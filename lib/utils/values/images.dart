@@ -12,6 +12,12 @@ class ImagePath {
   static const String DEV = "$imageDir/piano.jpg";
   static const String CAESAR = "$imageDir/caesar.png";
 
+  static const String CIRCLE = "$imageDir/circle.png";
+  static const String WORKS = "$imageDir/works.png";
+  static const String ARROW_RIGHT = "$imageDir/right-arrow.png";
+  static const String ARROW_DOWN = "$imageDir/down-arrow.png";
+  static const String ARROW_DOWN_IOS = "$imageDir/ios-down-arrow.png";
+
   // static const String VYBZ = "$imageDir/vybz.jpg";
   // static const String DAVID = "$imageDir/david.png";
   // static const String COLOSSAL_TOONS = "$imageDir/colossal_toons.jpg";
@@ -22,15 +28,10 @@ class ImagePath {
   // static const String FINOPP = "$imageDir/finopp.jpg";
   // static const String BEQUIP_LOGISTICS = "$imageDir/bequip_logistics.jpg";
   // static const String LEARN_UPP = "$imageDir/learn_upp.jpg";
-  static const String WORKS = "$imageDir/works.png";
 
-  static const String CIRCLE = "$imageDir/circle.png";
   // static const String PLAYSTORE = "$imageDir/playstore.png";
-  static const String ARROW_RIGHT = "$imageDir/right-arrow.png";
-  static const String ARROW_DOWN = "$imageDir/down-arrow.png";
   // static const String ARROW_DOWN_2 = "$imageDir/down-arrow-2.png";
   // static const String ARROW_UP = "$imageDir/up-arrow.png";
-  static const String ARROW_DOWN_IOS = "$imageDir/ios-down-arrow.png";
   // static const String MEDITATION = "$imageDir/meditation.png";
   // static const String ABOUT_PORTRAIT = "$imageDir/about_portrait.png";
   // static const String DEV_ABOUT = "$imageDir/dev-about.jpg";
