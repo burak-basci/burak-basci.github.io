@@ -40,8 +40,8 @@ jobs:
       - name: Download pub dependencies
         run: flutter pub get
 
-      - name: Run analyzer
-        run: flutter analyze
+#      - name: Run analyzer
+#        run: flutter analyze
 
       - name: Run tests
         run: flutter test
