@@ -198,7 +198,7 @@ class HomePageHeaderState extends State<HomePageHeader> with TickerProviderState
                     return Text(
                       'X',
                       style: TextStyle(
-                        fontFamily: 'Roboto',
+                        fontFamily: StringConst.ROBOTO,
                         fontSize: size,
                         color: Colors.black,
                       ),

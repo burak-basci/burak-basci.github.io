@@ -113,15 +113,13 @@ flutter:
           weight: 700
         - asset: assets/fonts/visuelt/VisueltPro-Bold.ttf
           weight: 800
-#    - family: BebasNeue
-#      fonts:
-#        - asset: assets/fonts/bebas_neue/BebasNeue-Regular.ttf
-#    - family: DancingScript
-#      fonts:
-#        - asset: assets/fonts/dancing_script/DancingScript-VariableFont_wght.ttf
-#    - family: NotoSerif
-#      fonts:
-#        - asset: assets/fonts/noto_serif/NotoSerif-VariableFont_wdth,wght.ttf
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/roboto/Roboto-Regular.ttf
+        - asset: assets/fonts/roboto/Roboto-Bold.ttf
+        - asset: assets/fonts/roboto/Roboto-Medium.ttf
+
+
 
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages

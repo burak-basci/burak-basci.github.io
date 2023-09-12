@@ -312,6 +312,7 @@ class StringConst {
 
   /// Font Family
   static const String VISUELT_PRO = "VisueltPro";
+  static const String ROBOTO = "Roboto";
 
   /// API
   static const String BASE_URL = "https://portfolio-api-liart.vercel.app/api";
