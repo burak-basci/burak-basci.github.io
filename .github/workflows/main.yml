@@ -11,6 +11,7 @@ jobs:
       # Install Flutter command
       - uses: subosito/flutter-action@v1
         with:
+          flutter-version: '3.10.5'
           channel: 'stable'
 
       # Build Website
