@@ -39,7 +39,16 @@ class SelfPositioningWidget extends StatelessWidget {
               )
               .slideY(
                 duration: const Duration(milliseconds: 800),
-                begin: 1.0,
+                // begin: 1.1 translates the text down by 110% of the
+                // SizedBox height initially (vs. exactly 100%). The extra
+                // 10% absorbs the few pixels of glyph ascender that some
+                // fonts render ABOVE the SizedBox's top edge — those
+                // pixels were peeking through above the ClipRect on the
+                // Experience page titles where TextStyle.height was not
+                // explicitly set. Animation still ends at 0.0 (no
+                // translation), so the visible final position is
+                // unchanged.
+                begin: 1.1,
                 end: 0.0,
                 curve: Curves.fastOutSlowIn,
                 delay: delay,

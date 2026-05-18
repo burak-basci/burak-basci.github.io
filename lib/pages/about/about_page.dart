@@ -45,7 +45,15 @@ class AboutPageState extends State<AboutPage> with TickerProviderStateMixin {
 
   @override
   void initState() {
-    _headerController = AnimationController(vsync: this);
+    // Header controller drives the AboutHeader animations (catch_line_1
+    // and catch_line_2 slide-box reveal). It needs a duration so
+    // [_headerController.forward] below can tick. flutter_animate's
+    // effect durations are 800 ms slide-in + 800 ms delay = 1600 ms
+    // total per line, so 1500 ms here lets both lines play through.
+    _headerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
     _storyController = AnimationController(vsync: this);
     _storySelfPositioningController = AnimationController(vsync: this);
     _technologyController = AnimationController(vsync: this);
@@ -80,9 +88,12 @@ class AboutPageState extends State<AboutPage> with TickerProviderStateMixin {
       selectedRoute: AboutPage.aboutPageRoute,
       selectedPageName: StringConst.ABOUT,
       onLoadingAnimationDone: () {
-        // Cover/uncover transition is the entry animation; snap content
-        // controllers straight to their final state.
-        _headerController.value = 1;
+        // Once the page uncover transition starts, play the header
+        // catch-line animations. Using forward() (not value = 1) so the
+        // slide-box reveal on `about.catch_line_1` and `about.catch_line_2`
+        // actually animates in — setting value = 1 snapped the controller
+        // straight to the final state and the slide-box wipe never played.
+        _headerController.forward();
       },
       child: ListView(
         controller: _scrollController,
