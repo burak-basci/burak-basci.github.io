@@ -148,13 +148,23 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
         },
         body: jsonEncode({
           'access_key': _web3formsAccessKey,
+          // Email subject header. Web3Forms also uses this verbatim so
+          // the inbox preview line reads as the visitor wrote it.
           'subject': _subjectController.text.trim(),
-          'from_name': _nameController.text.trim(),
+          // "From" display name on the delivered mail. Kept generic
+          // (the inbox subject + body already identify the form), so
+          // every contact-form message lines up under the same "From"
+          // in the inbox view.
+          'from_name': 'burakbasci.de — Kontaktformular',
+          // Each field below becomes its own labeled row in the email
+          // body. Keeping the four canonical Web3Forms field names
+          // (`name`, `email`, `subject`, `message`) so the labels read
+          // cleanly and the `message` row is just the visitor's text —
+          // the previous "Name (email) sent you a message…" preamble
+          // duplicated info already shown on its own rows.
+          'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
-          'message':
-              '${_nameController.text.trim()} (${_emailController.text.trim()}) '
-              'sent you a message from your website:\n\n'
-              '${_messageController.text.trim()}',
+          'message': _messageController.text.trim(),
           'botcheck': '',
         }),
       );
