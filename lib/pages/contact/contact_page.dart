@@ -46,7 +46,7 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
   // https://web3forms.com/ -> "Create Access Key" (uses your destination
   // email, no signup). The destination mailbox is set in the Web3Forms
   // dashboard against that key — keep SMTP creds out of this repo.
-  static const String _web3formsAccessKey = 'YOUR_WEB3FORMS_ACCESS_KEY';
+  static const String _web3formsAccessKey = 'ffa4e132-56c6-4016-a094-276f4602645b';
   static const String _web3formsEndpoint = 'https://api.web3forms.com/submit';
   // ---------------------------------------------------------------------------
 
