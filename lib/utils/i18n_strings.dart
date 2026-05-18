@@ -224,6 +224,20 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
   'contact.message_label':     {'en': 'Message',                                     'de': 'Nachricht'},
   'contact.message_error':     {'en': '* Please enter something to send this form',  'de': '* Bitte schreibe eine Nachricht, um das Formular abzusenden'},
   'contact.send_message':      {'en': 'Send Message',                                'de': 'Nachricht senden'},
+  'contact.banner.empty': {
+    'en': 'Please fill in the required fields before sending.',
+    'de': 'Bitte fülle die erforderlichen Felder aus, bevor du das Formular absendest.',
+  },
+  'contact.banner.success': {
+    'en': "Message sent — I'll get back to you shortly.",
+    'de': 'Nachricht gesendet — ich melde mich in Kürze bei dir.',
+  },
+  'contact.banner.error': {
+    'en': "Sorry, the message couldn't be sent. Please try again in a moment.",
+    'de': 'Leider konnte die Nachricht nicht gesendet werden. Bitte versuche es gleich erneut.',
+  },
+  'contact.button.sent':    {'en': 'Message sent',  'de': 'Gesendet'},
+  'contact.button.retry':   {'en': 'Try again',     'de': 'Erneut versuchen'},
 
   // --- Experience page ------------------------------------------------
   'experience.heading':      {'en': 'Experience',          'de': 'Erfahrung'},

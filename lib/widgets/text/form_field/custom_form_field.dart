@@ -3,52 +3,38 @@ import 'package:get/get.dart';
 
 import '../../../utils/values/values.dart';
 
-class CustomTextFormField extends StatelessWidget {
+/// Inline-validated text input used on the contact form.
+///
+/// The widget is stateful so it can:
+///   * track whether the field has been touched, and only auto-validate
+///     after the user has finished editing (no "invalid email" mid-typing);
+///   * surface the parent's [errorText] label above the field when the
+///     [validator] returns non-null;
+///   * keep the lightGreen "valid" fill until the next edit or until the
+///     parent calls `FormState.reset()` (which clears the controller and
+///     resets the internal touched flag via the controller listener).
+class CustomTextFormField extends StatefulWidget {
   const CustomTextFormField({
     this.controller,
     this.labelText,
-    this.title = '',
-    this.hasTitle = true,
-    this.titleStyle,
-    // this.textStyle,
-    // this.hintTextStyle,
-    // this.labelStyle,
-    // this.contentPadding,
-    // this.border = Borders.primaryInputBorder,
-    // this.focusedBorder = Borders.focusedBorder,
-    // this.enabledBorder = Borders.enabledBorder,
-    // this.hintText,
-    // this.obscured = false,
+    this.errorText,
     this.textInputType,
-    this.onChanged,
-    // this.validator,
-    // this.inputFormatters,
-    // this.fillColor = AppColors.lightGreen,
-    this.filled = false,
+    this.validator,
     this.maxLines = 1,
     super.key,
   });
 
   final TextEditingController? controller;
   final String? labelText;
-  final String title;
-  final bool hasTitle;
-  final TextStyle? titleStyle;
-  // final TextStyle? textStyle;
-  // final TextStyle? hintTextStyle;
-  // final TextStyle? labelStyle;
-  // final EdgeInsetsGeometry? contentPadding;
-  // final String? hintText;
-  // final bool obscured;
+
+  /// Long, user-friendly error label shown above the field when validation
+  /// fails (e.g. "* Please enter a valid email"). The field-level red text
+  /// inside the [TextFormField] is suppressed via [InputDecoration.errorStyle]
+  /// so this label is the only error surface.
+  final String? errorText;
+
   final TextInputType? textInputType;
-  final ValueChanged<String>? onChanged;
-  // final FormFieldValidator<String>? validator;
-  // final List<TextInputFormatter>? inputFormatters;
-  // final InputBorder border;
-  // final InputBorder enabledBorder;
-  // final InputBorder focusedBorder;
-  // final Color fillColor;
-  final bool filled;
+  final FormFieldValidator<String>? validator;
   final int? maxLines;
 
   static const UnderlineInputBorder primaryInputBorder = UnderlineInputBorder(
@@ -61,7 +47,7 @@ class CustomTextFormField extends StatelessWidget {
 
   static const UnderlineInputBorder enabledBorder = UnderlineInputBorder(
     borderSide: BorderSide(
-      color: CustomColors.grey, //AppColors.primaryColor,
+      color: CustomColors.grey,
       width: Sizes.WIDTH_2,
       style: BorderStyle.solid,
     ),
@@ -76,45 +62,143 @@ class CustomTextFormField extends StatelessWidget {
   );
 
   @override
+  State<CustomTextFormField> createState() => _CustomTextFormFieldState();
+}
+
+class _CustomTextFormFieldState extends State<CustomTextFormField> {
+  final FocusNode _focusNode = FocusNode();
+  String? _currentError;
+  bool _hasInteracted = false;
+  String? _lastSeenText;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastSeenText = widget.controller?.text ?? '';
+    _focusNode.addListener(_handleFocusChange);
+    widget.controller?.addListener(_handleControllerChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomTextFormField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?.removeListener(_handleControllerChange);
+      widget.controller?.addListener(_handleControllerChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    widget.controller?.removeListener(_handleControllerChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    // Only validate on blur after the user actually interacted with the
+    // field. This gives us "validate on unfocus" UX so the email field
+    // does not flash "invalid email" while the user is still typing.
+    if (!_focusNode.hasFocus && _hasInteracted) {
+      setState(() {
+        _currentError = widget.validator?.call(widget.controller?.text);
+      });
+    }
+  }
+
+  void _handleControllerChange() {
+    final String text = widget.controller?.text ?? '';
+    // Detect external reset: when the parent calls FormState.reset() the
+    // controller is cleared back to ''. In that case drop our interaction
+    // state so the outline returns to neutral (no more lightGreen fill,
+    // no error label).
+    if (text.isEmpty && (_lastSeenText?.isNotEmpty ?? false)) {
+      setState(() {
+        _hasInteracted = false;
+        _currentError = null;
+      });
+    }
+    _lastSeenText = text;
+  }
+
+  bool get _isValid =>
+      _hasInteracted &&
+      _currentError == null &&
+      (widget.controller?.text.trim().isNotEmpty ?? false);
+
+  @override
   Widget build(BuildContext context) {
+    final TextStyle? errorLabelStyle = Get.textTheme.bodyLarge?.copyWith(
+      color: CustomColors.errorRed,
+      fontWeight: FontWeight.w400,
+      fontSize: Sizes.TEXT_SIZE_12,
+      letterSpacing: 1,
+    );
+    final bool showErrorLabel = _currentError != null && widget.errorText != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        hasTitle ? Text(title, style: titleStyle) : const SizedBox(),
+        SizedBox(
+          height: Sizes.TEXT_SIZE_18,
+          child: showErrorLabel
+              ? Text(widget.errorText!, style: errorLabelStyle)
+              : const SizedBox(),
+        ),
         TextFormField(
-          style:
-              // textStyle ??
-              Get.textTheme.bodyLarge?.copyWith(
+          style: Get.textTheme.bodyLarge?.copyWith(
             color: CustomColors.black,
             fontWeight: FontWeight.w400,
           ),
-          controller: controller,
-          keyboardType: textInputType,
-          onChanged: onChanged,
-          maxLines: maxLines,
-          // validator: validator,
-          // inputFormatters: inputFormatters,
+          controller: widget.controller,
+          focusNode: _focusNode,
+          keyboardType: widget.textInputType,
+          maxLines: widget.maxLines,
+          onChanged: (value) {
+            if (!_hasInteracted) {
+              _hasInteracted = true;
+            }
+            // Wipe any stale error as soon as the user types — they will
+            // re-validate on blur or on the next submit.
+            if (_currentError != null) {
+              setState(() {
+                _currentError = null;
+              });
+            }
+          },
+          validator: (value) {
+            final String? message = widget.validator?.call(value);
+            // Defer the visible-state update until after this validation
+            // frame so we do not call setState during a build pass.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              if (_currentError != message) {
+                setState(() {
+                  _currentError = message;
+                  _hasInteracted = true;
+                });
+              }
+            });
+            return message;
+          },
           decoration: InputDecoration(
             fillColor: CustomColors.lightGreen,
-            filled: filled,
-            // contentPadding: contentPadding,
-            labelText: labelText,
-            labelStyle:
-                // labelStyle ??
-                Get.textTheme.bodyLarge?.copyWith(
+            filled: _isValid,
+            labelText: widget.labelText,
+            labelStyle: Get.textTheme.bodyLarge?.copyWith(
               color: CustomColors.black100,
             ),
-            border: primaryInputBorder,
-            enabledBorder: enabledBorder,
-            focusedBorder: focusedBorder,
-            // hintText: hintText,
-            hintStyle:
-                // hintTextStyle ??
-                Get.textTheme.bodyLarge?.copyWith(
+            border: CustomTextFormField.primaryInputBorder,
+            enabledBorder: CustomTextFormField.enabledBorder,
+            focusedBorder: CustomTextFormField.focusedBorder,
+            // Hide the built-in red error text — the long error label above
+            // the field is our only error surface.
+            errorStyle: const TextStyle(height: 0, fontSize: 0),
+            hintStyle: Get.textTheme.bodyLarge?.copyWith(
               color: CustomColors.black100,
             ),
           ),
-          // obscureText: obscured,
         ),
       ],
     );
