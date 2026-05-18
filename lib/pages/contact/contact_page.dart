@@ -57,10 +57,13 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
   Timer? _statusResetTimer;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  // Switched to onUserInteraction only AFTER the first submit attempt, so
-  // the validators do not flag "invalid email" while the user is still
-  // typing the address.
-  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+  // Auto-validation stays disabled at all times. Validation happens
+  // only on explicit submit (`_formKey.currentState.validate()`) and on
+  // blur (via the FocusNode listener inside [CustomTextFormField]).
+  // Turning it onUserInteraction after the first submit caused the
+  // green-valid fill to flicker on/off every keystroke, which read as
+  // the field "wiggling" — see _sendEmail comment below.
+  static const AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -107,18 +110,19 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
     _emailController.clear();
     _subjectController.clear();
     _messageController.clear();
-    setState(() {
-      _autovalidateMode = AutovalidateMode.disabled;
-    });
   }
 
   Future<void> _sendEmail() async {
-    // Flip autovalidate on so any subsequent edits give inline feedback,
-    // and so the empty-form case below shows the field-level "*" errors.
-    setState(() {
-      _autovalidateMode = AutovalidateMode.onUserInteraction;
-    });
-
+    // Trigger every validator once. `validate()` works regardless of
+    // [AutovalidateMode] — it returns false if any field is invalid and
+    // each field's validator schedules its own error-label setState via
+    // the post-frame callback inside [CustomTextFormField]. We do NOT
+    // flip on AutovalidateMode here: per-keystroke re-validation caused
+    // the green-valid fill to toggle on/off as the user typed (every
+    // keystroke briefly cleared _currentError then the validator's
+    // post-frame restored it), which read as the whole field wiggling.
+    // Blur-driven re-validation in [CustomTextFormField] still gives
+    // the user feedback after they finish editing a field.
     final bool isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
       _statusResetTimer?.cancel();

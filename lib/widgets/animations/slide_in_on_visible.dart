@@ -15,8 +15,8 @@ class SlideInOnVisible extends StatefulWidget {
     required this.uniqueKey,
     required this.child,
     this.visibilityThreshold = 0.15,
-    this.slideOffsetX = -60.0,
-    this.duration = const Duration(milliseconds: 700),
+    this.slideOffsetX = -240.0,
+    this.duration = const Duration(milliseconds: 900),
     super.key,
   });
 
