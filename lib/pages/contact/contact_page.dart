@@ -255,12 +255,17 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
         // controllers straight to their final state.
         _controller.value = 1;
       },
-      child: ListView(
+      // SingleChildScrollView keeps maxScrollExtent stable across the
+      // whole page — ListView lazily lays out children which made the
+      // Scrollbar thumb resize as new sections scrolled into view.
+      child: SingleChildScrollView(
         padding: EdgeInsets.zero,
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        children: <Widget>[
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
           LayoutBuilder(builder: (context, constraints) {
             final double contentAreaWidth = responsiveSize(
               mobile: Get.width * 0.8,
@@ -395,6 +400,7 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
           const CustomSpacer(heightFactor: 0.22),
           const BottomPartFooter(),
         ],
+        ),
       ),
     );
   }

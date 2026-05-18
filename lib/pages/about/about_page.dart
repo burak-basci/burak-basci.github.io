@@ -105,12 +105,16 @@ class AboutPageState extends State<AboutPage> with TickerProviderStateMixin {
         // straight to the final state and the slide-box wipe never played.
         _headerController.forward();
       },
-      child: ListView(
+      // SingleChildScrollView keeps maxScrollExtent constant from the
+      // first frame — see the equivalent comment in home_page.dart.
+      child: SingleChildScrollView(
         controller: _scrollController,
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        children: <Widget>[
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
           AboutHeader(
             scrollController: _scrollController,
             controller: _headerController,
@@ -332,6 +336,7 @@ class AboutPageState extends State<AboutPage> with TickerProviderStateMixin {
             ),
           ),
         ],
+        ),
       ),
     );
   }

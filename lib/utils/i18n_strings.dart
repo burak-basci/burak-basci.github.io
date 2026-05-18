@@ -64,6 +64,13 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
   'home.dev_desc':           {'en': 'Flutter / Unreal Engine / AI / Blockchain', 'de': 'Flutter / Unreal Engine / AI / Blockchain'},
   'home.see_my_work':        {'en': 'See my work',                          'de': 'Projekte ansehen'},
   'home.crafted':            {'en': 'Crafted with love.',                   'de': 'Mit Liebe gebaut.'},
+  // Closing line shown after the home page's project cascade. The
+  // visitor has just scrolled past every project; the outro acknowledges
+  // it and nudges them toward the contact form without nagging.
+  'home.outro.line': {
+    'en': "That's the lot. If something here resonated — or you've got a different idea in mind — say hi.",
+    'de': 'Bis hierher. Wenn dich etwas davon bewegt — oder du eine eigene Idee mitbringst — sag mir Bescheid.',
+  },
   'home.intro_name':         {'en': 'BURAK BASCI',                          'de': 'BURAK BASCI'},
 
   // --- Section headers (on project detail page) -----------------------

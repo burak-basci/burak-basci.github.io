@@ -105,13 +105,21 @@ class ExperiencePageState extends State<ExperiencePage> with TickerProviderState
         // controllers straight to their final state.
         _headerController.value = 1;
       },
-      child: ListView(
+      // SingleChildScrollView + Column lays the whole page out in one
+      // pass on first build, so position.maxScrollExtent stays constant
+      // and the Scrollbar thumb doesn't resize/pop as more sections
+      // scroll into view. ListView lazily lays out children based on
+      // cacheExtent and reports a moving maxScrollExtent — same bug
+      // home_page.dart had before its switch.
+      child: SingleChildScrollView(
         controller: _scrollController,
         padding: EdgeInsets.zero,
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        children: <Widget>[
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
           DefaultPageHeader(
             scrollController: _scrollController,
             headingText: Tr.of('experience.heading'),
@@ -255,6 +263,7 @@ class ExperiencePageState extends State<ExperiencePage> with TickerProviderState
             ),
           ),
         ],
+        ),
       ),
     );
   }

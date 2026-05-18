@@ -382,13 +382,19 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
         _navController.value = 1;
         _heroController.value = 1;
       },
-      child: ListView(
+      // SingleChildScrollView lays the entire project detail page out
+      // in one pass; ListView's lazy layout was causing maxScrollExtent
+      // (and thus the scrollbar thumb) to drift as new sections came
+      // into view, especially on long projects with many shots.
+      child: SingleChildScrollView(
         controller: _scrollController,
         padding: EdgeInsets.zero,
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        children: <Widget>[
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
           _hero(project, lang),
           const CustomSpacer(heightFactor: 0.12),
           _aboutSection(project, lang, contentWidth, horizontalPadding),
@@ -422,6 +428,7 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
             child: FullFooter(controller: _footerController),
           ),
         ],
+        ),
       ),
     );
   }

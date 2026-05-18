@@ -13,6 +13,7 @@ import '../../../utils/route_observers.dart';
 import '../../../utils/values/values.dart';
 import '../../data/projects.dart';
 import '../../widgets/animations/slide_in_on_visible.dart';
+import '../../widgets/buttons/animated_bubble_button.dart';
 import '../../widgets/project_item/project_item.dart';
 import '../project_detail/project_detail_page.dart';
 import '../../widgets/helper/custom_spacer.dart';
@@ -38,6 +39,7 @@ class HomePageState extends State<HomePage>
   final ScrollController _scrollController = ScrollController();
   // late AnimationController _viewProjectsController;
   late AnimationController _recentWorksController;
+  late AnimationController _outroController;
   late AnimationController _headerTextController;
   late AnimationController _headerCircleController;
   late AnimationController _footerController;
@@ -81,6 +83,7 @@ class HomePageState extends State<HomePage>
     _headerTextController = AnimationController(vsync: this);
     _headerCircleController = AnimationController(vsync: this);
     _recentWorksController = AnimationController(vsync: this);
+    _outroController = AnimationController(vsync: this);
     _footerController = AnimationController(vsync: this);
 
     _scrollController.addListener(_onScroll);
@@ -212,6 +215,7 @@ class HomePageState extends State<HomePage>
     _headerTextController.dispose();
     _headerCircleController.dispose();
     _recentWorksController.dispose();
+    _outroController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _footerController.dispose();
@@ -520,6 +524,73 @@ class HomePageState extends State<HomePage>
           //     ],
           //   ),
           // ),
+          // Cascade outro. A small closing line + bubble button shown
+          // after the last project tile, nudging visitors toward the
+          // contact form without nagging. Wrapped in a VisibilityDetector
+          // so the slide-box animation fires once when the line first
+          // scrolls into view, matching the "Crafted with love." heading
+          // up the page.
+          SizedBox(height: _viewportHeight * 0.10),
+          VisibilityDetector(
+            key: const Key('home-outro'),
+            onVisibilityChanged: (visibilityInfo) {
+              if (visibilityInfo.visibleFraction > 0.25) {
+                _outroController.forward();
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: responsiveSize(
+                  mobile: Get.width * 0.10,
+                  tabletSmall: Get.width * 0.15,
+                  desktop: Get.width * 0.15,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  AnimatedSlideBoxTransitionText(
+                    controller: _outroController,
+                    text: Tr.of('home.outro.line'),
+                    width: Get.width * 0.70,
+                    textStyle: Get.textTheme.headlineMedium?.copyWith(
+                      color: CustomColors.black,
+                      fontSize: responsiveSize(
+                        mobile: 22,
+                        tabletSmall: 26,
+                        tabletNormal: 30,
+                        desktop: 34,
+                      ),
+                      height: 1.6,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  AnimatedBubbleButton(
+                    title: Tr.of('btn.say_hello').toUpperCase(),
+                    bubbleColor: CustomColors.grey100,
+                    imageColor: CustomColors.black,
+                    targetWidth: 220,
+                    titleStyle: Get.textTheme.bodyLarge?.copyWith(
+                      color: CustomColors.black,
+                      fontSize: responsiveSize(
+                        mobile: Sizes.TEXT_SIZE_14,
+                        desktop: Sizes.TEXT_SIZE_16,
+                      ),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
+                    onTap: () {
+                      PageTransition.goTo(
+                        context,
+                        StringConst.CONTACT_PAGE,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
           SizedBox(height: _viewportHeight * 0.15),
           VisibilityDetector(
             key: const Key('animated-footer'),

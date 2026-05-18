@@ -61,12 +61,16 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
       onLoadingAnimationDone: () {
         _controller.forward();
       },
-      child: ListView(
+      // SingleChildScrollView keeps maxScrollExtent stable across the
+      // long privacy text — same reason as the other content pages.
+      child: SingleChildScrollView(
         controller: _scrollController,
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        children: <Widget>[
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
           DefaultPageHeader(
             scrollController: _scrollController,
             headingText: StringConst.PRIVACY_POLICY,
@@ -113,6 +117,7 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
             ),
           ),
         ],
+        ),
       ),
     );
   }
