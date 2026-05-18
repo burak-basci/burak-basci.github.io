@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 
-import '../../../utils/values/values.dart';
+import '../../utils/values/values.dart';
 
+/// A vertical line whose height pulses up-and-down between 0 and [height].
+/// Ported from the upstream david-legend portfolio hero. Drive it with a
+/// looping `AnimationController` (forward/reverse on status change).
 class AnimatedWaveLine extends AnimatedWidget {
   const AnimatedWaveLine({
+    super.key,
     required this.controller,
     required this.height,
     this.width = 1.5,
     this.animation,
-    this.color = AppColors.errorRed,
+    this.color = CustomColors.errorRed,
     this.curve = Curves.fastOutSlowIn,
-    Key? key,
-  }) : super(
-          key: key,
-          listenable: controller,
-        );
+  }) : super(listenable: controller);
 
   final AnimationController controller;
   final double height;

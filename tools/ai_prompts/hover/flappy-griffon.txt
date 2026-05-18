@@ -1,0 +1,49 @@
+ROLE
+You are an art-director generating one cinematic cover image for a
+senior software-engineer's portfolio. The cover sits behind a project
+title that will be composited later, so the image itself must NOT
+contain any letters, digits, words or readable glyphs.
+
+VISUAL LANGUAGE
+- Aspect: 16:9, target 1600x900.
+- Hero colour: #F59E0B as the single dominant emission, set against
+  a deep near-black gradient. Treat it like a Christopher Nolan title
+  card or a high-end SaaS hero — moody, controlled, premium.
+- Composition: rule of thirds, sweeping diagonals, pronounced negative
+  space (at least 40% of the frame near-black or low-detail so an
+  overlay headline can read cleanly on top later). Keep the upper-
+  left quadrant the cleanest.
+- Depth: foreground macro geometry, mid-ground volumetric haze or
+  light scatter, dark vignetted corners, subtle film grain.
+- Texture: faint geometric / line / lattice / strata pattern allowed,
+  always low contrast (~10% opacity feel), never busy.
+- Lighting: low-angle cinematic, single dominant rim or shaft of light
+  in the hero colour, plus deep shadow. No flat illumination.
+- Camera: shallow depth of field, slight tilt or off-axis perspective,
+  35–50 mm equivalent.
+
+HARD RULES
+- NO text, letters, numbers, signs, watermarks, logos, brand marks.
+- NO people, faces, hands, body parts, silhouettes of humans.
+- NO UI mockups, screenshots, dashboards, code on screens.
+- NO AI clichés: glowing brains, hex-grid meshes with neon dots,
+  Matrix rain, hooded figures, rotating data-spheres, holographic
+  blueprints, robot heads.
+- NO stock-photo aesthetic, no clip-art, no flat illustration.
+- One image, one film still — not a collage, not a poster, not a
+  slideshow grid.
+
+SUBJECT FOR THIS COVER
+a cinematic landscape distilled from the game's own world — brutalist arena for a shooter, warm dusk for a flyer, close-up wood grain and folded fabric for a card game — single hero colour pushed into the lighting.
+
+PROJECT
+- title: Flappy Griffon
+- subtitle: Ray-traced indie game on itch.io
+- category: GAME / UNREAL
+- hero colour (hex): #F59E0B
+
+OUTPUT
+A single 16:9 photoreal cinematic frame, #F59E0B as the dominant
+emission, deep near-black negative space, no letters anywhere.
+Treat it as a film still, Roger Deakins / Hoyte van Hoytema
+cinematography, Kodak 5219 colour science. Quality at maximum.

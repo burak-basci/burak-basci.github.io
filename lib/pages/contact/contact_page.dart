@@ -1,18 +1,19 @@
+import 'package:burak_basci_website/widgets/text/self_positioning_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import "package:flutter/material.dart";
 import 'package:get/get.dart';
 
 import '../../../utils/adaptive_layout.dart';
+import '../../../utils/i18n_strings.dart';
 import '../../../utils/values/values.dart';
 import '../../utils/values/spaces.dart';
-import '../../widgets/animations/animated_positioned_text.dart';
-import '../../widgets/animations/animated_text_slide_box_transition.dart';
 import '../../widgets/buttons/animated_button.dart';
 import '../../widgets/helper/custom_spacer.dart';
+import '../../widgets/scaffolding/footer/bottom_part_footer.dart';
 import '../../widgets/scaffolding/page_wrapper.dart';
-import '../../widgets/scaffolding/simple_footer.dart';
-import '../../widgets/text/custom_text_form_field.dart';
+import '../../widgets/text/form_field/custom_form_field.dart';
+import '../../widgets/text/slide_box_transitioning_text.dart';
 
 class Email {
   final String to;
@@ -34,8 +35,8 @@ class Email {
 class ContactPage extends StatefulWidget {
   static const String contactPageRoute = StringConst.CONTACT_PAGE;
   const ContactPage({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   ContactPageState createState() => ContactPageState();
@@ -43,7 +44,6 @@ class ContactPage extends StatefulWidget {
 
 class ContactPageState extends State<ContactPage> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<Offset> _slideAnimation;
   bool isSendingEmail = false;
   bool isBodyVisible = false;
   bool _nameFilled = false;
@@ -61,16 +61,7 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
 
   @override
   void initState() {
-    _controller = AnimationController(
-      vsync: this,
-      duration: Animations.slideAnimationDurationLong,
-    );
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 1), end: const Offset(0, 0)).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.6, 1.0, curve: Curves.fastOutSlowIn),
-      ),
-    );
+    _controller = AnimationController(vsync: this);
     super.initState();
   }
 
@@ -205,55 +196,14 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    final TextStyle? initialErrorStyle = textTheme.bodyText1?.copyWith(
-      color: AppColors.white,
-      fontSize: Sizes.TEXT_SIZE_12,
-    );
-    final TextStyle? errorStyle = textTheme.bodyText1?.copyWith(
-      color: AppColors.errorRed,
-      fontWeight: FontWeight.w400,
-      fontSize: Sizes.TEXT_SIZE_12,
-      letterSpacing: 1,
-    );
-    final double contentAreaWidth = responsiveSize(
-      context,
-      assignWidth(context, 0.8),
-      assignWidth(context, 0.6),
-    ); //takes 60% of screen
-
-    final double buttonWidth = responsiveSize(
-      context,
-      contentAreaWidth * 0.6,
-      contentAreaWidth * 0.25,
-    );
-    final EdgeInsetsGeometry padding = EdgeInsets.only(
-      left: responsiveSize(
-        context,
-        assignWidth(context, 0.10),
-        assignWidth(context, 0.15),
-      ),
-      right: responsiveSize(
-        context,
-        assignWidth(context, 0.10),
-        assignWidth(context, 0.25),
-      ),
-      top: responsiveSize(
-        context,
-        assignHeight(context, 0.24),
-        assignHeight(context, 0.28),
-      ),
-    );
-    final TextStyle? headingStyle = textTheme.headline2?.copyWith(
-      color: AppColors.black,
-      fontSize: responsiveSize(context, 40, 60),
-    );
     return PageWrapper(
       selectedRoute: ContactPage.contactPageRoute,
       selectedPageName: StringConst.CONTACT,
       navigationBarAnimationController: _controller,
       onLoadingAnimationDone: () {
-        _controller.forward();
+        // Cover/uncover transition is the entry animation; snap content
+        // controllers straight to their final state.
+        _controller.value = 1;
       },
       child: ListView(
         padding: EdgeInsets.zero,
@@ -261,109 +211,151 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
           parent: AlwaysScrollableScrollPhysics(),
         ),
         children: <Widget>[
-          Padding(
-            padding: padding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                AnimatedTextSlideBoxTransition(
-                  controller: _controller,
-                  text: StringConst.GET_IN_TOUCH,
-                  textStyle: headingStyle,
-                ),
-                const CustomSpacer(heightFactor: 0.05),
-                AnimatedPositionedText(
-                  width: contentAreaWidth,
-                  controller: CurvedAnimation(
-                    parent: _controller,
-                    curve: const Interval(0.6, 1.0, curve: Curves.fastOutSlowIn),
-                  ),
-                  text: StringConst.CONTACT_MSG,
-                  maxLines: 5,
-                  textStyle: textTheme.bodyText1?.copyWith(
-                    color: AppColors.grey700,
-                    height: 2.0,
-                    fontSize: responsiveSize(
-                      context,
-                      Sizes.TEXT_SIZE_16,
-                      Sizes.TEXT_SIZE_18,
+          LayoutBuilder(builder: (context, constraints) {
+            final TextStyle? initialErrorStyle = Get.textTheme.bodyLarge?.copyWith(
+              color: CustomColors.white,
+              fontSize: Sizes.TEXT_SIZE_12,
+            );
+            final TextStyle? errorStyle = Get.textTheme.bodyLarge?.copyWith(
+              color: CustomColors.errorRed,
+              fontWeight: FontWeight.w400,
+              fontSize: Sizes.TEXT_SIZE_12,
+              letterSpacing: 1,
+            );
+            final double contentAreaWidth = responsiveSize(
+              mobile: Get.width * 0.8,
+              desktop: Get.width * 0.6,
+            ); //takes 60% of screen
+
+            final double buttonWidth = responsiveSize(
+              mobile: contentAreaWidth * 0.6,
+              desktop: contentAreaWidth * 0.25,
+            );
+            final EdgeInsetsGeometry padding = EdgeInsets.only(
+              left: responsiveSize(
+                mobile: Get.width * 0.10,
+                desktop: Get.width * 0.15,
+              ),
+              right: responsiveSize(
+                mobile: Get.width * 0.10,
+                desktop: Get.width * 0.25,
+              ),
+              top: responsiveSize(
+                mobile: Get.height * 0.24,
+                desktop: Get.height * 0.28,
+              ),
+            );
+
+            return Padding(
+              padding: padding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  AnimatedSlideBoxTransitionText(
+                    controller: _controller,
+                    width: contentAreaWidth,
+                    text: Tr.of('contact.get_in_touch'),
+                    textStyle: Get.textTheme.displayMedium?.copyWith(
+                      fontFamily: StringConst.VISUELT_PRO,
+                      color: CustomColors.black,
+                      fontSize: responsiveSize(
+                        mobile: 40,
+                        desktop: 60,
+                      ),
                     ),
                   ),
-                ),
-                const CustomSpacer(heightFactor: 0.06),
-                SlideTransition(
-                  position: _slideAnimation,
-                  child: Column(
-                    children: <Widget>[
-                      CustomTextFormField(
-                        hasTitle: _nameHasError,
-                        title: StringConst.NAME_ERROR_MSG,
-                        titleStyle: _nameHasError ? errorStyle : initialErrorStyle,
-                        labelText: StringConst.YOUR_NAME,
-                        controller: _nameController,
-                        filled: _nameFilled,
-                        onChanged: (value) {
-                          isNameValid(value);
-                        },
+                  const CustomSpacer(heightFactor: 0.05),
+                  AnimatedSlideBoxTransitionText(
+                    controller: _controller,
+                    width: contentAreaWidth,
+                    text: Tr.of('contact.message'),
+                    textStyle: Get.textTheme.bodyLarge?.copyWith(
+                      fontFamily: StringConst.INTER,
+                      color: CustomColors.grey700,
+                      height: 2.0,
+                      fontWeight: FontWeight.w300,
+                      fontSize: responsiveSize(
+                        mobile: Sizes.TEXT_SIZE_16,
+                        desktop: Sizes.TEXT_SIZE_18,
                       ),
-                      const SpaceH20(),
-                      CustomTextFormField(
-                        hasTitle: _emailHasError,
-                        title: StringConst.EMAIL_ERROR_MSG,
-                        titleStyle: _emailHasError ? errorStyle : initialErrorStyle,
-                        labelText: StringConst.EMAIL,
-                        controller: _emailController,
-                        filled: _emailFilled,
-                        onChanged: (value) {
-                          isEmailValid(value);
-                        },
-                      ),
-                      const SpaceH20(),
-                      CustomTextFormField(
-                        hasTitle: _subjectHasError,
-                        title: StringConst.SUBJECT_ERROR_MSG,
-                        titleStyle: _subjectHasError ? errorStyle : initialErrorStyle,
-                        labelText: StringConst.SUBJECT,
-                        controller: _subjectController,
-                        filled: _subjectFilled,
-                        onChanged: (value) {
-                          isSubjectValid(value);
-                        },
-                      ),
-                      const SpaceH20(),
-                      CustomTextFormField(
-                        hasTitle: _messageHasError,
-                        title: StringConst.MESSAGE_ERROR_MSG,
-                        titleStyle: _messageHasError ? errorStyle : initialErrorStyle,
-                        labelText: StringConst.MESSAGE,
-                        controller: _messageController,
-                        filled: _messageFilled,
-                        textInputType: TextInputType.multiline,
-                        maxLines: 10,
-                        onChanged: (value) {
-                          isMessageValid(value);
-                        },
-                      ),
-                      const SpaceH20(),
-                      Align(
-                        alignment: Alignment.topRight,
-                        child: AnimatedButton(
-                          height: Sizes.HEIGHT_56,
-                          width: buttonWidth,
-                          isLoading: isSendingEmail,
-                          title: StringConst.SEND_MESSAGE.toUpperCase(),
-                          onPressed: sendEmail,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                )
-              ],
-            ),
-          ),
+                  const CustomSpacer(heightFactor: 0.06),
+                  SelfPositioningWidget(
+                    controller: _controller,
+                    delay: const Duration(milliseconds: 800),
+                    child: Column(
+                      children: <Widget>[
+                        CustomTextFormField(
+                          hasTitle: _nameHasError,
+                          title: Tr.of('contact.name_error'),
+                          titleStyle: _nameHasError ? errorStyle : initialErrorStyle,
+                          labelText: Tr.of('contact.your_name'),
+                          controller: _nameController,
+                          filled: _nameFilled,
+                          onChanged: (value) {
+                            isNameValid(value);
+                          },
+                        ),
+                        const SpaceH20(),
+                        CustomTextFormField(
+                          hasTitle: _emailHasError,
+                          title: Tr.of('contact.email_error'),
+                          titleStyle: _emailHasError ? errorStyle : initialErrorStyle,
+                          labelText: Tr.of('contact.email_label'),
+                          controller: _emailController,
+                          filled: _emailFilled,
+                          onChanged: (value) {
+                            isEmailValid(value);
+                          },
+                        ),
+                        const SpaceH20(),
+                        CustomTextFormField(
+                          hasTitle: _subjectHasError,
+                          title: Tr.of('contact.subject_error'),
+                          titleStyle: _subjectHasError ? errorStyle : initialErrorStyle,
+                          labelText: Tr.of('contact.subject'),
+                          controller: _subjectController,
+                          filled: _subjectFilled,
+                          onChanged: (value) {
+                            isSubjectValid(value);
+                          },
+                        ),
+                        const SpaceH20(),
+                        CustomTextFormField(
+                          hasTitle: _messageHasError,
+                          title: Tr.of('contact.message_error'),
+                          titleStyle: _messageHasError ? errorStyle : initialErrorStyle,
+                          labelText: Tr.of('contact.message_label'),
+                          controller: _messageController,
+                          filled: _messageFilled,
+                          textInputType: TextInputType.multiline,
+                          maxLines: 10,
+                          onChanged: (value) {
+                            isMessageValid(value);
+                          },
+                        ),
+                        const SpaceH20(),
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: AnimatedButton(
+                            height: Sizes.HEIGHT_56,
+                            width: buttonWidth,
+                            isLoading: isSendingEmail,
+                            title: Tr.of('contact.send_message').toUpperCase(),
+                            onPressed: sendEmail,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
           const CustomSpacer(heightFactor: 0.22),
-          const SimpleFooter(),
+          const BottomPartFooter(),
         ],
       ),
     );

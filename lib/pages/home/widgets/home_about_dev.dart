@@ -1,22 +1,27 @@
 import 'package:burak_basci_website/pages/about/about_page.dart';
+import 'package:burak_basci_website/utils/page_transition.dart';
+import 'package:burak_basci_website/utils/values/spaces.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get/get.dart';
 
 import '../../../../utils/adaptive_layout.dart';
 import '../../../../utils/functions.dart';
+import '../../../../utils/i18n_strings.dart';
 import '../../../../utils/values/values.dart';
-import '../../../widgets/animated_line_through_text.dart';
-import '../../../widgets/animations/animated_bubble_button.dart';
-import '../../../widgets/animations/animated_positioned_text.dart';
-import '../../../widgets/animations/animated_positioned_widget.dart';
-import '../../../widgets/animations/animated_text_slide_box_transition.dart';
+import '../../../widgets/buttons/animated_bubble_button.dart';
+import '../../../widgets/buttons/animated_underline_text_button.dart';
 import '../../../widgets/buttons/socials_icon_button.dart';
+import '../../../widgets/text/self_positioning_text.dart';
+import '../../../widgets/text/self_positioning_widget.dart';
+import '../../../widgets/text/slide_box_transitioning_text.dart';
 
 class HomeAboutDev extends StatefulWidget {
   const HomeAboutDev({
     required this.controller,
     required this.width,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   final AnimationController controller;
   final double width;
@@ -28,161 +33,172 @@ class HomeAboutDev extends StatefulWidget {
 class HomeAboutDevState extends State<HomeAboutDev> {
   @override
   Widget build(BuildContext context) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    const EdgeInsetsGeometry margin = EdgeInsets.only(left: 16);
-    final CurvedAnimation curvedAnimation = CurvedAnimation(
-      parent: widget.controller,
-      curve: const Interval(0.6, 1.0, curve: Curves.fastOutSlowIn),
-    );
-    final double headerFontSize = responsiveSize(context, 28, 48, medium: 36, small: 32);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Container(
-          margin: margin,
-          child: AnimatedTextSlideBoxTransition(
-            controller: widget.controller,
-            text: StringConst.HI,
-            width: widget.width,
-            maxLines: 3,
-            textStyle: textTheme.headline2?.copyWith(
-              color: AppColors.black,
-              fontSize: headerFontSize,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12.0),
-        Container(
-          margin: margin,
-          child: AnimatedTextSlideBoxTransition(
-            controller: widget.controller,
-            text: StringConst.DEV_INTRO,
-            width: widget.width,
-            maxLines: 3,
-            textStyle: textTheme.headline2?.copyWith(
-              color: AppColors.black,
-              fontSize: headerFontSize,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12.0),
-        Container(
-          margin: margin,
-          child: AnimatedTextSlideBoxTransition(
-            controller: widget.controller,
-            text: StringConst.DEV_TITLE,
-            width: responsiveSize(
-              context,
-              widget.width * 0.75,
-              widget.width,
-              medium: widget.width,
-              small: widget.width,
-            ),
-            maxLines: 3,
-            textStyle: textTheme.headline2?.copyWith(
-              fontSize: headerFontSize,
-            ),
-          ),
-        ),
-        const SizedBox(height: 30.0),
-        Container(
-          margin: margin,
-          child: AnimatedPositionedText(
-            controller: curvedAnimation,
-            width: widget.width,
-            maxLines: 3,
-            factor: 2,
-            text: StringConst.DEV_DESC,
-            textStyle: textTheme.bodyText1?.copyWith(
-              fontSize: responsiveSize(
-                context,
-                Sizes.TEXT_SIZE_16,
-                Sizes.TEXT_SIZE_18,
+    return LayoutBuilder(builder: (context, constraints) {
+      const EdgeInsetsGeometry margin = EdgeInsets.only(left: 16);
+      final double headerFontSize = responsiveSize(
+        mobile: 28,
+        tabletSmall: 32,
+        tabletNormal: 36,
+        desktop: 48,
+      );
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            margin: margin,
+            child: AnimatedSlideBoxTransitionText(
+              controller: widget.controller,
+              text: Tr.of('home.hi'),
+              width: widget.width,
+              textStyle: Get.textTheme.displayMedium?.copyWith(
+                color: CustomColors.black,
+                fontSize: headerFontSize,
               ),
-              height: 2,
-              fontWeight: FontWeight.w400,
             ),
           ),
-        ),
-        const SizedBox(height: 30.0),
-        AnimatedPositionedWidget(
-          controller: curvedAnimation,
-          width: 200,
-          height: 60,
-          child: AnimatedBubbleButton(
-            color: AppColors.grey100,
-            imageColor: AppColors.black,
-            startOffset: const Offset(0, 0),
-            targetOffset: const Offset(0.04, 0),
-            targetWidth: 200,
-            startBorderRadius: const BorderRadius.all(
-              Radius.circular(100.0),
-            ),
-            title: StringConst.SEE_MY_WORK.toUpperCase(),
-            titleStyle: textTheme.bodyText1?.copyWith(
-              color: AppColors.black,
-              fontSize: responsiveSize(
-                context,
-                Sizes.TEXT_SIZE_14,
-                Sizes.TEXT_SIZE_16,
-                small: Sizes.TEXT_SIZE_15,
+          const SpaceH12(),
+          Container(
+            margin: margin,
+            child: AnimatedSlideBoxTransitionText(
+              controller: widget.controller,
+              text: Tr.of('home.dev_intro'),
+              width: widget.width,
+              textStyle: Get.textTheme.displayMedium?.copyWith(
+                color: CustomColors.black,
+                fontSize: headerFontSize,
               ),
-              fontWeight: FontWeight.w500,
-            ),
-            onTap: () {
-              // TODO: Reimplement when WorksPage is ready
-              Navigator.pushNamed(context, AboutPage.aboutPageRoute);
-            },
-          ),
-        ),
-        const SizedBox(height: 40.0),
-        Container(
-          margin: margin,
-          child: Wrap(
-            spacing: 20,
-            runSpacing: 20,
-            children: _buildSocials(
-              context: context,
-              data: Data.socialData,
             ),
           ),
-        )
-      ],
-    );
+          const SpaceH12(),
+          Container(
+            margin: margin,
+            child: AnimatedSlideBoxTransitionText(
+              controller: widget.controller,
+              text: Tr.of('home.dev_title'),
+              width: responsiveSize(
+                mobile: widget.width * 0.75,
+                desktop: widget.width,
+                tabletNormal: widget.width,
+                tabletSmall: widget.width,
+              ),
+              textStyle: Get.textTheme.displayMedium?.copyWith(
+                fontSize: headerFontSize,
+              ),
+            ),
+          ),
+          const SpaceH32(),
+          Container(
+            margin: margin,
+            child: SelfPositioningText(
+              controller: widget.controller,
+              width: widget.width,
+              heightFactor: 2,
+              text: Tr.of('home.dev_desc'),
+              textStyle: Get.textTheme.bodyLarge?.copyWith(
+                fontSize: responsiveSize(
+                  mobile: Sizes.TEXT_SIZE_16,
+                  desktop: Sizes.TEXT_SIZE_18,
+                ),
+                height: 2,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+          const SpaceH32(),
+          SelfPositioningWidget(
+            controller: widget.controller,
+            width: 240,
+            height: 60,
+            child: Align(
+              alignment: Alignment.center,
+              child: AnimatedBubbleButton(
+              bubbleColor: CustomColors.grey100,
+              imageColor: CustomColors.black,
+              targetWidth: 200,
+              title: Tr.of('home.see_my_work').toUpperCase(),
+              titleStyle: Get.textTheme.bodyLarge?.copyWith(
+                color: CustomColors.black,
+                fontSize: responsiveSize(
+                  mobile: Sizes.TEXT_SIZE_14,
+                  tabletSmall: Sizes.TEXT_SIZE_16,
+                  desktop: Sizes.TEXT_SIZE_16,
+                ),
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+              onTap: () {
+                PageTransition.goTo(context, AboutPage.aboutPageRoute);
+              },
+              ),
+            ),
+          ),
+          const SpaceH40(),
+          Container(
+            margin: margin,
+            child: Wrap(
+              spacing: 4.0,
+              runSpacing: 0.0,
+              children: _buildSocials(
+                context: context,
+                data: Data.socialData,
+              ),
+            ),
+          )
+        ],
+      );
+    });
   }
 
   List<Widget> _buildSocials({
     required BuildContext context,
     required List<SocialData> data,
   }) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    final TextStyle? style = textTheme.bodyText1?.copyWith(color: AppColors.grey750);
-    final TextStyle? slashStyle = textTheme.bodyText1?.copyWith(
-      color: AppColors.grey750,
-      fontWeight: FontWeight.w400,
-      fontSize: 18,
-    );
     List<Widget> items = <Widget>[];
 
     for (int index = 0; index < data.length; index++) {
       items.add(
-        AnimatedLineThroughText(
+        AnimatedUnderlineTextButton(
           text: data[index].name,
-          isUnderlinedByDefault: true,
-          controller: widget.controller,
+          slideBoxController: widget.controller,
           hasSlideBoxAnimation: true,
-          hasOffsetAnimation: true,
-          isUnderlinedOnHover: false,
+          underlineBottomOffset: 1.0,
+          textStyle: Get.textTheme.bodyLarge?.copyWith(
+            fontFamily: StringConst.INTER,
+            fontSize: Sizes.TEXT_SIZE_16,
+            fontWeight: FontWeight.w300,
+            color: CustomColors.grey750,
+            decoration: TextDecoration.underline,
+          ),
           onTap: () {
             Functions.launchUrl(data[index].url);
           },
-          textStyle: style,
         ),
       );
 
       if (index < data.length - 1) {
         items.add(
-          Text('/', style: slashStyle),
+          Text(
+            '/ ',
+            style: Get.textTheme.bodyLarge?.copyWith(
+              color: CustomColors.grey750,
+              fontWeight: FontWeight.w400,
+              fontSize: 18,
+            ),
+          )
+              .animate(controller: widget.controller, autoPlay: false)
+              .fadeIn(
+                duration: const Duration(milliseconds: 400),
+                delay: Duration(milliseconds: 1000 + index * 200),
+                curve: Curves.easeOut,
+              )
+              .slideY(
+                begin: 0.5,
+                end: 0,
+                duration: const Duration(milliseconds: 500),
+                delay: Duration(milliseconds: 1000 + index * 200),
+                curve: Curves.fastOutSlowIn,
+              ),
         );
       }
     }

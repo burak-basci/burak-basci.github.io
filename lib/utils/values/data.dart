@@ -48,20 +48,18 @@ class NoteWorthyProjectDetails {
 
 class ExperienceData {
   ExperienceData({
-    required this.duration,
-    required this.company,
-    required this.position,
-    required this.roles,
-    required this.location,
-    this.companyUrl,
+    required this.time,
+    required this.title,
+    required this.subtitle,
+    required this.bulletPoint,
+    this.url,
   });
 
-  final String duration;
-  final String company;
-  final String position;
-  final List<String> roles;
-  final String? location;
-  final String? companyUrl;
+  final String time;
+  final String title;
+  final String subtitle;
+  final List<String> bulletPoint;
+  final String? url;
 }
 
 class PrivacyPolicyData {
@@ -136,18 +134,35 @@ class Data {
 
   static const List<String> programmingLanguages = <String>[
     "Dart",
-    "Flutter",
     "C/C++",
     "Python",
+    "JavaScript",
+    "HTML",
+    "CSS",
+    "SQL",
     "Solidity",
     "Matlab",
     "Java",
   ];
 
   static const List<String> applications = <String>[
+    "Flutter",
+    "Next.js",
+    "React",
+    "Node.js",
+    "Django",
+    "FastAPI",
+    "ElasticSearch",
+    "Firestore",
     "Unreal Engine",
+    "ROS",
+    "PyTorch",
+    "TensorFlow",
+    "Enterprise Architect",
+    "Home Assistant",
+    "n8n",
     "Android Studio",
-    "Visual Studio Code",
+    "Visual Studio",
     "Remix Ethereum IDE",
     "Matlab",
     "TwinCAT",
@@ -160,14 +175,28 @@ class Data {
   ];
 
   static const List<String> otherSoftware = <String>[
-    "Firebase",
+    "Kubernetes",
+    "Docker",
+    "Podman",
+    "Terraform",
+    "ArgoCD",
+    "GitLab CI/CD",
+    "Prometheus",
+    "Grafana",
     "Git",
+    "Firebase",
     "Hardhat",
-    "Auto GPT",
+    "RAG",
+    "Vector Databases",
+    "Proxmox",
+    "openSUSE",
+    "OpenWRT",
     "YOLOv8",
     "MidJourney",
     "Stable Diffusion",
+    "Auto GPT",
     "Wordpress",
+    "MuseScore",
   ];
 
   // static List<ProjectItemData> recentWorks = <ProjectItemData>[
@@ -270,44 +299,100 @@ class Data {
 //
 //   // static List<CertificationData> certificationData = [];
 //
-  static final List<ExperienceData> experienceData = <ExperienceData>[
+  static final List<ExperienceData> workData = <ExperienceData>[
     ExperienceData(
-      company: StringConst.EXPERIENCE_3,
-      position: StringConst.EXPERIENCE_3_POSITION,
-      companyUrl: StringConst.EXPERIENCE_3_URL,
-      roles: <String>[
-        StringConst.EXPERIENCE_3_ROLE_1,
-        StringConst.EXPERIENCE_3_ROLE_2,
-        StringConst.EXPERIENCE_3_ROLE_3,
-        StringConst.EXPERIENCE_3_ROLE_4,
-        StringConst.EXPERIENCE_3_ROLE_5,
+      time: StringConst.EXPERIENCE_5_TIME,
+      title: StringConst.EXPERIENCE_5_TITLE,
+      subtitle: StringConst.EXPERIENCE_5_SUBTITLE,
+      url: StringConst.EXPERIENCE_5_URL,
+      bulletPoint: <String>[
+        StringConst.EXPERIENCE_5_BULLET_POINT_1,
+        StringConst.EXPERIENCE_5_BULLET_POINT_2,
+        StringConst.EXPERIENCE_5_BULLET_POINT_3,
+        StringConst.EXPERIENCE_5_BULLET_POINT_4,
+        StringConst.EXPERIENCE_5_BULLET_POINT_5,
+        StringConst.EXPERIENCE_5_BULLET_POINT_6,
       ],
-      location: StringConst.EXPERIENCE_3_LOCATION,
-      duration: StringConst.EXPERIENCE_3_DURATION,
     ),
     ExperienceData(
-      company: StringConst.EXPERIENCE_2,
-      position: StringConst.EXPERIENCE_2_POSITION,
-      companyUrl: StringConst.EXPERIENCE_2_URL,
-      roles: <String>[
-        StringConst.EXPERIENCE_2_ROLE_1,
-        StringConst.EXPERIENCE_2_ROLE_2,
-        StringConst.EXPERIENCE_2_ROLE_3,
+      time: StringConst.EXPERIENCE_4_TIME,
+      title: StringConst.EXPERIENCE_4_TITLE,
+      subtitle: StringConst.EXPERIENCE_4_SUBTITLE,
+      url: StringConst.EXPERIENCE_4_URL,
+      bulletPoint: <String>[
+        StringConst.EXPERIENCE_4_BULLET_POINT_1,
+        StringConst.EXPERIENCE_4_BULLET_POINT_2,
+        StringConst.EXPERIENCE_4_BULLET_POINT_3,
+        StringConst.EXPERIENCE_4_BULLET_POINT_4,
       ],
-      location: StringConst.EXPERIENCE_2_LOCATION,
-      duration: StringConst.EXPERIENCE_2_DURATION,
     ),
     ExperienceData(
-      company: StringConst.EXPERIENCE_CAPS,
-      position: StringConst.EXPERIENCE_1_POSITION,
-      companyUrl: StringConst.EXPERIENCE_1_URL,
-      roles: <String>[
-        StringConst.EXPERIENCE_1_ROLE_1,
-        StringConst.EXPERIENCE_1_ROLE_2,
-        StringConst.EXPERIENCE_1_ROLE_3,
+      time: StringConst.EXPERIENCE_3_TIME,
+      title: StringConst.EXPERIENCE_3_TITLE,
+      subtitle: StringConst.EXPERIENCE_3_SUBTITLE,
+      url: StringConst.EXPERIENCE_3_URL,
+      bulletPoint: <String>[
+        StringConst.EXPERIENCE_3_BULLET_POINT_1,
+        StringConst.EXPERIENCE_3_BULLET_POINT_2,
+        StringConst.EXPERIENCE_3_BULLET_POINT_3,
+        StringConst.EXPERIENCE_3_BULLET_POINT_4,
       ],
-      location: StringConst.EXPERIENCE_1_LOCATION,
-      duration: StringConst.EXPERIENCE_1_DURATION,
+    ),
+    ExperienceData(
+      time: StringConst.EXPERIENCE_2_TIME,
+      title: StringConst.EXPERIENCE_2_TITLE,
+      subtitle: StringConst.EXPERIENCE_2_SUBTITLE,
+      url: StringConst.EXPERIENCE_2_URL,
+      bulletPoint: <String>[
+        StringConst.EXPERIENCE_2_BULLET_POINT_1,
+        StringConst.EXPERIENCE_2_BULLET_POINT_2,
+        StringConst.EXPERIENCE_2_BULLET_POINT_3,
+      ],
+    ),
+    ExperienceData(
+      time: StringConst.EXPERIENCE_GAME_TIME,
+      title: StringConst.EXPERIENCE_GAME_TITLE,
+      subtitle: StringConst.EXPERIENCE_GAME_SUBTITLE,
+      url: StringConst.EXPERIENCE_GAME_URL,
+      bulletPoint: <String>[
+        StringConst.EXPERIENCE_GAME_BULLET_POINT_1,
+        StringConst.EXPERIENCE_GAME_BULLET_POINT_2,
+      ],
+    ),
+    ExperienceData(
+      time: StringConst.EXPERIENCE_1_TIME,
+      title: StringConst.EXPERIENCE_1_TITLE,
+      subtitle: StringConst.EXPERIENCE_1_SUBTITLE,
+      url: StringConst.EXPERIENCE_1_URL,
+      bulletPoint: <String>[
+        StringConst.EXPERIENCE_1_BULLET_POINT_1,
+        StringConst.EXPERIENCE_1_BULLET_POINT_2,
+        StringConst.EXPERIENCE_1_BULLET_POINT_3,
+      ],
+    ),
+  ];
+
+  static final List<ExperienceData> academicData = <ExperienceData>[
+    ExperienceData(
+      time: StringConst.ACADEMIC_2_TIME,
+      title: StringConst.ACADEMIC_2_TITLE,
+      subtitle: StringConst.ACADEMIC_2_SUBTITLE,
+      url: StringConst.ACADEMIC_2_URL,
+      bulletPoint: <String>[],
+    ),
+    ExperienceData(
+      time: StringConst.ACADEMIC_1_TIME,
+      title: StringConst.ACADEMIC_1_TITLE,
+      subtitle: StringConst.ACADEMIC_1_SUBTITLE,
+      url: StringConst.ACADEMIC_1_URL,
+      bulletPoint: <String>[
+        StringConst.ACADEMIC_1_BULLET_POINT_1,
+        StringConst.ACADEMIC_1_BULLET_POINT_2,
+        StringConst.ACADEMIC_1_BULLET_POINT_3,
+        StringConst.ACADEMIC_1_BULLET_POINT_4,
+        StringConst.ACADEMIC_1_BULLET_POINT_5,
+        StringConst.ACADEMIC_1_BULLET_POINT_6,
+      ],
     ),
   ];
 

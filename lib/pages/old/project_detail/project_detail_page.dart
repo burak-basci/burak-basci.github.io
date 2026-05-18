@@ -6,11 +6,11 @@
 // import '../../../utils/values/values.dart';
 // import '../../utils/values/spaces.dart';
 // import '../../widgets/about_project.dart';
-// import '../../widgets/animations/animated_text_slide_box_transition.dart';
-// import '../../widgets/animations/animated_wave_line.dart';
+// import '../../widgets/text/slide_box_transitioning_text.dart';
+// import '../../widgets/text/animated_wave_line.dart';
 // import '../../widgets/helper/custom_spacer.dart';
 // import '../../widgets/scaffolding/page_wrapper.dart';
-// import '../../widgets/scaffolding/simple_footer.dart';
+// import '../../widgets/scaffolding/bottom_part_footer.dart';
 // import 'widgets/next_project.dart';
 // import 'widgets/project_item.dart';
 //
@@ -91,7 +91,7 @@
 //   @override
 //   Widget build(BuildContext context) {
 //     getArguments();
-//     final TextTheme textTheme = Theme.of(context).textTheme;
+//     final TextTheme textTheme = Get.textTheme;
 //     final TextStyle? coverTitleStyle = textTheme.headline2?.copyWith(
 //       color: AppColors.white,
 //       fontSize: 40,
@@ -102,19 +102,19 @@
 //     final EdgeInsetsGeometry padding = EdgeInsets.only(
 //       left: responsiveSize(
 //         context,
-//         assignWidth(context, 0.10),
-//         assignWidth(context, 0.15),
+//         Get.width *  0.10,
+//         Get.width *  0.15,
 //       ),
 //       right: responsiveSize(
 //         context,
-//         assignWidth(context, 0.10),
-//         assignWidth(context, 0.25),
+//         Get.width *  0.10,
+//         Get.width *  0.25,
 //       ),
 //     );
 //     final double contentAreaWidth = responsiveSize(
 //       context,
-//       assignWidth(context, 0.60),
-//       assignWidth(context, 0.80),
+//       Get.width *  0.60,
+//       Get.width *  0.80,
 //     );
 //     return PageWrapper(
 //       backgroundColor: AppColors.white,
@@ -135,15 +135,15 @@
 //         ),
 //         children: <Widget>[
 //           SizedBox(
-//             width: widthOfScreen(context),
-//             height: heightOfScreen(context),
+//             width: Get.width,
+//             height: Get.height,
 //             child: Stack(
 //               children: <Widget>[
 //                 Image.asset(
 //                   projectDetails.data.coverUrl,
 //                   fit: BoxFit.cover,
-//                   width: widthOfScreen(context),
-//                   height: heightOfScreen(context),
+//                   width: Get.width,
+//                   height: Get.height,
 //                 ),
 //                 Container(
 //                   margin: EdgeInsets.only(bottom: waveLineHeight + 40),

@@ -1,6 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
-part of values;
+part of 'values.dart';
 
 class Sizes {
   static const double SIZE_120 = 120.0;

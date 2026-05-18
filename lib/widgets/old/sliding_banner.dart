@@ -38,10 +38,10 @@
 //
 //   @override
 //   Widget build(BuildContext context) {
-//     TextTheme textTheme = Theme.of(context).textTheme;
+//     TextTheme textTheme = Get.textTheme;
 //     return Container(
-//       width: widthOfScreen(context),
-//       height: assignHeight(context, 0.5),
+//       width: Get.width,
+//       height: Get.height * 0.5,
 //       color: AppColors.black,
 //       child: Column(
 //         crossAxisAlignment: CrossAxisAlignment.start,

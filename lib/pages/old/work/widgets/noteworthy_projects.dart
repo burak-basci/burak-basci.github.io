@@ -5,9 +5,9 @@
 // import '../../../../utils/functions.dart';
 // import '../../../../utils/values/values.dart';
 // import '../../../utils/values/spaces.dart';
-// import '../../../widgets/animated_line_through_text.dart';
-// import '../../../widgets/animations/animated_positioned_text.dart';
-// import '../../../widgets/animations/animated_text_slide_box_transition.dart';
+// import '../../../widgets/animated_underline_text_button.dart';
+// import '../../../widgets/text/self_positioning_text.dart';
+// import '../../../widgets/text/slide_box_transitioning_text.dart';
 //
 // class NoteWorthyProjects extends StatefulWidget {
 //   const NoteWorthyProjects({Key? key}) : super(key: key);
@@ -36,7 +36,7 @@
 //
 //   @override
 //   Widget build(BuildContext context) {
-//     TextTheme textTheme = Theme.of(context).textTheme;
+//     TextTheme textTheme = Get.textTheme;
 //     TextStyle? titleStyle = textTheme.subtitle1?.copyWith(
 //       color: AppColors.black,
 //       fontSize: responsiveSize(
@@ -150,7 +150,7 @@
 //
 //   @override
 //   Widget build(BuildContext context) {
-//     final TextTheme textTheme = Theme.of(context).textTheme;
+//     final TextTheme textTheme = Get.textTheme;
 //     final TextStyle? defaultNumberStyle = textTheme.subtitle1?.copyWith(
 //       fontSize: Sizes.TEXT_SIZE_16,
 //       color: AppColors.grey550,
@@ -193,8 +193,7 @@
 //         const SpaceW20(),
 //         Flexible(
 //           child: AnimatedLineThroughText(
-//             maxLines: 3,
-//             width: assignWidth(context, 0.5),
+//             width: Get.width *  0.5,
 //             hasSlideBoxAnimation: true,
 //             controller: controller,
 //             text: projectName,

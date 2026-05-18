@@ -1,386 +1,205 @@
 import 'package:flutter/material.dart';
-import 'package:layout/layout.dart';
-import 'package:responsive_builder/responsive_builder.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get/get.dart';
 
-import '../../../../utils/adaptive_layout.dart';
 import '../../../../utils/values/values.dart';
-import '../../../widgets/animations/animated_slide_transition.dart';
+import '../../../utils/adaptive_layout.dart';
 import 'home_about_dev.dart';
 import 'home_scroll_down_button.dart';
 
-const kDuration = Duration(milliseconds: 600);
-
-class HomePageHeader extends StatefulWidget {
+class HomePageHeader extends StatelessWidget {
   const HomePageHeader({
-    Key? key,
-    required this.scrollToWorksKey,
-    required this.controller,
-  }) : super(key: key);
+    required this.scrollController,
+    required this.textController,
+    required this.circleController,
+    this.height,
+    super.key,
+  });
 
-  final GlobalKey scrollToWorksKey;
-  final AnimationController controller;
-  @override
-  HomePageHeaderState createState() => HomePageHeaderState();
-}
+  final ScrollController scrollController;
+  final AnimationController textController;
+  final AnimationController circleController;
 
-class HomePageHeaderState extends State<HomePageHeader> with TickerProviderStateMixin {
-  late AnimationController controller;
-  late AnimationController scrollDownButtonController;
-  late Animation<Offset> imageAnimation;
-  late Animation<Offset> scrollDownBtnAnimation;
-
-  double whiteCircleSize = 0.0; // Initial size of the circle
-  double greyCircleSize = 0.0; // Initial size of the circle
-
-  @override
-  void initState() {
-    whiteCircleSize = 0.0;
-    greyCircleSize = 0.0;
-
-    widget.controller.addStatusListener((status) {
-      if (controller.status == AnimationStatus.forward) {
-        Future.delayed(const Duration(milliseconds: 300), () {
-          setState(() {
-            greyCircleSize = 479.0; // Final size of the circle
-          });
-        });
-        Future.delayed(const Duration(milliseconds: 600), () {
-          setState(() {
-            whiteCircleSize = 480.0; // Final size of the circle
-          });
-        });
-      }
-    });
-
-    Future.delayed(const Duration(milliseconds: 3600), () {
-      setState(() {
-        greyCircleSize = 479.0; // Final size of the circle
-      });
-    });
-    Future.delayed(const Duration(milliseconds: 3900), () {
-      setState(() {
-        whiteCircleSize = 480.0; // Final size of the circle
-      });
-    });
-
-    scrollDownButtonController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-
-    controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2800),
-    )..repeat();
-    imageAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.05),
-      end: const Offset(0, -0.05),
-    ).animate(
-      CurvedAnimation(
-        parent: controller,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        controller.reverse();
-      } else if (status == AnimationStatus.dismissed) {
-        controller.forward();
-      }
-    });
-    controller.forward();
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    scrollDownButtonController.dispose();
-    // rotationController.dispose();
-    super.dispose();
-  }
+  /// Caller-supplied fixed height. Home page computes this once from the
+  /// initial viewport and threads it through so the section never re-reads
+  /// `Get.height` mid-scroll (which would jitter the cascade's content
+  /// height and make the scrollbar thumb jump). Falls back to the legacy
+  /// `Get.height * 0.92` for any other call site.
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = widthOfScreen(context);
-    final double screenHeight = heightOfScreen(context);
-    // final EdgeInsets textMargin = EdgeInsets.only(
-    //   left: responsiveSize(
-    //     context,
-    //     20,
-    //     screenWidth * 0.15,
-    //     small: screenWidth * 0.15,
-    //   ),
-    //   top: responsiveSize(
-    //     context,
-    //     60,
-    //     screenHeight * 0.35,
-    //     small: screenHeight * 0.35,
-    //   ),
-    //   bottom: responsiveSize(context, 20, 40),
-    // );
-    final EdgeInsets padding = EdgeInsets.symmetric(
-      horizontal: screenWidth * 0.1,
-      vertical: screenHeight * 0.1,
-    );
-    // final EdgeInsets imageMargin = EdgeInsets.only(
-    //   right: responsiveSize(
-    //     context,
-    //     20,
-    //     screenWidth * 0.05,
-    //     small: screenWidth * 0.05,
-    //   ),
-    //   top: responsiveSize(
-    //     context,
-    //     30,
-    //     screenHeight * 0.25,
-    //     small: screenHeight * 0.25,
-    //   ),
-    //   bottom: responsiveSize(context, 20, 40),
-    // );
+    return SizedBox(
+      width: Get.width,
+      height: height ?? Get.height * 0.92,
+      child: ColoredBox(
+        color: CustomColors.homePageBackground,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double fontSize;
 
-    return Container(
-      width: screenWidth,
-      height: screenHeight * 0.92,
-      color: AppColors.accentColor2.withOpacity(0.35),
-      child: Stack(
-        children: <Widget>[
-          /// Grey Circle
-          Center(
-            child: AnimatedContainer(
-              duration: const Duration(seconds: 1), // Duration of the animation
-              curve: Curves.fastOutSlowIn,
-              width: greyCircleSize,
-              height: greyCircleSize,
-              margin: const EdgeInsets.all(41),
-              decoration: const BoxDecoration(
-                color: Colors.grey,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
+            if (Get.width > Get.height) {
+              fontSize = Get.height * 0.6;
+            } else {
+              fontSize = Get.width * 0.6;
+            }
 
-          /// White Circle
-          Center(
-            child: AnimatedContainer(
-              duration: const Duration(seconds: 1), // Duration of the animation
-              curve: Curves.fastOutSlowIn,
-              width: whiteCircleSize,
-              height: whiteCircleSize,
-              margin: const EdgeInsets.all(40),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
+            final EdgeInsets padding = EdgeInsets.symmetric(
+              horizontal: Get.width * 0.1,
+              vertical: Get.height * 0.1,
+            );
 
-          /// X
-          Positioned(
-            right: 0,
-            bottom: -screenHeight * 0.1,
-            child: Padding(
-              padding: padding.copyWith(bottom: 0.0),
-              child: Transform(
-                alignment: Alignment.center,
-                transform: Matrix4.diagonal3Values(1, 0.8, 1),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    double size;
-
-                    if (screenWidth > screenHeight) {
-                      size = screenHeight * 0.6;
-                    } else {
-                      size = screenWidth * 0.6;
-                    }
-
-                    return Text(
-                      'X',
-                      style: TextStyle(
-                        fontFamily: StringConst.ROBOTO,
-                        fontSize: size,
-                        color: Colors.black,
+            return Stack(
+              children: <Widget>[
+                /// Grey Circle
+                Center(
+                  child: Container(
+                    width: 479.0,
+                    height: 479.0,
+                    margin: const EdgeInsets.all(41),
+                    decoration: const BoxDecoration(
+                      color: Colors.grey,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                      .animate(
+                        controller: circleController,
+                        autoPlay: false,
+                      )
+                      .scale(
+                        begin: const Offset(0.0, 0.0),
+                        end: const Offset(1.0, 1.0),
+                        curve: Curves.fastOutSlowIn,
+                        duration: const Duration(milliseconds: 1000),
+                      )
+                      .blur(
+                        begin: const Offset(2.0, 2.0),
+                        end: const Offset(0.0, 0.0),
                       ),
-                    );
-                  },
                 ),
-              ),
-            ),
-          ),
 
-          /// Caesar Image
-
-          Positioned(
-            right: screenWidth * 0.08 - 20,
-            bottom: 20 + screenWidth * 0.03,
-            child: AnimatedSlideTransition(
-              controller: controller,
-              position: imageAnimation,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  double size;
-
-                  if (screenWidth > screenHeight) {
-                    size = screenHeight * 0.44;
-                  } else {
-                    size = screenWidth * 0.44;
-                  }
-                  return Image.asset(
-                    ImagePath.CAESAR,
-                    fit: BoxFit.cover,
-                    width: size,
-                  );
-                },
-              ),
-            ),
-          ),
-
-          /// About Dev Text
-          Positioned(
-            left: 0,
-            bottom: 0,
-            child: Padding(
-              padding: padding,
-              child: SizedBox(
-                width: screenWidth,
-                child: HomeAboutDev(
-                  controller: widget.controller,
-                  width: screenWidth,
+                /// White Circle
+                Center(
+                  child: Container(
+                    width: 480.0,
+                    height: 480.0,
+                    margin: const EdgeInsets.all(40),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                      .animate(
+                        controller: circleController,
+                        autoPlay: false,
+                      )
+                      .scale(
+                        begin: const Offset(0.0, 0.0),
+                        end: const Offset(1.0, 1.0),
+                        curve: Curves.fastOutSlowIn,
+                        duration: const Duration(milliseconds: 1000),
+                        delay: const Duration(milliseconds: 300),
+                      )
+                      .blur(
+                        begin: const Offset(2.0, 2.0),
+                        end: const Offset(0.0, 0.0),
+                      ),
                 ),
-              ),
-            ),
-          ),
 
-          /// Scroll Down Button
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: ResponsiveBuilder(
-              builder: (context, sizingInformation) {
-                double screenWidth = sizingInformation.screenSize.width;
-                if (screenWidth < const RefinedBreakpoints().tabletNormal) {
-                  return Container();
-                } else {
-                  return InkWell(
-                    hoverColor: Colors.transparent,
-                    onTap: () {
-                      Scrollable.ensureVisible(
-                        widget.scrollToWorksKey.currentContext!,
-                        duration: kDuration,
-                      );
-                    },
-                    child: Margin(
-                      margin: const EdgeInsets.only(right: 24, bottom: 40),
-                      child: MouseRegion(
-                        onEnter: (e) => scrollDownButtonController.forward(),
-                        onExit: (e) => scrollDownButtonController.reverse(),
-                        child: AnimatedSlideTransition(
-                          controller: scrollDownButtonController,
-                          beginOffset: const Offset(0, 0),
-                          targetOffset: const Offset(0, 0.1),
-                          child: const HomeScrollDownButton(),
+                /// X
+                (constraints.maxWidth < refinedBreakpoints.mobile)
+                    ? const SizedBox()
+                    : Positioned(
+                        right: 0,
+                        bottom: -26,
+                        child: Padding(
+                          padding: padding.copyWith(bottom: 0.0),
+                          child: Transform(
+                            alignment: Alignment.center,
+                            transform: Matrix4.diagonal3Values(1, 0.8, 1),
+                            child: Text(
+                              'X',
+                              style: TextStyle(
+                                fontFamily: StringConst.ROBOTO,
+                                fontSize: fontSize,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
+
+                /// Caesar Image
+                (constraints.maxWidth < refinedBreakpoints.mobile)
+                    ? const SizedBox()
+                    : Positioned(
+                        right: Get.width * 0.08 - 20,
+                        bottom: 20 + Get.width * 0.03,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final double size;
+
+                            if (Get.width > Get.height) {
+                              size = Get.height * 0.44;
+                            } else {
+                              size = Get.width * 0.44;
+                            }
+                            return Image.asset(
+                              ImagePath.HOME_DUDE,
+                              fit: BoxFit.cover,
+                              width: size,
+                              // Explicit height locks the rendered box
+                              // even while the asset is still decoding.
+                              // Without it, the intrinsic height kicks in
+                              // post-decode and nudges layout — a stray
+                              // contributor to the scrollbar-thumb-jump
+                              // the user reported.
+                              height: size,
+                            )
+                                .animate(
+                                  onPlay: (controller) => controller.repeat(reverse: true),
+                                )
+                                .slideY(
+                                  begin: 0.05,
+                                  end: -0.05,
+                                  duration: const Duration(milliseconds: 2500),
+                                  curve: Curves.easeInOut,
+                                );
+                          },
+                        ),
+                      ),
+
+                /// About Dev Text
+                Positioned(
+                  left: 0,
+                  bottom: 0,
+                  child: Padding(
+                    padding: padding,
+                    child: SizedBox(
+                      width: Get.width,
+                      child: HomeAboutDev(
+                        controller: textController,
+                        width: Get.width,
+                      ),
                     ),
-                  );
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+                  ),
+                ),
 
-class WhiteCircle extends StatefulWidget {
-  const WhiteCircle({
-    this.child,
-    Key? key,
-  }) : super(key: key);
-  final Widget? child;
-
-  @override
-  State<WhiteCircle> createState() => _WhiteCircleState();
-}
-
-class _WhiteCircleState extends State<WhiteCircle> {
-  late double circleSize; // Initial size of the circle
-
-  @override
-  void initState() {
-    circleSize = 0.0;
-
-    // Delay the animation start to give time for the UI to build
-    Future.delayed(const Duration(milliseconds: 4000), () {
-      setState(() {
-        circleSize = 480.0; // Final size of the circle
-      });
-    });
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(seconds: 1), // Duration of the animation
-      curve: Curves.fastOutSlowIn,
-      width: circleSize,
-      height: circleSize,
-      margin: const EdgeInsets.all(40),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: widget.child,
-      ),
-    );
-  }
-}
-
-class GreyCircle extends StatefulWidget {
-  const GreyCircle({
-    this.child,
-    Key? key,
-  }) : super(key: key);
-  final Widget? child;
-
-  @override
-  State<GreyCircle> createState() => _GreyCircleState();
-}
-
-class _GreyCircleState extends State<GreyCircle> {
-  late double circleSize; // Initial size of the circle
-
-  @override
-  void initState() {
-    circleSize = 0.0;
-
-    // Delay the animation start to give time for the UI to build
-    Future.delayed(const Duration(milliseconds: 3600), () {
-      setState(() {
-        circleSize = 479.0; // Final size of the circle
-      });
-    });
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(seconds: 1), // Duration of the animation
-      curve: Curves.fastOutSlowIn,
-      width: circleSize,
-      height: circleSize,
-      margin: const EdgeInsets.all(41),
-      decoration: const BoxDecoration(
-        color: Colors.grey,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: widget.child,
+                /// Scroll Down Button
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 24, bottom: 40),
+                    child: HomeScrollDownButton(
+                      scrollController: scrollController,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

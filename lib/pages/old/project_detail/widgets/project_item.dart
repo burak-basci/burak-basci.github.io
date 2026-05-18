@@ -3,7 +3,7 @@
 // import '../../../../utils/adaptive_layout.dart';
 // import '../../../../utils/values/values.dart';
 // import '../../../utils/values/spaces.dart';
-// import '../../../widgets/animations/animated_bubble_button.dart';
+// import '../../../widgets/text/animated_bubble_button.dart';
 //
 // class ProjectItemData {
 //   ProjectItemData({
@@ -252,11 +252,10 @@
 //   @override
 //   Widget build(BuildContext context) {
 //     // width of the project item - it takes the entire width of the device
-//     double projectItemWidth = widthOfScreen(context);
+//     double projectItemWidth = Get.width;
 //     // height of the overall project item - it defaults to 40% of the height of the device
 //     double projectItemHeight = widget.projectItemheight ??
-//         assignHeight(
-//           context,
+//         Get.width *            context,
 //           0.4,
 //         );
 //     // it defaults to 75% of the height of the full [projectItemHeight]
@@ -267,10 +266,10 @@
 //     double containerWidth = widget.coloredContainerWidth ??
 //         responsiveSize(
 //           context,
-//           assignWidth(context, 0.25),
-//           assignWidth(context, 0.25), // 25%
-//           medium: assignWidth(context, 0.33), // 33%
-//           small: assignWidth(context, 0.35), // 30%
+//           Get.width *  0.25,
+//           Get.width *  0.25, // 25%
+//           medium: Get.width *  0.33, // 33%
+//           small: Get.width *  0.35, // 30%
 //         );
 //     // computes the position of the button, positions the button in the middle
 //     // of the container using subheight as it's height
@@ -310,7 +309,7 @@
 //       targetWidthOfButton,
 //       medium: targetWidthOfButtonMd,
 //     );
-//     TextTheme textTheme = Theme.of(context).textTheme;
+//     TextTheme textTheme = Get.textTheme;
 //     // textStyle for button for viewing project
 //     TextStyle? buttonStyle = textTheme.bodyText1?.copyWith(
 //       color: AppColors.black,
@@ -368,7 +367,7 @@
 //                       duration: const Duration(milliseconds: 400),
 //                       projectNumber: widget.projectNumber,
 //                       indicatorWidth:
-//                           _isHovering ? assignWidth(context, 0.18) : assignWidth(context, 0.12),
+//                           _isHovering ? Get.width *  0.18 : Get.width *  0.12,
 //                       leadingMargin: EdgeInsets.only(
 //                         top: (defaultTitleStyle!.fontSize! - defaultNumberStyle!.fontSize!) /
 //                             2.5, // computes margin dynamically based on the title and defaultNumber Size
@@ -390,7 +389,7 @@
 //             ),
 //             Positioned(
 //               top: positionOfColoredContainer,
-//               right: assignWidth(context, 0.1),
+//               right: Get.width *  0.1,
 //               child: AnimatedContainer(
 //                 width: _isHovering ? containerWidth : 0,
 //                 color: widget.containerColor,
@@ -416,7 +415,7 @@
 //             ),
 //             Positioned(
 //               top: positionOfButton, //places button
-//               right: assignWidth(context, 0.1),
+//               right: Get.width *  0.1,
 //               child: AnimatedBubbleButton(
 //                 startWidth: buttonWidth,
 //                 hovering: _isHovering,
@@ -512,18 +511,18 @@
 //   @override
 //   Widget build(BuildContext context) {
 //     // takes full width of screen
-//     final double projectItemWidth = widthOfScreen(context);
+//     final double projectItemWidth = Get.width;
 //     // takes 40% of the height of the device
-//     final double heightOfProjectImageCover = widget.imageHeight ?? assignHeight(context, 0.3);
+//     final double heightOfProjectImageCover = widget.imageHeight ?? Get.height * 0.3;
 //     // takes 90% of the width of the device
-//     final double widthOfProjectImageCover = widget.imageWidth ?? assignWidth(context, 0.9);
+//     final double widthOfProjectImageCover = widget.imageWidth ?? Get.width *  0.9;
 //     // takes 30% of the height of the device
-//     final double heightOfColoredContainer = widget.coloredContainerHeight ?? assignHeight(context, 0.3);
+//     final double heightOfColoredContainer = widget.coloredContainerHeight ?? Get.height * 0.3;
 //     // takes 80% of the width of the device
-//     final double widthOfColoredContainer = widget.coloredContainerWidth ?? assignWidth(context, 0.8);
+//     final double widthOfColoredContainer = widget.coloredContainerWidth ?? Get.width *  0.8;
 //     // this positions the colored container at the middle of the cover image.
 //     final double positionOfColoredContainer = heightOfProjectImageCover / 2;
-//     final TextTheme textTheme = Theme.of(context).textTheme;
+//     final TextTheme textTheme = Get.textTheme;
 //     // textStyle for button for viewing project
 //     final TextStyle? buttonStyle = textTheme.bodyText1?.copyWith(
 //       color: AppColors.black,
@@ -597,7 +596,7 @@
 //                 ProjectData(
 //                   duration: widget.duration,
 //                   projectNumber: widget.projectNumber,
-//                   indicatorWidth: assignWidth(context, 0.12),
+//                   indicatorWidth: Get.width *  0.12,
 //                   leadingMargin: EdgeInsets.only(
 //                     top: (defaultTitleStyle!.fontSize! - defaultNumberStyle!.fontSize!) / 2.5,
 //                     right: Sizes.MARGIN_8,

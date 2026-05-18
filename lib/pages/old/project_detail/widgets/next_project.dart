@@ -4,7 +4,7 @@
 // import '../../../../utils/adaptive_layout.dart';
 // import '../../../../utils/values/values.dart';
 // import '../../../utils/values/spaces.dart';
-// import '../../../widgets/animations/animated_bubble_button.dart';
+// import '../../../widgets/text/animated_bubble_button.dart';
 // import 'project_item.dart';
 //
 // class NextProject extends StatefulWidget {
@@ -65,7 +65,7 @@
 //
 //   @override
 //   Widget build(BuildContext context) {
-//     TextTheme textTheme = Theme.of(context).textTheme;
+//     TextTheme textTheme = Get.textTheme;
 //     const EdgeInsetsGeometry marginLeft = EdgeInsets.only(left: 16);
 //     double projectTitleFontSize = responsiveSize(context, 28, 48, medium: 40, small: 36);
 //     BorderRadiusGeometry borderRadius = const BorderRadius.all(
@@ -110,8 +110,8 @@
 //               ),
 //               const SpaceH20(),
 //               SizedBox(
-//                 width: widthOfScreen(context),
-//                 height: assignHeight(context, 0.3),
+//                 width: Get.width,
+//                 height: Get.height * 0.3,
 //                 child: Image.asset(
 //                   widget.nextProject.coverUrl,
 //                   fit: BoxFit.cover,
@@ -136,7 +136,7 @@
 //           );
 //         } else {
 //           return SizedBox(
-//             height: assignHeight(context, 0.3),
+//             height: Get.height * 0.3,
 //             child: Row(
 //               mainAxisSize: MainAxisSize.min,
 //               children: <Widget>[
@@ -225,7 +225,7 @@
 //                 Expanded(
 //                   child: SizedBox(
 //                     width: widget.width * 0.55,
-//                     height: assignHeight(context, 0.3),
+//                     height: Get.height * 0.3,
 //                     child: ScaleTransition(
 //                       scale: scaleAnimation,
 //                       child: Image.asset(

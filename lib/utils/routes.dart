@@ -5,6 +5,8 @@ import '../pages/about/about_page.dart';
 import '../pages/contact/contact_page.dart';
 import '../pages/experience/experience_page.dart';
 import '../pages/home/home_page.dart';
+import '../pages/project_detail/project_detail_page.dart';
+import 'lang.dart';
 
 typedef PathWidgetBuilder = Widget Function(BuildContext, String? /*Map<String, String>*/);
 
@@ -35,7 +37,16 @@ class RouteConfiguration {
   /// take priority.
   static List<Path> paths = <Path>[
     Path(
-      r'^' + HomePage.homePageRoute,
+      HomePage.homePageRoute,
+      (context, matches) => const HomePage(),
+    ),
+
+    // Friendly alias so a direct visit to `/home` (or `/index`,
+    // `/index.html`) still lands on the home page instead of falling
+    // through to onUnknownRoute. The intro-redirect layer also
+    // normalises these URLs back to `/` at startup.
+    Path(
+      r'^/(home|index|index\.html)$',
       (context, matches) => const HomePage(),
     ),
 
@@ -45,29 +56,36 @@ class RouteConfiguration {
     // ),
 
     Path(
-      r'^' + AboutPage.aboutPageRoute,
+      AboutPage.aboutPageRoute,
       (context, matches) => const AboutPage(),
     ),
 
     Path(
-      r'^' + ExperiencePage.experiencePageRoute,
+      ExperiencePage.experiencePageRoute,
       (context, matches) => const ExperiencePage(),
     ),
 
     Path(
-      r'^' + ContactPage.contactPageRoute,
+      ContactPage.contactPageRoute,
       (context, matches) => const ContactPage(),
     ),
 
     Path(
-      r'^' + PrivacyPolicyPage.privacyPolicyPageRoute,
+      PrivacyPolicyPage.privacyPolicyPageRoute,
       (context, matches) => const PrivacyPolicyPage(),
     ),
 
-    // Path(
-    //   r'^' + ProjectDetailPage.projectDetailPageRoute,
-    //   (context, matches) => const ProjectDetailPage(),
-    // ),
+    // Per-project URLs: /projects/<slug>
+    Path(
+      r'^/projects/([\w-]+)$',
+      (context, slug) => ProjectDetailPage(slug: slug),
+    ),
+    // Back-compat: the old /project-detail route still works and
+    // uses the index argument as before.
+    Path(
+      ProjectDetailPage.projectDetailPageRoute,
+      (context, matches) => const ProjectDetailPage(),
+    ),
 
     // Path(
     //   r'^' + CertificationPage.certificationPageRoute,
@@ -76,10 +94,18 @@ class RouteConfiguration {
   ];
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    // Pull the language out of the URL and strip the `/de` prefix
+    // before matching against the route table. The remaining `name`
+    // is the logical route, identical for both languages.
+    final String rawName = settings.name ?? '/';
+    final AppLang detected = LangController.detect(rawName);
+    LangController.to.setLang(detected);
+    final String logicalName = LangController.stripLangPrefix(rawName);
+
     for (Path path in paths) {
       final regExpPattern = RegExp(path.pattern);
-      if (regExpPattern.hasMatch(settings.name!)) {
-        final firstMatch = regExpPattern.firstMatch(settings.name!)!;
+      if (regExpPattern.hasMatch(logicalName)) {
+        final firstMatch = regExpPattern.firstMatch(logicalName)!;
         final match = (firstMatch.groupCount == 1) ? firstMatch.group(1) : null;
         return NoAnimationMaterialPageRoute<void>(
           builder: (context) => path.builder(context, match),
@@ -126,9 +152,9 @@ class RouteConfiguration {
 
 class NoAnimationMaterialPageRoute<T> extends MaterialPageRoute<T> {
   NoAnimationMaterialPageRoute({
-    required WidgetBuilder builder,
-    RouteSettings? settings,
-  }) : super(builder: builder, settings: settings);
+    required super.builder,
+    super.settings,
+  });
 
   @override
   Widget buildTransitions(

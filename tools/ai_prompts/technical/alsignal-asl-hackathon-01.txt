@@ -1,0 +1,65 @@
+ROLE
+You are an art-director generating one minimalist technical-illustration
+poster for a senior software-engineer's portfolio. This is graphic
+design, not photography — flat colour fields, clean geometric type,
+zero atmospheric detail. The image is a SYSTEM DIAGRAM rendered with
+the same Swiss / Bauhaus / Dieter-Rams visual vocabulary the project's
+main cover uses.
+
+LAYOUT
+- Aspect: 16:9, target 1600x900.
+- Background: hero colour #1F2937 as a smooth diagonal gradient
+  (slightly lighter top-left, slightly darker bottom-right). A very
+  faint diagonal-line texture (~8% opacity) and a subtle vignette are
+  allowed.
+- The diagram lives in the centre / centre-right of the frame. The
+  left ~25% of the frame is kept clean for visual breathing room.
+- Diagram elements (nodes, arrows, labels) are drawn as thin
+  geometric primitives — outlined rectangles, circles, lines —
+  rendered in white or pale neutrals. Only the most important node or
+  two are filled in the hero colour as accents.
+- Short technical labels (1–3 words each) are allowed and EXPECTED
+  on each node, so the diagram reads as a real architecture sketch
+  rather than abstract decoration. Use a clean geometric sans-serif
+  (DIN / Inter / URW Gothic vocabulary). Letter-spacing is loose.
+
+DIAGRAM
+A horizontal pipeline. Stages: 'CAMERA' → 'HAND POSE' → 'CLASSIFIER' → 'LETTER'. Connected by arrows. Hero-colour fill on the final LETTER node.
+
+STYLE
+Swiss International Style, Bauhaus, Dieter Rams industrial-design
+simplicity. The composition feels like an engineering whitepaper
+figure or a museum-shop architecture poster — never a film still and
+never a photograph.
+
+HARD RULES
+- Allowed text: short technical labels on diagram nodes, plus the
+  diagram's small title "ASL recognition pipeline" set as a quiet
+  caption near the top-left corner if it fits. No long sentences,
+  no paragraphs, no marketing copy.
+- NO people, faces, hands, body parts.
+- NO UI mockups, screenshots, real dashboards, code-on-screen.
+- NO smoke, fog, haze, particles, sparkles, atmospheric scatter.
+- NO film grain, ISO noise, dust, scratches.
+- NO realistic surface textures (concrete, brushed metal, patina,
+  woodgrain, fabric, paper fibre).
+- NO photographic depth-of-field, bokeh, lens flare.
+- NO cinematic treatment.
+- NO AI clichés: glowing brains, hex-grid meshes with neon dots,
+  Matrix rain, hooded figures, rotating data-spheres, holographic
+  blueprints, robot heads.
+- One composition — no collage, no grid, no multi-panel layout.
+
+PROJECT CONTEXT
+- title: ALSignal — ASL Hackathon
+- subtitle: Real-time American Sign Language in Unity
+- category: HACKATHON / CV
+- diagram: ASL recognition pipeline
+- hero colour (hex): #1F2937
+
+OUTPUT
+One 16:9 minimalist architecture diagram. Hero colour #1F2937 as
+the gradient background; the diagram nodes / arrows / labels rendered
+as crisp white-on-dark geometric primitives with the hero colour
+called out only on the one or two nodes that carry the most weight.
+Swiss / Bauhaus / Dieter Rams sensibility. Quality at maximum.

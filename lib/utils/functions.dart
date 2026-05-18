@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Functions {
@@ -6,17 +5,31 @@ class Functions {
     await launch(url);
   }
 
-  static Size textSize({
-    required String text,
-    required TextStyle? style,
-    int maxLines = 1,
-    double maxWidth = double.infinity,
-  }) {
-    final TextPainter textPainter = TextPainter(
-        text: TextSpan(text: text, style: style), maxLines: maxLines, textDirection: TextDirection.ltr)
-      ..layout(minWidth: 0, maxWidth: maxWidth);
-    return textPainter.size;
+  /// Make a URL-safe slug out of a free-form title.
+  ///
+  ///   "Volkswagen AI Patent Search"  -> "volkswagen-ai-patent-search"
+  ///   "Hetzner k3s Infrastructure"   -> "hetzner-k3s-infrastructure"
+  ///   "PostPilot — Social-Media Automation" -> "postpilot-social-media-automation"
+  ///   "Binance → German Tax PDF"     -> "binance-german-tax-pdf"
+  static String slugify(String text) {
+    return text
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+        .replaceAll(RegExp(r'\s+'), '-')
+        .replaceAll(RegExp(r'-+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
   }
+
+  // static Size textSize({
+  //   required String text,
+  //   required TextStyle? style,
+  //   double maxWidth = double.infinity,
+  // }) {
+  //   final TextPainter textPainter = TextPainter(
+  //       text: TextSpan(text: text, style: style), textDirection: TextDirection.ltr)
+  //     ..layout(minWidth: 0, maxWidth: maxWidth);
+  //   return textPainter.size;
+  // }
 
   // static void navigateToProject({
   //   required BuildContext context,

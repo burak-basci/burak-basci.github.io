@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../utils/functions.dart';
 import '../../../utils/values/values.dart';
@@ -14,21 +15,20 @@ class SocialData {
     required this.name,
     required this.iconData,
     required this.url,
-    this.color = AppColors.white,
+    this.color = CustomColors.white,
   });
 }
 
-class SocialsIconButton extends StatelessWidget {
-  const SocialsIconButton({
+class SocialIconButtonList extends StatefulWidget {
+  const SocialIconButtonList({
     required this.socialData,
-    this.size = Sizes.ICON_SIZE_18,
-    this.color = AppColors.white,
-    this.spacing = Sizes.SIZE_40,
-    this.runSpacing = Sizes.SIZE_16,
+    this.size = 24.0,
+    this.color = CustomColors.white,
+    this.spacing = 32.0,
+    this.runSpacing = 16.0,
     this.isHorizontal = true,
-    Key? key,
-  })  : assert(socialData.length > 0),
-        super(key: key);
+    super.key,
+  }) : assert(socialData.length > 0);
 
   final List<SocialData> socialData;
   final double size;
@@ -38,41 +38,113 @@ class SocialsIconButton extends StatelessWidget {
   final bool isHorizontal;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      child: isHorizontal
-          ? Wrap(
-              spacing: spacing,
-              runSpacing: runSpacing,
-              children: _buildSocialIcons(socialData),
-            )
-          : Column(
-              children: _buildSocialIcons(socialData),
-            ),
-    );
-  }
+  State<SocialIconButtonList> createState() => _SocialIconButtonListState();
+}
 
-  List<Widget> _buildSocialIcons(List<SocialData> socialData) {
+class _SocialIconButtonListState extends State<SocialIconButtonList> {
+  List<Widget> _buildSocialIcons() {
     List<Widget> items = <Widget>[];
 
-    for (int index = 0; index < socialData.length; index++) {
+    for (int index = 0; index < widget.socialData.length; index++) {
       items.add(
-        InkWell(
-          onTap: () => Functions.launchUrl(socialData[index].url),
-          child: Icon(
-            socialData[index].iconData,
-            color: socialData[index].color ?? color,
-            size: size,
-          ),
+        AnimatedSocialIconButton(
+          socialData: widget.socialData,
+          index: index,
+          size: widget.size,
+          color: widget.color,
         ),
       );
 
       // if it is vertical, add spaces
-      if (!isHorizontal) {
-        items.add(const SpaceH30());
+      if (!widget.isHorizontal) {
+        items.add(const SpaceH32());
       }
     }
 
     return items;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.isHorizontal) {
+      return Wrap(
+        spacing: widget.spacing,
+        runSpacing: widget.runSpacing,
+        children: _buildSocialIcons(),
+      );
+    } else {
+      return Column(
+        children: _buildSocialIcons(),
+      );
+    }
+  }
+}
+
+class AnimatedSocialIconButton extends StatefulWidget {
+  const AnimatedSocialIconButton({
+    required this.socialData,
+    required this.index,
+    this.size = Sizes.ICON_SIZE_18,
+    this.color = CustomColors.white,
+    super.key,
+  });
+
+  final List<SocialData> socialData;
+  final int index;
+  final double size;
+  final Color color;
+
+  @override
+  State<AnimatedSocialIconButton> createState() => _AnimatedSocialIconButtonState();
+}
+
+class _AnimatedSocialIconButtonState extends State<AnimatedSocialIconButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _backgroundController;
+
+  @override
+  void initState() {
+    _backgroundController = AnimationController(vsync: this);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _backgroundController.dispose();
+    super.dispose();
+  }
+
+  void _mouseEnter(bool hovering) {
+    if (hovering) {
+      _backgroundController.forward();
+    } else {
+      _backgroundController.reverse();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (e) => _mouseEnter(true),
+      onExit: (e) => _mouseEnter(false),
+      child: InkWell(
+        onTap: () => Functions.launchUrl(widget.socialData[widget.index].url),
+        child: Icon(
+          widget.socialData[widget.index].iconData,
+          color: widget.socialData[widget.index].color ?? widget.color,
+          size: widget.size,
+        )
+            .animate(
+              controller: _backgroundController,
+              autoPlay: false,
+            )
+            .scale(
+              begin: const Offset(1, 1),
+              end: const Offset(1.2, 1.2),
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeIn,
+            ),
+      ),
+    );
   }
 }

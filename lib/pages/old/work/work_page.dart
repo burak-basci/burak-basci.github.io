@@ -5,7 +5,7 @@
 // import '../../../utils/functions.dart';
 // import '../../../utils/values/values.dart';
 // import '../../widgets/helper/custom_spacer.dart';
-// import '../../widgets/scaffolding/animated_footer.dart';
+// import '../../widgets/scaffolding/full_footer.dart';
 // import '../../widgets/scaffolding/default_page_header.dart';
 // import '../../widgets/scaffolding/page_wrapper.dart';
 // import '../project_detail/widgets/project_item.dart';
@@ -50,20 +50,20 @@
 //
 //   @override
 //   Widget build(BuildContext context) {
-//     final double projectItemHeight = assignHeight(context, 0.4);
+//     final double projectItemHeight = Get.height * 0.4;
 //     final double subHeight = (3 / 4) * projectItemHeight;
 //     final double extra = projectItemHeight - subHeight;
 //
 //     final EdgeInsetsGeometry padding = EdgeInsets.only(
 //       left: responsiveSize(
 //         context,
-//         assignWidth(context, 0.10),
-//         assignWidth(context, 0.15),
+//         Get.width *  0.10,
+//         Get.width *  0.15,
 //       ),
 //       right: responsiveSize(
 //         context,
-//         assignWidth(context, 0.10),
-//         assignWidth(context, 0.10),
+//         Get.width *  0.10,
+//         Get.width *  0.10,
 //       ),
 //     );
 //     return PageWrapper(

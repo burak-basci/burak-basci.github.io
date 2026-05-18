@@ -11,31 +11,32 @@ class AppTheme {
 
   static ThemeData themeData(ColorScheme colorScheme, Color focusColor) {
     return ThemeData(
+      useMaterial3: false,
       colorScheme: colorScheme,
-      textTheme: _textTheme,
-      iconTheme: const IconThemeData(color: AppColors.white),
+      textTheme: _textTheme.apply(fontSizeDelta: 1.0),
+      iconTheme: const IconThemeData(color: CustomColors.white),
       canvasColor: colorScheme.background,
       appBarTheme: const AppBarTheme(
-        color: AppColors.primaryColor,
+        color: CustomColors.primaryColor,
       ),
-      textSelectionTheme: const TextSelectionThemeData(
-        cursorColor: AppColors.black,
-        selectionColor: AppColors.textSelectionColor,
-        selectionHandleColor: AppColors.primaryColor,
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: CustomColors.black,
+        selectionColor: CustomColors.textSelectionColor,
+        selectionHandleColor: CustomColors.primaryColor,
       ),
       scaffoldBackgroundColor: colorScheme.background,
       highlightColor: Colors.transparent,
       hintColor: colorScheme.primary,
-      focusColor: AppColors.primaryColor,
+      focusColor: CustomColors.primaryColor,
       visualDensity: VisualDensity.adaptivePlatformDensity,
     );
   }
 
   static const ColorScheme lightColorScheme = ColorScheme(
-    primary: AppColors.primaryColor,
-    secondary: AppColors.secondaryColor,
-    background: AppColors.primaryColor,
-    surface: AppColors.primaryColor,
+    primary: CustomColors.primaryColor,
+    secondary: CustomColors.secondaryColor,
+    background: CustomColors.primaryColor,
+    surface: CustomColors.primaryColor,
     onBackground: Colors.white,
     error: _lightFillColor,
     onError: _lightFillColor,
@@ -52,87 +53,87 @@ class AppTheme {
   static const _light = FontWeight.w300;
 
   static const TextTheme _textTheme = TextTheme(
-    headline1: TextStyle(
+    displayLarge: TextStyle(
       fontFamily: StringConst.VISUELT_PRO,
       fontSize: Sizes.TEXT_SIZE_96,
-      color: AppColors.black,
+      color: CustomColors.black,
       fontWeight: _bold,
       fontStyle: FontStyle.normal,
     ),
-    headline2: TextStyle(
+    displayMedium: TextStyle(
       fontFamily: StringConst.VISUELT_PRO,
       fontSize: Sizes.TEXT_SIZE_60,
-      color: AppColors.black,
+      color: CustomColors.black,
       fontWeight: _bold,
       fontStyle: FontStyle.normal,
     ),
-    headline3: TextStyle(
+    displaySmall: TextStyle(
       // Removed GoogleFonts.roboto here
       fontSize: Sizes.TEXT_SIZE_48,
-      color: AppColors.black,
+      color: CustomColors.black,
       fontWeight: _bold,
       fontStyle: FontStyle.normal,
     ),
-    headline4: TextStyle(
+    headlineMedium: TextStyle(
       fontFamily: StringConst.VISUELT_PRO,
       fontSize: Sizes.TEXT_SIZE_34,
-      color: AppColors.black,
+      color: CustomColors.black,
       fontWeight: _bold,
       fontStyle: FontStyle.normal,
     ),
-    headline5: TextStyle(
+    headlineSmall: TextStyle(
       // Removed GoogleFonts.roboto here
       fontSize: Sizes.TEXT_SIZE_24,
-      color: AppColors.black,
+      color: CustomColors.black,
       fontWeight: _bold,
       fontStyle: FontStyle.normal,
     ),
-    headline6: TextStyle(
+    titleLarge: TextStyle(
       fontFamily: StringConst.VISUELT_PRO,
       fontSize: Sizes.TEXT_SIZE_20,
-      color: AppColors.black,
+      color: CustomColors.black,
       fontWeight: _bold,
       fontStyle: FontStyle.normal,
     ),
-    subtitle1: TextStyle(
-      fontFamily: StringConst.VISUELT_PRO,
+    titleMedium: TextStyle(
+      fontFamily: StringConst.INTER,
       fontSize: Sizes.TEXT_SIZE_16,
-      color: AppColors.secondaryColor,
+      color: CustomColors.secondaryColor,
       fontWeight: _semiBold,
       fontStyle: FontStyle.normal,
     ),
-    subtitle2: TextStyle(
+    titleSmall: TextStyle(
       // Removed GoogleFonts.roboto here
       fontSize: Sizes.TEXT_SIZE_14,
-      color: AppColors.secondaryColor,
+      color: CustomColors.secondaryColor,
       fontWeight: _semiBold,
       fontStyle: FontStyle.normal,
     ),
-    bodyText1: TextStyle(
-      fontFamily: StringConst.VISUELT_PRO,
+    bodyLarge: TextStyle(
+      fontFamily: StringConst.INTER,
       fontSize: Sizes.TEXT_SIZE_16,
-      color: AppColors.secondaryColor,
+      color: CustomColors.secondaryColor,
       fontWeight: _light,
       fontStyle: FontStyle.normal,
     ),
-    bodyText2: TextStyle(
+    bodyMedium: TextStyle(
       // Removed GoogleFonts.roboto here
       fontSize: Sizes.TEXT_SIZE_14,
-      color: AppColors.secondaryColor,
+      color: CustomColors.secondaryColor,
       fontWeight: _light,
       fontStyle: FontStyle.normal,
     ),
-    button: TextStyle(
+    labelLarge: TextStyle(
       // Removed GoogleFonts.roboto here
       fontSize: Sizes.TEXT_SIZE_14,
-      color: AppColors.secondaryColor,
+      color: CustomColors.secondaryColor,
       fontStyle: FontStyle.normal,
       fontWeight: _medium,
     ),
-    caption: TextStyle(
-      fontFamily: StringConst.VISUELT_PRO,
+    bodySmall: TextStyle(
+      fontFamily: StringConst.INTER,
       fontSize: Sizes.TEXT_SIZE_12,
-      color: AppColors.white,
+      color: CustomColors.white,
       fontWeight: _regular,
       fontStyle: FontStyle.normal,
     ),

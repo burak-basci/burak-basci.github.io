@@ -1,20 +1,22 @@
+import 'package:burak_basci_website/widgets/text/self_positioning_text.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../utils/adaptive_layout.dart';
 import '../../../utils/values/values.dart';
 import '../../utils/values/spaces.dart';
-import '../../widgets/animations/animated_text_slide_box_transition.dart';
 import '../../widgets/helper/custom_spacer.dart';
-import '../../widgets/scaffolding/animated_footer.dart';
-import '../../widgets/scaffolding/default_page_header.dart';
+import '../../widgets/scaffolding/footer/full_footer.dart';
+import '../../widgets/scaffolding/header/default_page_header.dart';
 import '../../widgets/scaffolding/page_wrapper.dart';
+import '../../widgets/text/slide_box_transitioning_text.dart';
 
 class PrivacyPolicyPage extends StatefulWidget {
   static const String privacyPolicyPageRoute = StringConst.PRIVACY_POLICY_PAGE;
   const PrivacyPolicyPage({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   PrivacyPolicyPageState createState() => PrivacyPolicyPageState();
@@ -25,20 +27,17 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
 
   late AnimationController _controller;
   late List<AnimationController> _privacyPolicyControllers;
+  late AnimationController _footerController;
 
   @override
   void initState() {
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
+    _controller = AnimationController(vsync: this);
 
     _privacyPolicyControllers = List.generate(Data.privacyPolicyData.length, (index) {
-      return AnimationController(
-        duration: const Duration(milliseconds: 1200),
-        vsync: this,
-      );
+      return AnimationController(vsync: this);
     });
+
+    _footerController = AnimationController(vsync: this);
 
     super.initState();
   }
@@ -46,58 +45,15 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
   @override
   void dispose() {
     _controller.dispose();
-    for (var controller in _privacyPolicyControllers) {
+    for (AnimationController controller in _privacyPolicyControllers) {
       controller.dispose();
     }
+    _footerController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final double contentAreaWidth = responsiveSize(
-      context,
-      assignWidth(context, 0.8),
-      assignWidth(context, 0.75),
-      small: assignWidth(context, 0.8),
-    );
-    final EdgeInsetsGeometry padding = EdgeInsets.only(
-      left: responsiveSize(
-        context,
-        assignWidth(context, 0.10),
-        assignWidth(context, 0.15),
-      ),
-      right: responsiveSize(
-        context,
-        assignWidth(context, 0.10),
-        assignWidth(context, 0.10),
-      ),
-      top: responsiveSize(
-        context,
-        assignHeight(context, 0.15),
-        assignHeight(context, 0.15),
-      ),
-    );
-
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    final TextStyle? defaultNumberStyle = textTheme.bodyText1?.copyWith(
-      fontSize: Sizes.TEXT_SIZE_10,
-      color: AppColors.black,
-      fontWeight: FontWeight.w400,
-      height: 2.0,
-      letterSpacing: 2,
-    );
-    final TextStyle? defaultSectionStyle = defaultNumberStyle?.copyWith(
-      color: AppColors.grey600,
-    );
-    final TextStyle? defaultTitleStyle = textTheme.subtitle1?.copyWith(
-      color: AppColors.black,
-      fontSize: responsiveSize(
-        context,
-        Sizes.TEXT_SIZE_16,
-        Sizes.TEXT_SIZE_20,
-      ),
-    );
-
     return PageWrapper(
       selectedRoute: PrivacyPolicyPage.privacyPolicyPageRoute,
       selectedPageName: StringConst.PRIVACY_POLICY,
@@ -116,36 +72,60 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
             headingText: StringConst.PRIVACY_POLICY,
             headingTextController: _controller,
           ),
-          Padding(
-            padding: padding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                ..._buildPrivacyPolicySection(
-                  data: Data.privacyPolicyData,
-                  width: contentAreaWidth,
-                ),
-                const CustomSpacer(heightFactor: 0.1),
-              ],
+          LayoutBuilder(builder: (context, constraints) {
+            final double contentAreaWidth = responsiveSize(
+              mobile: Get.width * 0.8,
+              desktop: Get.width * 0.75,
+              tabletSmall: Get.width * 0.8,
+            );
+            final EdgeInsetsGeometry padding = EdgeInsets.only(
+              left: responsiveSize(
+                mobile: Get.width * 0.10,
+                desktop: Get.width * 0.15,
+              ),
+              right: Get.width * 0.10,
+              top: Get.height * 0.15,
+            );
+
+            return Padding(
+              padding: padding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  ...buildPrivacyPolicySection(
+                    data: Data.privacyPolicyData,
+                    width: contentAreaWidth,
+                  ),
+                  const CustomSpacer(heightFactor: 0.1),
+                ],
+              ),
+            );
+          }),
+          VisibilityDetector(
+            key: const Key('animated-footer'),
+            onVisibilityChanged: (visibilityInfo) {
+              if (visibilityInfo.visibleFraction > 0.25) {
+                _footerController.forward();
+              }
+            },
+            child: FullFooter(
+              controller: _footerController,
             ),
           ),
-          const AnimatedFooter(),
         ],
       ),
     );
   }
 
-  List<Widget> _buildPrivacyPolicySection({
+  List<Widget> buildPrivacyPolicySection({
     required List<PrivacyPolicyData> data,
     required double width,
   }) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    TextStyle? defaultTitleStyle = textTheme.subtitle1?.copyWith(
-      color: AppColors.black,
+    TextStyle? defaultTitleStyle = Get.textTheme.titleMedium?.copyWith(
+      color: CustomColors.black,
       fontSize: responsiveSize(
-        context,
-        Sizes.TEXT_SIZE_18,
-        Sizes.TEXT_SIZE_20,
+        mobile: Sizes.TEXT_SIZE_18,
+        desktop: Sizes.TEXT_SIZE_20,
       ),
     );
 
@@ -161,8 +141,7 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
         VisibilityDetector(
           key: Key('privacy-policy-section-$index'),
           onVisibilityChanged: (visibilityInfo) {
-            double visiblePercentage = visibilityInfo.visibleFraction * 100;
-            if (visiblePercentage > 40) {
+            if (visibilityInfo.visibleFraction > 0.25) {
               _privacyPolicyControllers[index].forward();
             }
           },
@@ -170,25 +149,23 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               data[index].title != null
-                  ? AnimatedTextSlideBoxTransition(
+                  ? AnimatedSlideBoxTransitionText(
                       controller: _privacyPolicyControllers[index],
                       text: data[index].title!,
-                      maxLines: 100,
                       width: width,
                       textStyle: defaultTitleStyle,
                     )
                   : const SizedBox(),
               data[index].title != null ? const SpaceH12() : const SizedBox(),
-              AnimatedTextSlideBoxTransition(
+              SelfPositioningText(
                 controller: _privacyPolicyControllers[index],
                 text: data[index].content,
-                maxLines: 100,
                 width: width,
+                delay: const Duration(milliseconds: 800),
                 textStyle: defaultTitleStyle?.copyWith(
                   fontSize: responsiveSize(
-                    context,
-                    Sizes.TEXT_SIZE_16,
-                    Sizes.TEXT_SIZE_18,
+                    mobile: Sizes.TEXT_SIZE_16,
+                    desktop: Sizes.TEXT_SIZE_18,
                   ),
                   fontWeight: FontWeight.w300,
                 ),

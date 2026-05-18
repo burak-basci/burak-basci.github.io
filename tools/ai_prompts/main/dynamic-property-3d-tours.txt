@@ -1,0 +1,82 @@
+ROLE
+You are an art-director generating one minimalist editorial cover
+poster for a senior software-engineer's portfolio. This is graphic
+design, not photography — flat colour fields, clean geometric type,
+zero atmospheric detail. The poster must include the project's title,
+subtitle, category and a large faded watermark of the initials.
+
+LAYOUT (mirror this exact template across every cover)
+
+Background:
+- 16:9, target 1600x900.
+- Hero colour #475569 as a smooth diagonal gradient — slightly
+  lighter top-left, slightly darker bottom-right.
+- A very faint diagonal-line texture is allowed (~8% opacity), never
+  busy. A subtle vignette darkening the corners.
+
+Initials watermark (the heroic background element):
+- The four letters "DP3T" rendered HUGE in a clean geometric
+  sans-serif (DIN, Inter Display, URW Gothic style), all caps.
+- White at ~10–14% opacity, very slightly blurred.
+- Positioned upper-right or visually centred, occupying roughly 55–
+  65% of the frame height. Dominant but quiet.
+
+Foreground typography stack (lower-left, ~6% margin from left edge):
+1. Category line — "CLIENT / 3D" — small uppercase, letter-spaced
+   ~3 px, at ~60% white opacity. Sits above the title.
+2. Project title — "Dynamic Property 3D Tours" — large bold geometric sans-serif,
+   pure white, single line if it fits, two lines otherwise.
+3. Subtitle / description — "Browser-based walkable 3D building models for real-estate" — lighter weight, ~80%
+   opacity, wrapped to a maximum of two lines.
+4. Two thin horizontal accent rules under the subtitle, ~90 px and
+   ~40 px wide, drawn in the hero colour #475569.
+
+Abstract accent (small, secondary — never the main subject):
+- One small geometric primitive that complements the project's
+  category. Placed off-centre, far from the title stack so it never
+  competes with the type.
+- Always one element only — never a literal illustration.
+- Style: one tall vertical rectangle (building silhouette) on a flat near-black field with one small square 'window' inside it filled with the hero colour.
+
+STYLE
+Swiss International Style, Bauhaus, Dieter Rams editorial design.
+Flat colour fields. No smoke, no haze, no atmosphere, no grain, no
+photo depth, no lens flare. The composition feels like a museum-shop
+poster, not a film still.
+
+TEXT — RENDER THESE FOUR STRINGS LITERALLY
+- INITIALS (watermark, huge):   "DP3T"
+- CATEGORY (small uppercase):   "CLIENT / 3D"
+- TITLE (large foreground):     "Dynamic Property 3D Tours"
+- SUBTITLE (smaller, under):    "Browser-based walkable 3D building models for real-estate"
+
+HARD RULES
+- The four strings above MUST appear, spelled exactly as written. Do
+  not invent additional copy, numbers, signatures, dates or labels.
+- NO people, faces, hands, body parts, silhouettes.
+- NO UI mockups, screenshots, dashboards, code-on-screen.
+- NO smoke, fog, haze, particles, sparkles, atmospheric scatter.
+- NO film grain, ISO noise, dust, scratches.
+- NO realistic surface textures (concrete, brushed metal, patina,
+  woodgrain, fabric, paper fibre).
+- NO photographic depth-of-field, bokeh, lens flare.
+- NO cinematic treatment, no film-still framing.
+- NO AI clichés: glowing brains, hex-grid meshes with neon dots,
+  Matrix rain, hooded figures, rotating data-spheres, holographic
+  blueprints, robot heads.
+- One composition — no collage, no grid, no multi-panel layout.
+
+PROJECT
+- title: Dynamic Property 3D Tours
+- subtitle: Browser-based walkable 3D building models for real-estate
+- category: CLIENT / 3D
+- initials: DP3T
+- hero colour (hex): #475569
+
+OUTPUT
+One 16:9 minimalist editorial poster. Hero colour #475569 as the
+gradient background; "DP3T" rendered huge as a faded watermark;
+"CLIENT / 3D", "Dynamic Property 3D Tours" and "Browser-based walkable 3D building models for real-estate" cleanly set
+bottom-left; two short accent rules below; one small abstract glyph
+placed quietly elsewhere in the frame. Swiss / Bauhaus / Dieter Rams
+sensibility. Quality at maximum.

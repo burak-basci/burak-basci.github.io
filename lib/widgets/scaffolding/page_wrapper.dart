@@ -1,12 +1,15 @@
 import "package:flutter/material.dart";
 
-import '../../../utils/adaptive_layout.dart';
+import '../../../utils/page_transition.dart';
 import '../../../utils/values/values.dart';
-import '../../pages/home/home_page.dart';
-import 'app_drawer.dart';
-import 'loading_slider.dart';
-import 'top_navigation_bar.dart';
+import 'floating_back_button.dart';
+import 'header/app_drawer.dart';
+import 'header/top_navigation_bar.dart';
 
+/// Lightweight nav-argument bag kept for backward-compat with call-sites
+/// that still expect it. The actual cover/uncover panel lives in the
+/// global [PageTransitionOverlay], so these flags are only used now to
+/// tell the home page whether to play its first-load intro animation.
 class NavigationArguments {
   bool showUnVeilPageAnimation;
   bool reverseAnimationOnPop;
@@ -19,161 +22,121 @@ class NavigationArguments {
 
 class PageWrapper extends StatefulWidget {
   const PageWrapper({
+    required this.navigationBarAnimationController,
     required this.selectedRoute,
     required this.selectedPageName,
-    required this.navigationBarAnimationController,
     required this.child,
+    this.hasSideTitle = true,
+    this.backgroundColor,
     this.customLoadingAnimation = const SizedBox(),
     this.onLoadingAnimationDone,
-    this.hasSideTitle = true,
-    this.hasUnveilPageAnimation = true,
-    this.reverseAnimationOnPop = true,
-    this.backgroundColor,
-    this.navigationBarTitleColor = AppColors.grey600,
-    this.navigationBarSelectedTitleColor = Colors.black,
-    this.appLogoColor = Colors.black,
-    Key? key,
-  }) : super(key: key);
+    this.hasStandardPageUnveilAnimation = true,
+    this.reverseUnveilPageAnimationOnPop = true,
+    this.showFloatingBack = false,
+    super.key,
+  });
 
+  final AnimationController navigationBarAnimationController;
   final String selectedRoute;
   final String selectedPageName;
-  final AnimationController navigationBarAnimationController;
-  final VoidCallback? onLoadingAnimationDone;
   final Widget child;
-  final Widget customLoadingAnimation;
   final bool hasSideTitle;
-  final bool hasUnveilPageAnimation;
-  final bool reverseAnimationOnPop;
   final Color? backgroundColor;
-  final Color navigationBarTitleColor;
-  final Color navigationBarSelectedTitleColor;
-  final Color appLogoColor;
+  final Widget customLoadingAnimation;
+  final VoidCallback? onLoadingAnimationDone;
+  final bool hasStandardPageUnveilAnimation;
+  final bool reverseUnveilPageAnimationOnPop;
+  final bool showFloatingBack;
 
   @override
   PageWrapperState createState() => PageWrapperState();
 }
 
-class PageWrapperState extends State<PageWrapper> with TickerProviderStateMixin {
-  late AnimationController forwardSlideController;
-  late AnimationController unveilPageSlideController;
+class PageWrapperState extends State<PageWrapper> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
-  final Duration duration = const Duration(milliseconds: 1000);
 
-  loadPage() {
-    forwardSlideController.forward();
-    forwardSlideController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        if (widget.onLoadingAnimationDone != null) {
-          widget.onLoadingAnimationDone!();
-        }
-      }
-    });
+  /// Cover → push → uncover (handled centrally). The route argument
+  /// continues to carry [NavigationArguments] so the home page can decide
+  /// whether to replay its intro animation when it remounts.
+  void slideAndPushNamed(String routeName, {Object? arguments}) {
+    PageTransition.goTo(context, routeName, arguments: arguments);
+  }
+
+  /// Convenience: find the nearest [PageWrapperState] and trigger the
+  /// global page-transition. Always returns true now (kept for backward
+  /// compatibility — older call-sites used the return value as a "no
+  /// ancestor found" fallback signal).
+  static bool slideAndPushNamedFrom(
+    BuildContext context,
+    String routeName, {
+    Object? arguments,
+  }) {
+    PageTransition.goTo(context, routeName, arguments: arguments);
+    return true;
   }
 
   @override
   void initState() {
-    forwardSlideController = AnimationController(
-      vsync: this,
-      duration: duration,
-    );
-    unveilPageSlideController = AnimationController(
-      vsync: this,
-      duration: duration,
-    );
-
-    if (widget.hasUnveilPageAnimation) {
-      unveilPageSlideController.forward();
-      unveilPageSlideController.addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          if (widget.onLoadingAnimationDone != null) {
-            widget.onLoadingAnimationDone!();
-          }
-        }
+    super.initState();
+    // Pages that opt into the standard unveil animation fire their
+    // onLoadingAnimationDone callback shortly after the global uncover
+    // begins, so in-page content animations can stagger in as the panel
+    // slides away. Home overrides this path with its [customLoadingAnimation].
+    if (widget.hasStandardPageUnveilAnimation &&
+        widget.onLoadingAnimationDone != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Match roughly the moment the global panel starts uncovering —
+        // cover phase is ~700 ms, then a 40 ms framework breather, so
+        // ~750 ms after mount the screen is starting to reveal again.
+        Future<void>.delayed(const Duration(milliseconds: 100), () {
+          if (!mounted) return;
+          widget.onLoadingAnimationDone?.call();
+        });
       });
     }
-
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    forwardSlideController.dispose();
-    unveilPageSlideController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // simple hack to reverse animation when navigation is popped
-    // I don't know if there's a better way to do this, but for now it works
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (forwardSlideController.isCompleted && widget.reverseAnimationOnPop) {
-        forwardSlideController.reverse();
-      }
-    });
-
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: widget.backgroundColor,
-      drawer: AppDrawer(
-        controller: widget.navigationBarAnimationController,
-        menuList: Data.menuItems,
-        selectedItemRouteName: widget.selectedRoute,
-      ),
-      body: Stack(
-        children: <Widget>[
-          widget.child,
-          TopNavigationBar(
-            selectedRouteTitle: widget.selectedPageName,
-            controller: widget.navigationBarAnimationController,
-            selectedRouteName: widget.selectedRoute,
-            hasSideTitle: widget.hasSideTitle,
-            appLogoColor: widget.appLogoColor,
-            titleColor: widget.navigationBarTitleColor,
-            selectedTitleColor: widget.navigationBarSelectedTitleColor,
-            onNavItemWebTap: (String route) {
-              forwardSlideController.forward();
-              forwardSlideController.addStatusListener((status) {
-                if (status == AnimationStatus.completed) {
-                  if (route == HomePage.homePageRoute) {
-                    Navigator.of(context).pushNamed(
-                      route,
-                      arguments: NavigationArguments(
-                        showUnVeilPageAnimation: true,
-                      ),
-                    );
-                  } else {
-                    Navigator.of(context).pushNamed(route);
-                  }
+    return SelectionArea(
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: widget.backgroundColor,
+        drawer: AppDrawer(
+          controller: widget.navigationBarAnimationController,
+          menuList: Data.menuItems,
+          selectedItemRouteName: widget.selectedRoute,
+        ),
+        body: Stack(
+          children: <Widget>[
+            widget.child,
+            TopNavigationBar(
+              controller: widget.navigationBarAnimationController,
+              selectedRouteTitle: widget.selectedPageName,
+              selectedRouteName: widget.selectedRoute,
+              hasSideTitle: widget.hasSideTitle,
+              onMenuTap: () {
+                if (_scaffoldKey.currentState!.isEndDrawerOpen) {
+                  _scaffoldKey.currentState?.openEndDrawer();
+                } else {
+                  _scaffoldKey.currentState?.openDrawer();
                 }
-              });
-            },
-            onMenuTap: () {
-              if (_scaffoldKey.currentState!.isEndDrawerOpen) {
-                _scaffoldKey.currentState?.openEndDrawer();
-              } else {
-                _scaffoldKey.currentState?.openDrawer();
-              }
-            },
-          ),
-          LoadingSlider(
-            controller: forwardSlideController,
-            width: widthOfScreen(context),
-            height: heightOfScreen(context),
-          ),
-          widget.hasUnveilPageAnimation
-              ? Positioned(
-                  right: 0,
-                  child: LoadingSlider(
-                    controller: unveilPageSlideController,
-                    curve: Curves.fastOutSlowIn,
-                    width: widthOfScreen(context),
-                    height: heightOfScreen(context),
-                    isSlideForward: false,
-                  ),
-                )
-              : widget.customLoadingAnimation,
-        ],
+              },
+              onNavItemWebTap: (String route) {
+                PageTransition.goTo(context, route);
+              },
+            ),
+            // The home page passes a custom intro animation here; for
+            // every other page the global PageTransitionOverlay is the
+            // only cover layer, so this just renders nothing.
+            if (!widget.hasStandardPageUnveilAnimation)
+              widget.customLoadingAnimation,
+            if (widget.showFloatingBack)
+              FloatingBackButton(
+                controller: widget.navigationBarAnimationController,
+              ),
+          ],
+        ),
       ),
     );
   }

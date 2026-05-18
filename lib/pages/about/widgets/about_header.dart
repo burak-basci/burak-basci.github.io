@@ -1,87 +1,112 @@
 import 'package:flutter/material.dart';
-import 'package:responsive_builder/responsive_builder.dart';
+import 'package:get/get.dart';
 
 import '../../../../utils/adaptive_layout.dart';
 import '../../../../utils/values/values.dart';
-import '../../../utils/values/spaces.dart';
+import '../../../widgets/buttons/scroll_down_button.dart';
 import 'about_header_description.dart';
 
 class AboutHeader extends StatelessWidget {
   const AboutHeader({
-    required this.width,
+    required this.scrollController,
     required this.controller,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
-  final double width;
+  final ScrollController scrollController;
   final AnimationController controller;
 
   @override
   Widget build(BuildContext context) {
-    final double spacing = responsiveSize(
-      context,
-      width * 0.15,
-      width * 0.15,
-      medium: width * 0.05,
-    );
-    final double imageWidthLarge = responsiveSize(
-      context,
-      width * 0.3,
-      width * 0.3,
-      medium: width * 0.4,
-    );
-    return ResponsiveBuilder(
-      builder: (context, sizingInformation) {
-        final double screenWidth = sizingInformation.screenSize.width;
-        if (screenWidth <= const RefinedBreakpoints().tabletSmall) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              AboutHeaderDescription(
-                controller: controller,
-                width: widthOfScreen(context),
-              ),
-              const SpaceH30(),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(80),
-                child: Image.asset(
-                  ImagePath.DEV,
-                  fit: BoxFit.cover,
-                  width: widthOfScreen(context),
-                  height: assignHeight(context, 0.45),
-                ),
-              ),
-            ],
-          );
-        } else {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              AboutHeaderDescription(
-                controller: controller,
-                width: width * 0.55,
-              ),
-              SizedBox(
-                width: spacing,
-              ),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(80.0),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: imageWidthLarge,
-                    minWidth: imageWidthLarge,
-                    maxHeight: assignHeight(context, 0.55),
-                  ),
-                  child: Image.asset(
-                    ImagePath.DEV,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-      },
+    return SizedBox(
+      width: Get.width,
+      height: Get.height,
+      child: Stack(
+        children: <Widget>[
+          LayoutBuilder(
+            builder: (context, constraints) {
+              /// Mobile View
+              if (constraints.maxWidth < refinedBreakpoints.tabletSmall) {
+                return Stack(
+                  children: <Widget>[
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(40.0, 120.0, 40.0, 0.0),
+                        child: AboutHeaderDescription(
+                          controller: controller,
+                          width: constraints.maxWidth - 80.0,
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(40.0, 0.0, 40.0, 120.0),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16.0),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: constraints.maxWidth * 0.5 - 80,
+                              maxHeight: constraints.maxHeight * 0.6 - 120,
+                            ),
+                            child: Image.asset(
+                              ImagePath.DEV,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              /// Tablet and Desktop View
+              else {
+                return Stack(
+                  children: <Widget>[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 80.0),
+                        child: AboutHeaderDescription(
+                          controller: controller,
+                          width: constraints.maxWidth * 0.5 - 100,
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 80.0),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16.0),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: constraints.maxWidth * 0.25 - 100,
+                              maxWidth: constraints.maxWidth * 0.5 - 100,
+                              maxHeight: constraints.maxHeight * 0.6,
+                            ),
+                            child: Image.asset(
+                              ImagePath.DEV,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: ScrollDownButton(scrollController: scrollController),
+          ),
+        ],
+      ),
     );
   }
 }

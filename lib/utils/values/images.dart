@@ -1,6 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
-part of values;
+part of 'values.dart';
 
 class ImagePath {
   //images route
@@ -10,10 +10,10 @@ class ImagePath {
 
   //Images
   static const String DEV = "$imageDir/piano.jpg";
-  static const String CAESAR = "$imageDir/caesar.png";
+  static const String HOME_DUDE = "$imageDir/home_dude.png";
 
-  static const String CIRCLE = "$imageDir/circle.png";
-  static const String WORKS = "$imageDir/works.png";
+  static const String DEFAULT_PAGE_FOOTER = "$imageDir/default_page_footer.png";
+  static const String DEFAULT_PAGE_HEADER = "$imageDir/default_page_header.png";
   static const String ARROW_RIGHT = "$imageDir/right-arrow.png";
   static const String ARROW_DOWN = "$imageDir/down-arrow.png";
   static const String ARROW_DOWN_IOS = "$imageDir/ios-down-arrow.png";

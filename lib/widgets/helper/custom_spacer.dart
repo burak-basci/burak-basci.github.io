@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
-
-import '../../../utils/adaptive_layout.dart';
+import 'package:get/get.dart';
 
 class CustomSpacer extends StatelessWidget {
   const CustomSpacer({
-    this.widthFactor,
     this.heightFactor,
-    Key? key,
-  }) : super(key: key);
+    this.widthFactor,
+    super.key,
+  });
 
-  final double? widthFactor;
   final double? heightFactor;
+  final double? widthFactor;
 
   @override
   Widget build(BuildContext context) {
-    final double widthFraction = widthFactor ?? 0;
-    final double heightFraction = heightFactor ?? 0;
     return SizedBox(
-      width: assignWidth(context, widthFraction),
-      height: assignHeight(context, heightFraction),
+      height: Get.height * (heightFactor ?? 0),
+      width: Get.width * (widthFactor ?? 0),
     );
   }
 }
