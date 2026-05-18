@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!--
+    Reserve the vertical scrollbar gutter at all times. Without this the
+    browser shows the scrollbar only when content exceeds the viewport,
+    and every page-to-page navigation with a different content height
+    flips the scrollbar on or off. That flip shifts the viewport width
+    by ~15px on Windows/Linux Chrome, which makes every responsive
+    widget visibly "rescale" and the scrollbar appear to jump around.
+    `scrollbar-gutter: stable` is the modern fix; `overflow-y: scroll`
+    is the legacy fallback for older browsers (Safari < 16) that always
+    renders a scrollbar so the gutter is consistent there too.
+    `overflow-x: hidden` guards against accidental horizontal scroll
+    from off-screen decorative elements.
+  -->
+  <style>
+    html {
+      scrollbar-gutter: stable;
+      overflow-y: scroll;
+      overflow-x: hidden;
+    }
+    body {
+      margin: 0;
+      overflow-x: hidden;
+    }
+  </style>
+
+  <!-- Primary identity signals -->
+  <title>Burak Basci — Senior Software Engineer · AI, SaaS & DevSecOps Portfolio</title>
+  <meta name="description" content="Burak Basci (Volkswagen Infotainment, freelance B2B SaaS) — full-stack engineer building production AI search, multi-tenant SaaS platforms and sovereign Kubernetes infrastructure. Selected work, decisions and learnings from real engagements.">
+  <meta name="author" content="Burak Basci">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="googlebot" content="index, follow">
+  <meta name="keywords" content="Burak Basci, Burak Başcı, software engineer, full stack engineer, AI engineer, Flutter, Kubernetes, FastAPI, Volkswagen, portfolio, freelance, Dortmund, Germany, SaaS, DevSecOps">
+  <link rel="canonical" href="https://www.burakbasci.de/">
+  <meta name="theme-color" content="#FFFFFF">
+
+  <!-- Open Graph for previews on LinkedIn, Slack, Discord, etc. -->
+  <meta property="og:type" content="profile">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="de_DE">
+  <meta property="og:site_name" content="Burak Basci">
+  <meta property="og:title" content="Burak Basci — Senior Software Engineer · AI, SaaS & DevSecOps Portfolio">
+  <meta property="og:description" content="Full-stack engineer at Volkswagen Infotainment and freelance B2B SaaS — production AI search, multi-tenant SaaS, sovereign Kubernetes. Selected work with engineering decisions and learnings.">
+  <meta property="og:url" content="https://www.burakbasci.de/">
+  <meta property="og:image" content="https://www.burakbasci.de/apple-icon-180x180.png">
+  <meta property="profile:first_name" content="Burak">
+  <meta property="profile:last_name" content="Basci">
+
+  <!-- Twitter / X card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Burak Basci — Senior Software Engineer">
+  <meta name="twitter:description" content="Production AI search, multi-tenant SaaS, sovereign Kubernetes. Selected work with engineering decisions and learnings.">
+  <meta name="twitter:image" content="https://www.burakbasci.de/apple-icon-180x180.png">
+
+  <!-- JSON-LD: tells Google explicitly who "Burak Basci" is, and which
+       profiles all belong to the same person. The "sameAs" links are the
+       strongest disambiguation signal for a name-query search result. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Burak Basci",
+    "alternateName": "Burak Başcı",
+    "url": "https://www.burakbasci.de/",
+    "image": "https://www.burakbasci.de/apple-icon-180x180.png",
+    "jobTitle": "Senior Software Engineer",
+    "description": "Full-stack engineer building production AI search, multi-tenant SaaS platforms and sovereign Kubernetes infrastructure. Currently at Volkswagen Infotainment; freelance B2B SaaS on the side.",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Dortmund",
+      "addressCountry": "DE"
+    },
+    "worksFor": {
+      "@type": "Organization",
+      "name": "Volkswagen Infotainment"
+    },
+    "alumniOf": {
+      "@type": "CollegeOrUniversity",
+      "name": "TU Dortmund University"
+    },
+    "knowsAbout": [
+      "Flutter",
+      "Dart",
+      "Python",
+      "FastAPI",
+      "Django",
+      "PostgreSQL",
+      "Kubernetes",
+      "k3s",
+      "GitOps",
+      "Information Retrieval",
+      "Large Language Models",
+      "Vector Search",
+      "SaaS Architecture",
+      "Multi-tenant Systems",
+      "DevSecOps",
+      "Unreal Engine 5"
+    ],
+    "sameAs": [
+      "https://github.com/burak-basci",
+      "https://www.linkedin.com/in/burak-basci"
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "url": "https://www.burakbasci.de/",
+    "name": "Burak Basci — Portfolio",
+    "inLanguage": "en",
+    "author": {
+      "@type": "Person",
+      "name": "Burak Basci"
+    }
+  }
+  </script>
+
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Burak Basci">
+  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+  <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+  <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+  <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+
+  <link rel="manifest" href="manifest.json">
+
+  <script>
+    const serviceWorkerVersion = "3689814226";
+  </script>
+  <script src="flutter.js" defer></script>
+</head>
+<body>
+  <!--
+    Crawler-visible content. Search engines read the body before the Flutter
+    JS engine takes over the document. Once Flutter mounts, this <header>
+    is replaced by the rendered canvas. Keep the copy here factual and
+    aligned with what the Flutter app shows — never use this for keyword
+    stuffing the human page does not actually contain.
+  -->
+  <header id="seo-shell" style="position:absolute;left:-9999px;top:-9999px;">
+    <h1>Burak Basci — Senior Software Engineer</h1>
+    <p>
+      Burak Basci is a senior software engineer based in Dortmund, Germany.
+      He builds production AI search at <strong>Volkswagen Infotainment</strong>
+      and runs a small freelance B2B SaaS practice on the side, covering
+      multi-tenant SaaS platforms, sovereign Kubernetes infrastructure and
+      on-device AI assistants.
+    </p>
+    <h2>Selected work</h2>
+    <ul>
+      <li><a href="/projects/volkswagen-ai-patent-search">Volkswagen AI Patent Search</a> — hybrid BM25 + dense-vector retrieval engine deployed on VW's internal Kubernetes clusters.</li>
+      <li><a href="/projects/hetzner-k3s-infrastructure">Hetzner k3s Infrastructure</a> — GitOps Kubernetes platform hosting an agency's internal tools alongside their clients' WordPress and static sites.</li>
+      <li><a href="/projects/sovereign-real-estate-infrastructure">Sovereign Real-Estate Infrastructure</a> — self-hosted Linux platform for a 700-unit property manager, replacing 15+ commercial SaaS subscriptions and cutting €20k/year in OPEX.</li>
+      <li><a href="/projects/postpilot-social-media-automation">PostPilot — Social-Media Automation</a> — multi-platform content SaaS with Temporal + LangGraph.</li>
+      <li><a href="/projects/coldmailing-lead-platform">Coldmailing Lead Platform</a> — CRM-lite outreach platform with NocoDB.</li>
+      <li><a href="/projects/luminarep-clinic-review-saas">LuminaRep</a> — premium SaaS turning clinic reviews into multi-channel social posts.</li>
+      <li><a href="/projects/llm-mail-triage-intent-engine">LLM Mail Triage</a> — pluggable-provider classification + drafting service.</li>
+      <li><a href="/projects/durak-cross-platform-card-game">Durak</a> — six-platform Flutter card game, live at durak.burakbasci.de.</li>
+      <li><a href="/projects/immopilot-real-estate-saas">ImmoPilot</a> — multi-tenant CRM-and-mail automation for German real-estate brokers.</li>
+      <li><a href="/projects/formal-document-automation">Formal Document Automation</a> — DOCX/PDF generator for invoices, payment reminders and DIN-5008 legal letters.</li>
+      <li><a href="/projects/legal-evidence-organization">Legal Evidence Organization</a> — forensic evidence rooms with chronologies and source-bound citations.</li>
+    </ul>
+    <h2>Contact</h2>
+    <p>
+      Reach Burak via the <a href="/contact">contact page</a>, on
+      <a href="https://www.linkedin.com/in/burak-basci">LinkedIn</a> or on
+      <a href="https://github.com/burak-basci">GitHub</a>.
+    </p>
+  </header>
+
+  <noscript>
+    <p style="font-family:sans-serif;padding:2rem;max-width:40rem;margin:0 auto;">
+      This portfolio is a Flutter web application and requires JavaScript to
+      view the full interactive site. The same content is available in plain
+      text below.
+    </p>
+  </noscript>
+
+  <script>
+    window.addEventListener('load', function(ev) {
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
