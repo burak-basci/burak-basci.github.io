@@ -65,6 +65,13 @@ class HomePageState extends State<HomePage>
   late double _midSpacerH;
   late double _footerH;
   late double _bottomPartH;
+  // Recent-works heading ("Crafted with love.") — the only cascade child
+  // whose height was previously the *intrinsic* Column/TextPainter height.
+  // TextPainter re-measures on every rebuild (and shifts by font-swap,
+  // animation tick, DPR jitter), nudging maxScrollExtent and visibly
+  // resizing the scrollbar thumb. Freezing it here matches the rest of
+  // the cascade.
+  late double _recentHeadingH;
 
   @override
   void initState() {
@@ -111,6 +118,19 @@ class HomePageState extends State<HomePage>
     final double rawFooter = _viewportHeight * 0.54;
     _footerH = rawFooter <= 450.0 ? 450.0 : rawFooter;
     _bottomPartH = (size.height * 0.2).clamp(175.0, double.infinity);
+    // Mirror the responsive font ladder used for the "Crafted with love."
+    // heading. Two lines × lineHeight (2.0) gives enough room for the
+    // mobile wrap case while keeping the section size stable on every
+    // rebuild — TextPainter's intrinsic measurement is no longer load-
+    // bearing for maxScrollExtent.
+    final double headingFs = w < 600
+        ? 30.0
+        : w < 1023
+            ? 36.0
+            : w < 1439
+                ? 40.0
+                : 48.0;
+    _recentHeadingH = headingFs * 2.0 * 2.0;
     _heightsReady = true;
   }
 
@@ -278,7 +298,13 @@ class HomePageState extends State<HomePage>
             height: _headerH,
           ),
           SizedBox(height: _topSpacerH),
-          VisibilityDetector(
+          // Heading section is force-sized so the animated text inside
+          // (TextPainter-measured on every rebuild) cannot push or pull
+          // the cascade's maxScrollExtent while its slide-box animation
+          // plays. See [_recentHeadingH] for the height ladder.
+          SizedBox(
+            height: _recentHeadingH,
+            child: VisibilityDetector(
             key: const Key('recent-projects'),
             onVisibilityChanged: (visibilityInfo) {
               if (visibilityInfo.visibleFraction > 0.25) {
@@ -335,6 +361,7 @@ class HomePageState extends State<HomePage>
                 ),
               );
             }),
+          ),
           ),
           SizedBox(height: _midSpacerH),
           LayoutBuilder(
