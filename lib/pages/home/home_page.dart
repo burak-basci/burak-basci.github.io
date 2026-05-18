@@ -289,20 +289,27 @@ class HomePageState extends State<HomePage>
         thumbVisibility: true,
         thickness: 8.0,
         radius: const Radius.circular(4),
-        child: ListView(
-          // PageStorageKey lets Flutter's PageStorageBucket cache this
-          // ListView's scroll offset against the home route. The
-          // RouteAware-driven [didPopNext] restoration in HomePageState
-          // is the load-bearing mechanism for the visible offset on
-          // back navigation; PageStorageKey stays as a belt-and-braces
-          // fallback for cases where the State could be rebuilt.
+        // SingleChildScrollView + Column lays out the whole cascade in one
+        // pass on first build, so `position.maxScrollExtent` is the total
+        // content height from frame zero and never drifts as the user
+        // scrolls. The previous `ListView` used Flutter's lazy
+        // SliverChildListDelegate layout — children outside the cacheExtent
+        // were not laid out yet, so maxScrollExtent grew when new sections
+        // came into view AND shrank again when they left the cache on the
+        // way back up, making the Scrollbar thumb visibly resize and pop
+        // multiple times per scroll. Numbers from a captured [scroll]
+        // log went 14347 → 16640 → 29463 → 16640 → 14347 across one
+        // round trip; with SingleChildScrollView they stay constant.
+        child: SingleChildScrollView(
           key: const PageStorageKey<String>('home-list'),
-          padding: EdgeInsets.zero,
           controller: _scrollController,
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),
-          children: <Widget>[
+          padding: EdgeInsets.zero,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
           HomePageHeader(
             scrollController: _scrollController,
             textController: _headerTextController,
@@ -531,6 +538,7 @@ class HomePageState extends State<HomePage>
             ),
           ),
           ],
+          ),
         ),
       ),
     );
