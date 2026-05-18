@@ -1,4 +1,3 @@
-import "package:flutter/foundation.dart" show debugPrint;
 import "package:flutter/material.dart";
 import 'package:get/get.dart';
 import 'package:url_launcher/link.dart';
@@ -91,19 +90,8 @@ class HomePageState extends State<HomePage>
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    final ScrollPosition p = _scrollController.position;
-    final double px = p.pixels;
+    final double px = _scrollController.position.pixels;
     if (px >= 0) _lastKnownOffset = px;
-    // TEMP scroll-jump diagnosis. The Scrollbar thumb is sized/positioned
-    // from these three numbers each frame. If `max` shifts between events
-    // the thumb visibly resizes and pops — that's the user's bug. Pair the
-    // output with the [scroll] trigger lines from the visibility callbacks
-    // below to know whether the shift coincides with an animation start.
-    // Uses debugPrint (not `if (kDebugMode) print`) so the log fires in
-    // release builds too — the default `flutter build web` is release.
-    debugPrint('[scroll] px=${px.toStringAsFixed(2)} '
-        'max=${p.maxScrollExtent.toStringAsFixed(2)} '
-        'vp=${p.viewportDimension.toStringAsFixed(2)}');
   }
 
   /// Compute and cache every viewport-derived height in one shot. Called
@@ -327,7 +315,6 @@ class HomePageState extends State<HomePage>
             key: const Key('recent-projects'),
             onVisibilityChanged: (visibilityInfo) {
               if (visibilityInfo.visibleFraction > 0.25) {
-                debugPrint('[scroll] recent-works trigger');
                 _recentWorksController.forward();
               }
             },
@@ -527,7 +514,6 @@ class HomePageState extends State<HomePage>
             key: const Key('animated-footer'),
             onVisibilityChanged: (visibilityInfo) {
               if (visibilityInfo.visibleFraction > 0.25) {
-                debugPrint('[scroll] footer trigger');
                 _footerController.forward();
               }
             },
