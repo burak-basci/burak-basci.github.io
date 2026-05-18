@@ -12,6 +12,7 @@ import '../../../utils/page_transition.dart';
 import '../../../utils/route_observers.dart';
 import '../../../utils/values/values.dart';
 import '../../data/projects.dart';
+import '../../widgets/animations/slide_in_on_visible.dart';
 import '../../widgets/project_item/project_item.dart';
 import '../project_detail/project_detail_page.dart';
 import '../../widgets/helper/custom_spacer.dart';
@@ -397,7 +398,16 @@ class HomePageState extends State<HomePage>
                   cascade.add(
                     Container(
                       margin: EdgeInsets.only(top: topMargin),
-                      child: Link(
+                      // SlideInOnVisible lets each tile animate in
+                      // (fade + slide from the left, 60 px) the first
+                      // time it crosses 15% visibility in the viewport,
+                      // instead of all 33 tiles snapping into place at
+                      // the moment the cascade enters view. The unique
+                      // `ValueKey` per index is required by
+                      // VisibilityDetector.
+                      child: SlideInOnVisible(
+                        uniqueKey: ValueKey<String>('cascade-$i'),
+                        child: Link(
                         uri: Uri.parse(displayUri),
                         target: LinkTarget.self,
                         builder: (BuildContext context, FollowLink? _) {
@@ -419,6 +429,7 @@ class HomePageState extends State<HomePage>
                             },
                           );
                         },
+                        ),
                       ),
                     ),
                   );

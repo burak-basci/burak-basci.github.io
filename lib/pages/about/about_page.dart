@@ -33,6 +33,11 @@ class AboutPageState extends State<AboutPage> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
 
   late AnimationController _headerController;
+  // Continuous Ken-Burns breathing on the hero photo — slow zoom 1.00 ->
+  // 1.04 that reverses on completion so the image drifts gently behind
+  // the catch lines, matching the cinematic feel of the project hero
+  // covers (see _heroBreathController in project_detail_page.dart).
+  late AnimationController _heroBreathController;
   late AnimationController _storyController;
   late AnimationController _storySelfPositioningController;
   late AnimationController _technologyController;
@@ -54,6 +59,10 @@ class AboutPageState extends State<AboutPage> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
+    _heroBreathController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 8000),
+    )..repeat(reverse: true);
     _storyController = AnimationController(vsync: this);
     _storySelfPositioningController = AnimationController(vsync: this);
     _technologyController = AnimationController(vsync: this);
@@ -69,6 +78,7 @@ class AboutPageState extends State<AboutPage> with TickerProviderStateMixin {
   @override
   void dispose() {
     _headerController.dispose();
+    _heroBreathController.dispose();
     _storyController.dispose();
     _storySelfPositioningController.dispose();
     _technologyController.dispose();
@@ -104,6 +114,7 @@ class AboutPageState extends State<AboutPage> with TickerProviderStateMixin {
           AboutHeader(
             scrollController: _scrollController,
             controller: _headerController,
+            heroBreathController: _heroBreathController,
           ),
           LayoutBuilder(
             builder: (context, constraints) {

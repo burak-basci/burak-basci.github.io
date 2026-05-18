@@ -94,9 +94,10 @@ class RouteConfiguration {
   ];
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
-    // Pull the language out of the URL and strip the `/de` prefix
+    // Pull the language out of the URL and strip the `/en` prefix
     // before matching against the route table. The remaining `name`
-    // is the logical route, identical for both languages.
+    // is the logical route, identical for both languages. German
+    // (the default) has no URL prefix.
     final String rawName = settings.name ?? '/';
     final AppLang detected = LangController.detect(rawName);
     LangController.to.setLang(detected);

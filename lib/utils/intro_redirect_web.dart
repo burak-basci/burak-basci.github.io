@@ -24,9 +24,10 @@ bool _isHomeLogicalPath(String logical) => _homeAliases.contains(logical);
 /// requested page. A home-alias URL like `/home` is normalised to `/` but
 /// *not* stashed, so the intro plays and stays put.
 ///
-/// Language handling: the `/de` prefix is detected here and applied to
+/// Language handling: the `/en` prefix is detected here and applied to
 /// [LangController] so the intro and the deferred navigation both render
-/// in German. The URL is rewritten to `/` for English / `/de` for German.
+/// in the right language. German is the default; the URL is rewritten to
+/// `/` for German / `/en` for English.
 void captureDeepLinkInto(void Function(String?) setter) {
   final String rawPath = html.window.location.pathname ?? '';
   final String rawHash = html.window.location.hash;
@@ -42,14 +43,15 @@ void captureDeepLinkInto(void Function(String?) setter) {
   }
 
   // Detect + apply the language, then strip the prefix so the rest of
-  // the logic only sees the logical path.
+  // the logic only sees the logical path. No URL signal at all → default
+  // to German.
   final AppLang detected =
-      signal == null ? AppLang.en : LangController.detect(signal);
+      signal == null ? AppLang.de : LangController.detect(signal);
   LangController.to.setLang(detected);
   final String? logical =
       signal == null ? null : LangController.stripLangPrefix(signal);
 
-  final String canonicalHome = detected == AppLang.de ? '/de' : '/';
+  final String canonicalHome = detected == AppLang.en ? '/en' : '/';
 
   // Pure home or no signal at all — make sure the URL is the canonical
   // home for the chosen language and bail.
