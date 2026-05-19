@@ -581,25 +581,34 @@ class HomePageState extends State<HomePage>
                   // tight natural width, which keeps the circle next to the
                   // content instead of stranded at the far left of an
                   // over-wide SizedBox).
-                  AnimatedBubbleButton(
-                    title: Tr.of('btn.say_hello').toUpperCase(),
-                    bubbleColor: CustomColors.grey100,
-                    imageColor: CustomColors.black,
-                    titleStyle: Get.textTheme.bodyLarge?.copyWith(
-                      color: CustomColors.black,
-                      fontSize: responsiveSize(
-                        mobile: Sizes.TEXT_SIZE_14,
-                        desktop: Sizes.TEXT_SIZE_16,
+                  //
+                  // Wrapped in [SlideInOnVisible] so the CTA slides in from
+                  // the left when the outro region enters view, matching the
+                  // cascade-tile entrance vocabulary above. Without this the
+                  // button would just pop into place while the line above is
+                  // mid-reveal, breaking the rhythm of the outro.
+                  SlideInOnVisible(
+                    uniqueKey: const Key('home-outro-cta-slide'),
+                    child: AnimatedBubbleButton(
+                      title: Tr.of('btn.say_hello').toUpperCase(),
+                      bubbleColor: CustomColors.grey100,
+                      imageColor: CustomColors.black,
+                      titleStyle: Get.textTheme.bodyLarge?.copyWith(
+                        color: CustomColors.black,
+                        fontSize: responsiveSize(
+                          mobile: Sizes.TEXT_SIZE_14,
+                          desktop: Sizes.TEXT_SIZE_16,
+                        ),
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
                       ),
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
+                      onTap: () {
+                        PageTransition.goTo(
+                          context,
+                          StringConst.CONTACT_PAGE,
+                        );
+                      },
                     ),
-                    onTap: () {
-                      PageTransition.goTo(
-                        context,
-                        StringConst.CONTACT_PAGE,
-                      );
-                    },
                   ),
                 ],
               ),
