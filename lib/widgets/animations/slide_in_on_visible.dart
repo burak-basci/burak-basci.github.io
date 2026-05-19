@@ -30,6 +30,8 @@ class SlideInOnVisible extends StatefulWidget {
     this.visibilityThreshold = 0.15,
     this.slideBeginX = -1.5,
     this.duration = const Duration(milliseconds: 900),
+    this.staggerGroup,
+    this.staggerStep = const Duration(milliseconds: 140),
     super.key,
   });
 
@@ -54,8 +56,61 @@ class SlideInOnVisible extends StatefulWidget {
 
   final Duration duration;
 
+  /// Optional cascade identifier. Tiles that share the same non-null
+  /// [staggerGroup] coordinate via a shared ticket counter so that a
+  /// batch of tiles which all cross the visibility threshold in the
+  /// same frame fan out into a wave (tile N+1 starts `staggerStep`
+  /// after tile N) instead of firing in lockstep. The counter resets
+  /// after a short idle period, so a re-scroll into a fresh region
+  /// (or a lone tile entering view well after the previous wave)
+  /// starts again from zero delay.
+  ///
+  /// `null` disables staggering entirely (forward() fires immediately
+  /// on first qualifying visibility).
+  final String? staggerGroup;
+
+  /// Per-step delay used to space neighbouring tile entrances inside a
+  /// cascade group. 140 ms feels like a deliberate wave without
+  /// dragging out the last tile noticeably.
+  final Duration staggerStep;
+
   @override
   State<SlideInOnVisible> createState() => _SlideInOnVisibleState();
+}
+
+/// Per-group state for queue-based cascade staggering. One entry per
+/// distinct [SlideInOnVisible.staggerGroup] value; entries are kept on
+/// a private static map keyed by group name. A `ticket` field holds the
+/// next slot index to hand out, and `lastClaim` records the wall-clock
+/// time of the most recent claim so the queue can self-reset after an
+/// idle gap (i.e. when a lone tile enters view well after the last
+/// wave finished).
+class _CascadeStagger {
+  _CascadeStagger();
+
+  /// Idle window after which the queue resets to slot 0. Slightly longer
+  /// than the worst-case per-tile delay so a small wave can complete
+  /// before a freshly-triggered tile starts numbering from scratch.
+  static const Duration _idleReset = Duration(milliseconds: 1500);
+
+  static final Map<String, _CascadeStagger> _groups = <String, _CascadeStagger>{};
+
+  int _ticket = 0;
+  DateTime _lastClaim = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Claim the next slot in [group]'s queue. Resets to 0 if the queue
+  /// has been idle for more than [_idleReset] since the previous claim.
+  static int claim(String group) {
+    final _CascadeStagger entry = _groups.putIfAbsent(group, _CascadeStagger.new);
+    final DateTime now = DateTime.now();
+    if (now.difference(entry._lastClaim) > _idleReset) {
+      entry._ticket = 0;
+    }
+    final int slot = entry._ticket;
+    entry._ticket += 1;
+    entry._lastClaim = now;
+    return slot;
+  }
 }
 
 class _SlideInOnVisibleState extends State<SlideInOnVisible>
@@ -95,7 +150,30 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
         if (_hasAnimated) return;
         if (info.visibleFraction >= widget.visibilityThreshold) {
           _hasAnimated = true;
-          if (mounted) _controller.forward();
+          // Queue-based stagger: tiles which share a `staggerGroup` and
+          // cross the visibility threshold inside the same idle window
+          // claim sequential slots, so the first tile in a wave fires
+          // immediately and each subsequent neighbour waits
+          // `staggerStep` longer. A lone tile entering view well after
+          // the previous wave reclaims slot 0 (the queue resets after a
+          // short idle gap inside [_CascadeStagger]) so it does NOT
+          // inherit a long pending delay from earlier tiles.
+          //
+          // The `mounted` guard inside the delayed callback makes the
+          // schedule safe if the user navigates away (e.g. into a
+          // project detail) before the delay elapses — the controller
+          // would otherwise be disposed.
+          int slot = 0;
+          if (widget.staggerGroup != null) {
+            slot = _CascadeStagger.claim(widget.staggerGroup!);
+          }
+          if (slot == 0) {
+            if (mounted) _controller.forward();
+          } else {
+            Future<void>.delayed(widget.staggerStep * slot, () {
+              if (mounted) _controller.forward();
+            });
+          }
         }
       },
       child: widget.child

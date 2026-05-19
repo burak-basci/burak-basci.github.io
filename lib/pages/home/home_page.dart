@@ -408,9 +408,18 @@ class HomePageState extends State<HomePage>
                       // instead of all 33 tiles snapping into place at
                       // the moment the cascade enters view. The unique
                       // `ValueKey` per index is required by
-                      // VisibilityDetector.
+                      // VisibilityDetector. The shared `staggerGroup`
+                      // coordinates a queue-based wave: tiles that all
+                      // cross the threshold in the same frame fan out
+                      // via sequential slot claims (slot 0 fires
+                      // immediately, slot N waits `staggerStep` × N).
+                      // The shared ticket counter resets after a short
+                      // idle gap, so a lone tile entering view well
+                      // after the previous wave does NOT inherit a
+                      // long pending delay.
                       child: SlideInOnVisible(
                         uniqueKey: ValueKey<String>('cascade-$i'),
+                        staggerGroup: 'home-cascade',
                         child: Link(
                         uri: Uri.parse(displayUri),
                         target: LinkTarget.self,
