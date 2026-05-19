@@ -68,9 +68,14 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
+        // Inner desktop-only right gutter so clickable content ends
+        // BEFORE the Scrollbar thumb's column. See
+        // [kDesktopScrollbarGutter] in page_wrapper.dart.
+        child: Padding(
+          padding: desktopScrollGutterPadding(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
           DefaultPageHeader(
             scrollController: _scrollController,
             headingText: StringConst.PRIVACY_POLICY,
@@ -117,6 +122,7 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
             ),
           ),
         ],
+        ),
         ),
       ),
     );

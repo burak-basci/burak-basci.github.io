@@ -7,36 +7,45 @@ import 'floating_back_button.dart';
 import 'header/app_drawer.dart';
 import 'header/top_navigation_bar.dart';
 
-/// Pixel gutter reserved on the right edge of every page on desktop so
-/// the always-visible Scrollbar thumb has uncontested click space.
-/// Without this the right edge of clickable content (project tiles,
-/// links, hover cards) extends underneath the Scrollbar gutter and the
-/// browser routes the mouse-down to the content instead of letting
-/// the user drag the scrollbar thumb, which opens links when the user
-/// is just trying to scroll.
+/// Pixel gutter every desktop page reserves on the right edge of its
+/// scrollable content, INSIDE its own Scrollbar / scrollable viewport,
+/// so the always-visible Scrollbar thumb sits in dead space and never
+/// overlaps clickable content (project tiles, links, hover cards).
 ///
-/// The gutter is realised by insetting [widget.child] with a
-/// right Padding of [_kDesktopScrollbarGutter] on desktop, which
-/// shifts every clickable widget — and the page's own Scrollbar with
-/// it — left by the gutter width. The scrollbar thumb still paints on
-/// the right edge of the padded child, so the thumb sits at
-/// `[viewportWidth - gutter - thumbThickness, viewportWidth - gutter]`,
-/// while the rightmost [_kDesktopScrollbarGutter] pixels of the
-/// viewport contain no clickable content at all. A transparent
-/// hit-absorber strip is then overlaid in those rightmost pixels so
-/// any stray click in that empty band is swallowed and cannot fall
-/// through to anything underneath.
+/// The gutter is realised per-page: each page wraps the child of its
+/// `SingleChildScrollView` (or other scrollable) in a
+/// `Padding(EdgeInsets.only(right: kDesktopScrollbarGutter))` on desktop.
+/// This insets the inner content WITHOUT shifting the Scrollbar — the
+/// Scrollbar still paints at the right edge of the scrollable's
+/// viewport, but the content now ends `kDesktopScrollbarGutter` pixels
+/// before the viewport's right edge. The thumb therefore occupies a
+/// strip with no tile underneath, and a mouse-down on the thumb cannot
+/// fall through to a tile.
 ///
-/// An earlier attempt overlaid only an 8 px absorber strip at
-/// `right: 8 .. right: 16` (just left of the thumb) WITHOUT padding
-/// the child: the scrollbar thumb itself remained directly on top of
-/// the project tiles, and a mouse-down on the thumb was still routed
-/// to the tile because the Scrollbar's gesture recognizer only claims
-/// drag gestures, not single taps — so the tap fell through to the
-/// tile and opened the project page. The current implementation
-/// removes that overlap entirely by physically shifting the tiles
-/// inward by the gutter width.
-const double _kDesktopScrollbarGutter = 16.0;
+/// Use [kDesktopScrollbarGutter] in every page that owns a scrollable
+/// view; the helper [desktopScrollGutterPadding] returns an
+/// [EdgeInsets] that is the gutter on desktop and zero on tablet /
+/// mobile (where the platform scrollbar overlays or auto-hides and
+/// using the full width is preferred).
+///
+/// Earlier attempts that wrapped `widget.child` in a Padding here in
+/// PageWrapper failed: the padding shifted the entire scrollable —
+/// Scrollbar and content together — left by the gutter, so the
+/// Scrollbar continued to sit on top of tiles in its new position. The
+/// gutter MUST be inserted between the scrollable's viewport and its
+/// child so that only the content moves inward, not the scrollbar.
+const double kDesktopScrollbarGutter = 24.0;
+
+/// Convenience helper for pages: returns a right-inset gutter on
+/// desktop and zero padding on smaller screens. Pages wrap the child
+/// of their scrollable with `Padding(padding: desktopScrollGutterPadding(context), child: ...)`.
+EdgeInsets desktopScrollGutterPadding(BuildContext context) {
+  final double width = MediaQuery.of(context).size.width;
+  final bool isDesktop = width > refinedBreakpoints.tablet;
+  return isDesktop
+      ? const EdgeInsets.only(right: kDesktopScrollbarGutter)
+      : EdgeInsets.zero;
+}
 
 /// Lightweight nav-argument bag kept for backward-compat with call-sites
 /// that still expect it. The actual cover/uncover panel lives in the
@@ -130,46 +139,17 @@ class PageWrapperState extends State<PageWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // Reserve a right-edge gutter on desktop so clickable page content
-    // (project tiles, links, hover targets) never extends underneath
-    // the always-visible Scrollbar thumb. On tablet / mobile the
-    // platform scrollbar overlays or auto-hides and we want the
-    // content to use the full width, so the gutter is desktop-only.
-    //
-    // The gutter is realised in two complementary layers:
-    //
-    //   1) `widget.child` is wrapped in `Padding(right: _gutter)` on
-    //      desktop. This shifts every page's content — and the page's
-    //      own Scrollbar with it — inward by [_kDesktopScrollbarGutter]
-    //      pixels. The scrollbar thumb now paints on the right edge of
-    //      the padded child, NOT on the right edge of the viewport, so
-    //      there is no longer any tile content sitting underneath the
-    //      thumb to receive a stray click.
-    //
-    //   2) A transparent hit-absorber strip is overlaid in the
-    //      rightmost [_kDesktopScrollbarGutter] pixels of the viewport.
-    //      Those pixels contain no clickable content (the child has
-    //      been padded away from them) and no scrollbar thumb (the
-    //      thumb sits LEFT of the gutter inside the padded child), so
-    //      the absorber simply guarantees that any click in this empty
-    //      band cannot fall through to the Scaffold body underneath.
-    //
-    // Earlier attempts that tried to absorb only the 8 px gap LEFT of
-    // the thumb without padding the child failed because the thumb
-    // itself overlapped tile content: a single tap on the thumb was
-    // not claimed by the Scrollbar (Scrollbar's gesture recognizer
-    // only wins drag gestures) and fell through to the tile, opening
-    // the project page.
-    final double width = MediaQuery.of(context).size.width;
-    final bool isDesktop = width > refinedBreakpoints.tablet;
-
-    final Widget paddedChild = isDesktop
-        ? Padding(
-            padding: const EdgeInsets.only(right: _kDesktopScrollbarGutter),
-            child: widget.child,
-          )
-        : widget.child;
-
+    // NOTE: the right-edge scrollbar gutter that prevents clicks from
+    // falling through to tiles underneath the Scrollbar thumb is NOT
+    // applied here — applying a Padding around `widget.child` shifts
+    // both the content AND the scrollable's own Scrollbar inward by the
+    // same amount, leaving the scrollbar still sitting directly on top
+    // of the content. Instead, each page inserts a
+    // `Padding(EdgeInsets.only(right: kDesktopScrollbarGutter))` BETWEEN
+    // its scrollable (e.g. SingleChildScrollView) and the scrollable's
+    // child column. That way the Scrollbar paints at the viewport's
+    // true right edge while the content ends one gutter-width before
+    // it, putting the thumb in genuinely empty dead space.
     return SelectionArea(
       child: Scaffold(
         key: _scaffoldKey,
@@ -181,15 +161,7 @@ class PageWrapperState extends State<PageWrapper> {
         ),
         body: Stack(
           children: <Widget>[
-            paddedChild,
-            if (isDesktop)
-              const Positioned(
-                top: 0,
-                bottom: 0,
-                right: 0,
-                width: _kDesktopScrollbarGutter,
-                child: _ScrollbarGutterHitAbsorber(),
-              ),
+            widget.child,
             TopNavigationBar(
               controller: widget.navigationBarAnimationController,
               selectedRouteTitle: widget.selectedPageName,
@@ -217,31 +189,6 @@ class PageWrapperState extends State<PageWrapper> {
               ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Invisible click-blocker that sits in the right-edge scrollbar
-/// gutter and absorbs taps so they do not fall through to a project
-/// tile sitting underneath. Uses a [GestureDetector] in opaque mode
-/// so it intercepts tap / pan gestures aimed at the gutter strip
-/// without registering as a [Listener] for [PointerSignalEvent]s —
-/// that way mouse-wheel scroll events in the gutter still propagate
-/// to the page's [Scrollable] via Flutter's [PointerSignalResolver].
-class _ScrollbarGutterHitAbsorber extends StatelessWidget {
-  const _ScrollbarGutterHitAbsorber();
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      // Show the default cursor in the gutter zone — no pointer hover
-      // affordance leaks through to the tile underneath.
-      cursor: SystemMouseCursors.basic,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {},
-        child: const SizedBox.expand(),
       ),
     );
   }
