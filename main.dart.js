@@ -41933,7 +41933,7 @@ m=1-q
 p=4*q*m
 if(q<0.2)o=q/0.2
 else o=q>0.65?B.d.dl(m/0.35,0,1):1
-return A.vt(A.uo(A.als(-0.32*p,B.H6),o),new A.j(n.d-12+q*140,12+-96*(q+p*0.35)))},
+return A.vt(A.uo(A.als(-0.32*p,B.H6),o),new A.j(n.d-12+q*110,60+-38*(q+p*0.35)))},
 $S:203}
 A.Xt.prototype={
 H(a){var s=null,r=this.e,q=this.d,p=r?A.aI(46,q.E()>>>16&255,q.E()>>>8&255,q.E()&255):A.aI(B.d.aJ(25.5),q.E()>>>16&255,q.E()>>>8&255,q.E()&255),o=A.zs(r?B.GZ:B.H1,q,s,20),n=A.bh($.a9()).ok.y
