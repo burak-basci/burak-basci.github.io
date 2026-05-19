@@ -18,6 +18,8 @@ class AnimatedButton extends StatefulWidget {
     this.backgroundColor = CustomColors.black,
     this.foregroundColor = CustomColors.white,
     this.isLoading = false,
+    this.iconKey,
+    this.iconOpacity = 1.0,
     this.onPressed,
     super.key,
   });
@@ -33,6 +35,18 @@ class AnimatedButton extends StatefulWidget {
   final Color foregroundColor;
   final bool isLoading;
   final VoidCallback? onPressed;
+
+  /// Optional key attached to the inner [Icon] widget. Used by the
+  /// contact page to read the icon's on-screen position (via
+  /// [RenderBox]) so the celebration paper-plane can lift off from
+  /// the exact spot the button's send-glyph occupied.
+  final GlobalKey? iconKey;
+
+  /// Multiplier on the inner [Icon]'s opacity. The contact page drops
+  /// this to 0 the moment the celebration plane launches, so the
+  /// button's own glyph appears to detach into the flying plane (no
+  /// "two send icons on screen at once" tell).
+  final double iconOpacity;
 
   @override
   AnimatedButtonState createState() => AnimatedButtonState();
@@ -150,10 +164,27 @@ class AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvide
                                     color: _textAndIconColor.value,
                                     size: widget.iconSize,
                                   )
-                                : Icon(
-                                    Icons.send,
-                                    size: widget.iconSize,
-                                    color: _textAndIconColor.value,
+                                : Opacity(
+                                    // `iconOpacity` is driven externally
+                                    // (see [ContactPage]'s plane launch)
+                                    // so the button's icon can fade out
+                                    // the instant the celebration plane
+                                    // takes flight — same glyph appears
+                                    // to detach from the button.
+                                    opacity: widget.iconOpacity,
+                                    child: Icon(
+                                      // Honors the externally-passed
+                                      // [widget.icon] so the success
+                                      // (check) and error (refresh)
+                                      // states render correctly. The
+                                      // GlobalKey lets the parent read
+                                      // this Icon's render position to
+                                      // anchor the paper-plane launch.
+                                      widget.icon,
+                                      key: widget.iconKey,
+                                      size: widget.iconSize,
+                                      color: _textAndIconColor.value,
+                                    ),
                                   ),
                           )
                         : const SizedBox(),

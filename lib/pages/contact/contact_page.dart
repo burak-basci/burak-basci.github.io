@@ -53,9 +53,9 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
   // ---------------------------------------------------------------------------
 
   late AnimationController _controller;
-  // Drives the success-card headline + line + body + paper-plane reveal.
-  // Held separately so we can fire it the moment the success card
-  // mounts (the page-level [_controller] has already finished its entry
+  // Drives the success-card headline + line + body reveal. Held
+  // separately so we can fire it the moment the success card mounts
+  // (the page-level [_controller] has already finished its entry
   // animation by then).
   late AnimationController _successCardController;
   // Drives the cascade exit animation of the form fields — each
@@ -63,12 +63,41 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
   // by index) to fade + slide upward as it leaves. Starts at 0
   // (everything visible), animates to 1 (everything gone).
   late AnimationController _formExitController;
+  // Drives the celebration paper-plane that lifts off the submit
+  // button's send-icon position and arcs upward into the success-card
+  // headline area. Held on its own controller so it can SPAN the
+  // boundary between "form still cascading out" and "success card
+  // appearing" — the plane needs to be in flight while both
+  // transitions overlap, so a separate timeline keeps each phase
+  // honest. 0 = at rest at button icon, 1 = arrived at success card
+  // headline.
+  late AnimationController _planeController;
   _SendStatus _status = _SendStatus.idle;
   String? _bannerMessage;
   Color? _bannerColor;
   Timer? _statusResetTimer;
   Timer? _successCardSwapTimer;
   Timer? _formExitTimer;
+  Timer? _planeLaunchTimer;
+  // Tracks whether the celebration paper-plane is currently in
+  // flight. While true, the submit button's send-icon is hidden
+  // (Opacity 0 on the [AnimatedButton.iconOpacity]) so the entity in
+  // flight reads as the button's own icon detaching. Reset on each
+  // new send attempt and on dispose.
+  bool _planeInFlight = false;
+  // GlobalKey on the submit button's inner Icon widget. Used to
+  // resolve the icon's pixel-perfect RenderBox position when the
+  // celebration plane is about to launch, so its origin sits exactly
+  // where the user just clicked (and not on empty space).
+  final GlobalKey _buttonIconKey = GlobalKey();
+  // GlobalKey on the _ContactSwapArea — the parent coordinate space
+  // we translate the button-icon's global position INTO so the plane
+  // can be Positioned in the swap area's local frame.
+  final GlobalKey _swapAreaKey = GlobalKey();
+  // Resolved on the frame the plane launches: the icon's center in
+  // the swap area's local coordinates. Null while the plane is not
+  // in flight.
+  Offset? _planeOrigin;
   // Flipped to true once the cascade-exit completes. While false, the
   // form column is rendered (and may be playing its exit animation if
   // [_formExitController.value] > 0). While true, the success card is
@@ -114,7 +143,51 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
       // 5 staggered slots × 80ms stagger + 280ms per slot ≈ 680ms total.
       duration: const Duration(milliseconds: 680),
     );
+    // Plane-flight duration. 1100ms feels right: long enough to read
+    // as a deliberate arc (the user's eye follows it), short enough
+    // that it lands close to when the success-card headline begins
+    // resolving. Curve + arc geometry are inside [_PaperPlaneArc].
+    _planeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    _planeController.addStatusListener((status) {
+      // Once the plane has landed, drop the in-flight flag. We do NOT
+      // restore [iconOpacity] on the button — by this point the
+      // form's cascade has long since hidden the whole button anyway
+      // (its slot has opacity 0 + IgnorePointer), and the success
+      // card is on-stage. Flipping the flag back lets the next idle
+      // send (e.g. if the user navigates back and submits again)
+      // start with a visible icon.
+      if (status == AnimationStatus.completed && mounted) {
+        setState(() {
+          _planeInFlight = false;
+        });
+      }
+    });
     super.initState();
+  }
+
+  /// Resolves the submit button's send-icon position in the
+  /// [_swapAreaKey] widget's local coordinate space. Returns null if
+  /// either render box isn't ready yet (defensive — by the time this
+  /// runs the layout has long since settled). Reading the position
+  /// via [RenderBox.localToGlobal] + [RenderBox.globalToLocal] is the
+  /// only way to be precise about WHERE the icon sits inside the
+  /// centered text+icon Row, which depends on the rendered text
+  /// width (button-title length, font metrics, breakpoint).
+  Offset? _resolveButtonIconOrigin() {
+    final RenderObject? iconRO =
+        _buttonIconKey.currentContext?.findRenderObject();
+    final RenderObject? swapRO =
+        _swapAreaKey.currentContext?.findRenderObject();
+    if (iconRO is! RenderBox || swapRO is! RenderBox) return null;
+    if (!iconRO.hasSize || !swapRO.hasSize) return null;
+    // Icon's center in global (screen) coords, then translated back
+    // into the swap area's local frame.
+    final Offset iconCenterGlobal =
+        iconRO.localToGlobal(iconRO.size.center(Offset.zero));
+    return swapRO.globalToLocal(iconCenterGlobal);
   }
 
   @override
@@ -122,9 +195,11 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
     _statusResetTimer?.cancel();
     _successCardSwapTimer?.cancel();
     _formExitTimer?.cancel();
+    _planeLaunchTimer?.cancel();
     _controller.dispose();
     _successCardController.dispose();
     _formExitController.dispose();
+    _planeController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _subjectController.dispose();
@@ -182,6 +257,12 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
     setState(() {
       _status = _SendStatus.sending;
       _bannerMessage = null;
+      // Defensive resets on any re-attempt — keeps the button icon
+      // visible (in case a previous celebration left state behind)
+      // and clears any stale plane origin so an aborted run can't
+      // resurrect a ghost plane on the next send.
+      _planeInFlight = false;
+      _planeOrigin = null;
     });
 
     try {
@@ -253,17 +334,45 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
         //   t=600   cascade exit starts: each field fades + slides up
         //           in a wave, ~80ms stagger over 280ms each (≈680ms
         //           total)
+        //   t=920   paper plane LAUNCHES from the submit button's
+        //           send-icon position. The button is at cascade slot
+        //           index 4 (name/email/subject/message/button on the
+        //           success path — no banner), so its 80ms-stagger
+        //           window opens at 600 + 4*80 = 920ms. The button's
+        //           own icon is hidden the instant the plane launches
+        //           (iconOpacity → 0) so the plane reads as the
+        //           detached send-glyph rather than a second one.
         //   t=1280  form is gone — flip _showSuccessCard so the form
         //           is offstage and the success card takes its slot
         //           in the Stack. _formExitController is reset.
         //   t=1280  success card controller starts: headline reveals
-        //           letter-by-letter, underline draws, body fades in,
-        //           paper plane arcs upward.
+        //           letter-by-letter, underline draws, body fades in.
+        //   t≈2020  plane arrives at the success-card headline area
+        //           (920 + 1100ms plane span) — right as the headline
+        //           is mid-reveal, so the arrival is the visual cue
+        //           "your message is delivered, here's the receipt".
         _successCardSwapTimer?.cancel();
         _formExitTimer?.cancel();
+        _planeLaunchTimer?.cancel();
         _successCardSwapTimer = Timer(const Duration(milliseconds: 600), () {
           if (!mounted) return;
           _formExitController.forward(from: 0);
+        });
+        _planeLaunchTimer = Timer(const Duration(milliseconds: 920), () {
+          if (!mounted) return;
+          // Resolve the button-icon's position in swap-area-local
+          // coordinates RIGHT before launch (positions are stable
+          // here — the button has only just started fading; layout
+          // hasn't shifted). If either render box is gone (shouldn't
+          // happen, but belt-and-braces), bail without launching
+          // rather than spawn the plane at (0,0).
+          final Offset? origin = _resolveButtonIconOrigin();
+          if (origin == null) return;
+          setState(() {
+            _planeOrigin = origin;
+            _planeInFlight = true;
+          });
+          _planeController.forward(from: 0);
         });
         _formExitTimer = Timer(const Duration(milliseconds: 1280), () {
           if (!mounted) return;
@@ -434,7 +543,11 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
                       // and is offstage until the cascade exit
                       // completes.
                       child: _ContactSwapArea(
+                        key: _swapAreaKey,
                         showSuccessCard: _showSuccessCard,
+                        planeController: _planeController,
+                        planeOrigin: _planeOrigin,
+                        planeInFlight: _planeInFlight,
                         formFields: _FormFields(
                           key: const ValueKey('contact-form-fields'),
                           status: _status,
@@ -452,12 +565,16 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
                           validateEmail: _validateEmail,
                           onPressed: _sendEmail,
                           exitController: _formExitController,
+                          buttonIconKey: _buttonIconKey,
+                          // Hide the button's own send-icon while the
+                          // plane is in flight — the plane IS the
+                          // button's icon detaching.
+                          buttonIconOpacity: _planeInFlight ? 0.0 : 1.0,
                         ),
                         successCard: _SuccessCard(
                           key: const ValueKey('contact-success-card'),
                           controller: _successCardController,
                           width: contentAreaWidth,
-                          buttonWidth: buttonWidth,
                         ),
                       ),
                     ),
@@ -499,6 +616,8 @@ class _FormFields extends StatelessWidget {
     required this.validateEmail,
     required this.onPressed,
     required this.exitController,
+    required this.buttonIconKey,
+    required this.buttonIconOpacity,
   });
 
   final _SendStatus status;
@@ -519,6 +638,16 @@ class _FormFields extends StatelessWidget {
   /// 0 = all visible, 1 = all gone. Each [_CascadeExitSlot] reads its
   /// own [slotIndex]-staggered slice of this controller.
   final AnimationController exitController;
+
+  /// GlobalKey attached to the submit button's inner [Icon] widget so
+  /// the celebration plane can read its on-screen position the moment
+  /// it launches.
+  final GlobalKey buttonIconKey;
+
+  /// Opacity multiplier applied to the submit button's send-icon.
+  /// Driven to 0 by the parent the instant the plane launches so the
+  /// detaching icon and the in-flight plane are never both visible.
+  final double buttonIconOpacity;
 
   @override
   Widget build(BuildContext context) {
@@ -627,6 +756,8 @@ class _FormFields extends StatelessWidget {
                 : status == _SendStatus.error
                     ? Icons.refresh
                     : Icons.send,
+            iconKey: buttonIconKey,
+            iconOpacity: buttonIconOpacity,
             onPressed: status == _SendStatus.sending ? null : onPressed,
           ),
         ),
@@ -710,19 +841,40 @@ class _CascadeExitSlot extends StatelessWidget {
 /// during or after a successful send.
 class _ContactSwapArea extends StatelessWidget {
   const _ContactSwapArea({
+    super.key,
     required this.showSuccessCard,
     required this.formFields,
     required this.successCard,
+    required this.planeController,
+    required this.planeOrigin,
+    required this.planeInFlight,
   });
 
   final bool showSuccessCard;
   final Widget formFields;
   final Widget successCard;
 
+  /// Drives the celebration paper-plane that lifts off the submit
+  /// button and arcs into the success-card headline area. Owned by
+  /// [ContactPageState].
+  final AnimationController planeController;
+
+  /// The plane's origin point in this Stack's local coordinate space.
+  /// Resolved by the parent the moment the plane launches (reads the
+  /// submit button's icon RenderBox via GlobalKey, translates through
+  /// this Stack's RenderBox). Null while no plane is in flight.
+  final Offset? planeOrigin;
+
+  /// True while the plane is mid-flight. Used to mount the plane only
+  /// for the duration of the animation — the widget is otherwise not
+  /// in the tree, so it can't render at a stale origin between sends.
+  final bool planeInFlight;
+
   @override
   Widget build(BuildContext context) {
     return Stack(
       alignment: Alignment.topLeft,
+      clipBehavior: Clip.none,
       children: <Widget>[
         // Form is the size-determining child. It stays in the tree
         // even after [showSuccessCard] flips so the Stack keeps its
@@ -747,6 +899,19 @@ class _ContactSwapArea extends StatelessWidget {
         // [successCardController] (chained delays inside _SuccessCard),
         // so we don't need an outer opacity transition here.
         if (showSuccessCard) successCard,
+        // Paper-plane — lives at the OUTER stack so its origin
+        // (button icon, near the bottom of the form area) and target
+        // (success-card headline area, near the top) span the full
+        // swap area. Only mounted while [planeInFlight] is true so
+        // it can't peek through at idle. The plane reads its origin
+        // from [planeOrigin] (the button-icon's center in this
+        // Stack's local frame, resolved at launch time via
+        // RenderBox + GlobalKey by the parent).
+        if (planeInFlight && planeOrigin != null)
+          _PaperPlaneArc(
+            controller: planeController,
+            origin: planeOrigin!,
+          ),
       ],
     );
   }
@@ -759,26 +924,23 @@ class _ContactSwapArea extends StatelessWidget {
 ///     rewards the visitor without going into confetti territory.
 ///   - Thin horizontal line draws left-to-right under the headline.
 ///   - Body line fades + slides in just after the line lands.
-///   - Paper-plane glyph arcs from the (former) button position up
-///     across the success card area and fades at the apex, tying
-///     the "sent" metaphor together. Positioned absolutely against
-///     the card's bounds so it doesn't displace the layout.
+///
+/// The celebration paper-plane (see [_PaperPlaneArc]) is NOT mounted
+/// inside this card — it lives at the outer [_ContactSwapArea] Stack
+/// so its origin (the submit button at the BOTTOM of the form) and
+/// its destination (the headline at the TOP of this card) can span
+/// the full swap-area height. Mounting it here would have constrained
+/// it to the card's own bounds and made the launch look like it
+/// "spawned in empty space" near the headline.
 class _SuccessCard extends StatelessWidget {
   const _SuccessCard({
     super.key,
     required this.controller,
     required this.width,
-    required this.buttonWidth,
   });
 
   final AnimationController controller;
   final double width;
-
-  /// Width of the original submit button — used to place the paper
-  /// plane's flight origin near where the button was (top-right of
-  /// the form area, since the button was Align.topRight inside an
-  /// equally-wide column).
-  final double buttonWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -797,39 +959,24 @@ class _SuccessCard extends StatelessWidget {
       height: 1.1,
     );
     // Single Column — sizes itself to the headline + underline + body
-    // content (MainAxisSize.min). The paper plane is overlaid via a
-    // Stack INSIDE the headline row so its `Positioned` lives next to
-    // the Column entry; this keeps the success card's natural height
-    // tied to text content only (no full-bleed Stack expanding to
-    // form-height that paints any visible background).
+    // content (MainAxisSize.min). The plane composite that used to
+    // overlay the headline has moved up to [_ContactSwapArea] so its
+    // origin can be anchored on the button (which lives in the form
+    // column, NOT in this card).
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        // Headline + paper-plane composite. The Stack only wraps the
-        // headline area; clipBehavior.none lets the plane fly outside
-        // the headline's bounds.
-        Stack(
-          clipBehavior: Clip.none,
-          children: <Widget>[
-            _LetterByLetterReveal(
-              controller: controller,
-              text: Tr.of('contact.success.headline'),
-              style: headlineStyle,
-              width: width,
-              // Stagger per character — fast enough to feel snappy on
-              // a 6-letter headline like "Danke." (≈270ms total) but
-              // slow enough to read as deliberate.
-              perCharMs: 45,
-              startDelayMs: 120,
-            ),
-            // Paper-plane glyph arcs from ~the (former) button position
-            // up and to the right, fading at the apex.
-            _PaperPlaneArc(
-              controller: controller,
-              originX: width - buttonWidth * 0.5,
-            ),
-          ],
+        _LetterByLetterReveal(
+          controller: controller,
+          text: Tr.of('contact.success.headline'),
+          style: headlineStyle,
+          width: width,
+          // Stagger per character — fast enough to feel snappy on
+          // a 6-letter headline like "Danke." (≈270ms total) but
+          // slow enough to read as deliberate.
+          perCharMs: 45,
+          startDelayMs: 120,
         ),
         const SizedBox(height: 32),
         // Thin underline drawing across — draws from left after the
@@ -953,52 +1100,38 @@ class _LetterByLetterReveal extends StatelessWidget {
   }
 }
 
-/// A small paper-plane glyph that arcs from near the (former) button
-/// position upward and to the right, fading at the apex. Lives as a
-/// direct child of the headline Stack (no [Positioned.fill]) so it
-/// doesn't force the success card to expand to fill the whole form
-/// area. Fires once when the success card controller plays. Quiet
-/// and small — restrained, not flashy.
+/// The celebration paper-plane.
 ///
-/// Visual identity: uses the SAME [Icons.send] glyph the submit button
-/// renders (Material's paper-plane silhouette, see [AnimatedButton]
-/// in lib/widgets/buttons/animated_button.dart) at the SAME size
-/// ([Sizes.ICON_SIZE_16]), so the entity that lifts off the button
-/// reads as the button's own icon detaching and flying toward the
-/// success card. Only the color differs (black here vs. white on the
-/// dark button) because the plane is now over the page background.
+/// Lifts off the submit button's send-icon (at [origin], in the parent
+/// [_ContactSwapArea] Stack's local coordinate space) and arcs UP-AND-
+/// LEFT into the success-card headline area. Driven by a dedicated
+/// 0→1 controller in [ContactPageState] that fires the instant the
+/// button's cascade-exit slot begins fading — so the plane visibly
+/// detaches from the icon the user just clicked rather than spawning
+/// somewhere in empty space.
+///
+/// Visual identity: same [Icons.send] glyph the submit button renders,
+/// at the same [Sizes.ICON_SIZE_16] size. Only the color differs
+/// (black here vs. white on the dark button) because the plane is
+/// now over the page background.
 class _PaperPlaneArc extends StatelessWidget {
   const _PaperPlaneArc({
     required this.controller,
-    required this.originX,
+    required this.origin,
   });
 
   final AnimationController controller;
 
-  /// Horizontal anchor (logical px from the headline Stack's left
-  /// edge) where the plane begins its flight. We pick a point near
-  /// the right edge of the form column — roughly where the submit
-  /// button was.
-  final double originX;
+  /// Pixel-perfect launch point: the submit button's send-icon
+  /// center, expressed in the parent Stack's local coordinate frame.
+  /// Resolved at launch time via [RenderBox.localToGlobal] +
+  /// [RenderBox.globalToLocal] (see
+  /// [ContactPageState._resolveButtonIconOrigin]).
+  final Offset origin;
 
-  // Timing within the success-card controller's 2600ms span. We
-  // start the plane fairly early so it overlaps with the headline
-  // reveal — the "sent" visual cue lands while the headline is
-  // still forming, then settles before the body fades in.
-  static const double _startMs = 80;
-  static const double _windowMs = 1100;
-  // Arc geometry, in logical pixels. Kept small so the plane stays
-  // within the headline's bounds — the parent SelfPositioningWidget
-  // (which wraps the whole swap area) uses a ClipRect that would
-  // otherwise clip the plane off mid-flight.
-  static const double _liftPx = 38;
-  static const double _driftRightPx = 110;
   // Match the submit button's icon size exactly (Sizes.ICON_SIZE_16,
   // 16px) so the entity that lifts off reads as the same glyph the
-  // visitor just clicked — same icon family (Material `Icons.send`,
-  // the paper-plane silhouette) at the same size, only the color
-  // differs because the plane is now flying over the page background
-  // rather than sitting on the dark button.
+  // visitor just clicked.
   static const double _glyphSize = Sizes.ICON_SIZE_16;
 
   @override
@@ -1006,62 +1139,111 @@ class _PaperPlaneArc extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        final double totalMs =
-            controller.duration?.inMilliseconds.toDouble() ?? 1.0;
-        final double t = controller.value * totalMs;
-        double progress = ((t - _startMs) / _windowMs).clamp(0.0, 1.0);
-        // Hide entirely before its window opens or after it lands —
-        // prevents the icon from flashing at the origin on mount or
-        // lingering at the apex when faded out.
-        if (t < _startMs || progress >= 1.0) {
-          return const SizedBox.shrink();
-        }
-        // easeOutQuad — fast lift-off, settles at the apex
-        final double eased = 1 - (1 - progress) * (1 - progress);
-        // Vertical arc: parabola — up then slightly back down.
-        final double parabola =
-            4 * eased * (1 - eased); // 0 → 1 → 0
-        final double dx = eased * _driftRightPx;
-        final double dy = -_liftPx * (eased + parabola * 0.35);
-        // Fade in over first 20%, hold, fade out over last 35%.
-        double opacity;
-        if (eased < 0.2) {
-          opacity = eased / 0.2;
-        } else if (eased > 0.65) {
-          opacity = ((1 - eased) / 0.35).clamp(0.0, 1.0);
-        } else {
-          opacity = 1.0;
-        }
-        // Rotate slightly into the direction of travel for a
-        // gentle "in flight" feel — peaks at ~-18° at the apex.
-        final double rotation = -0.32 * parabola;
-        // Position the plane using Transform.translate so we don't
-        // need a Positioned (which only works in a Stack with a
-        // bounded parent). The plane sits at (originX, 60) in the
-        // headline Stack — ~60px down from the headline's top —
-        // and is translated by (dx, dy) over time. Picking 60 puts
-        // the resting position inside the headline's vertical
-        // bounds so the upward arc (dy up to -38) stays comfortably
-        // within the headline area's visible region. The horizontal
-        // offset (-_glyphSize / 2) centers the glyph on `originX`.
-        return Transform.translate(
-          offset: Offset(originX - _glyphSize / 2 + dx, 60 + dy),
-          child: Opacity(
-            opacity: opacity,
-            child: Transform.rotate(
-              angle: rotation,
-              child: const Icon(
-                // Same glyph the submit button renders (Material
-                // `Icons.send` — a paper-plane silhouette), so the
-                // entity that arcs off feels like the button's own
-                // icon detaching. See [AnimatedButton] in
-                // lib/widgets/buttons/animated_button.dart.
-                Icons.send,
-                size: _glyphSize,
-                color: CustomColors.black,
+        // Need the swap area's bounds to know where to LAND. Inner
+        // LayoutBuilder reads the Stack's loose constraints (set by
+        // the form's natural size — the Stack's size-determining
+        // child), giving us the swap area's current dimensions.
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            // `constraints.biggest` is the swap area's bounds — the
+            // parent Stack passes the form's natural size down to
+            // its non-positioned children. If the constraints aren't
+            // bounded (defensive — shouldn't happen here), fall back
+            // to a conservative size so the plane still flies
+            // somewhere reasonable rather than NaN-ing.
+            final Size swapSize = constraints.biggest.isFinite
+                ? constraints.biggest
+                : const Size(600, 400);
+            // Landing point: just inside the headline's leading edge,
+            // a touch below its baseline so the "delivery receipt"
+            // arrival reads as the plane settling onto the headline.
+            // 18% from the left works at both breakpoints since the
+            // headline is left-aligned and roughly the same fraction
+            // of the column width either way. 70 logical px puts the
+            // glyph inside the headline's vertical band (font 56-96).
+            final Offset target = Offset(swapSize.width * 0.18, 70);
+
+            final double progress = controller.value.clamp(0.0, 1.0);
+            // easeInOutCubic — gentle lift-off, accelerates mid-arc,
+            // settles softly. Reads as a paper plane catching air.
+            final double eased = progress < 0.5
+                ? 4 * progress * progress * progress
+                : 1 -
+                    math.pow(-2 * progress + 2, 3).toDouble() / 2;
+
+            // Parabola bow ABOVE the straight line between origin
+            // and target — so the plane lifts UP (above either
+            // endpoint) before descending into the headline. Without
+            // the bow, the path would be a straight diagonal which
+            // reads as "icon teleported" rather than "icon flew".
+            final double parabola =
+                4 * eased * (1 - eased); // 0 → 1 → 0 across the flight
+            final double flightDistance =
+                (target - origin).distance.clamp(120.0, 600.0);
+            // Bow scales with flight distance so a long arc looks
+            // arched and a short arc still curls — never flattens.
+            final double bow = flightDistance * 0.18;
+
+            final double x = origin.dx + (target.dx - origin.dx) * eased;
+            final double y =
+                origin.dy + (target.dy - origin.dy) * eased - bow * parabola;
+
+            // Rotation: align the plane with its instantaneous
+            // direction of travel. Material's `Icons.send` glyph
+            // already noses up-and-right at rest, so we offset by
+            // -π/4 (the glyph's intrinsic 45° tilt) and add the
+            // straight-line travel angle so the visible nose tracks
+            // the trajectory. Small sine wobble adds life.
+            final double travelAngle = math.atan2(
+              target.dy - origin.dy,
+              target.dx - origin.dx,
+            );
+            final double rotation =
+                travelAngle - math.pi / 4 + 0.08 * math.sin(eased * math.pi);
+
+            // Fade in over first 12% — long enough to mask the
+            // instant the button-icon's opacity flips to 0, but
+            // short enough that the plane is visible while still
+            // near the button (the launch reads as continuous).
+            // Hold opaque through the body of the flight, fade out
+            // over the last 20% so the plane melts into the
+            // headline area rather than clunking to a stop.
+            double opacity;
+            if (eased < 0.12) {
+              opacity = eased / 0.12;
+            } else if (eased > 0.80) {
+              opacity = ((1 - eased) / 0.20).clamp(0.0, 1.0);
+            } else {
+              opacity = 1.0;
+            }
+
+            // Position via Transform.translate — the plane is a
+            // direct child of the swap-area Stack, so an unbounded
+            // Positioned would conflict with the Stack's loose
+            // sizing. Center the glyph on (x, y).
+            return Transform.translate(
+              offset: Offset(x - _glyphSize / 2, y - _glyphSize / 2),
+              child: Opacity(
+                opacity: opacity,
+                child: Transform.rotate(
+                  angle: rotation,
+                  child: const IgnorePointer(
+                    child: Icon(
+                      // Same glyph the submit button renders
+                      // (Material `Icons.send` — a paper-plane
+                      // silhouette), so the entity that arcs off
+                      // reads as the button's own icon detaching.
+                      // See [AnimatedButton] in
+                      // lib/widgets/buttons/animated_button.dart.
+                      Icons.send,
+                      size: _glyphSize,
+                      color: CustomColors.black,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
