@@ -1,10 +1,21 @@
 import "package:flutter/material.dart";
 
+import '../../../utils/adaptive_layout.dart';
 import '../../../utils/page_transition.dart';
 import '../../../utils/values/values.dart';
 import 'floating_back_button.dart';
 import 'header/app_drawer.dart';
 import 'header/top_navigation_bar.dart';
+
+/// Pixel gutter reserved on the right edge of every page on desktop so
+/// the always-visible Scrollbar thumb has uncontested click space.
+/// Without this the right edge of clickable content (project tiles,
+/// links, hover cards) extends underneath the Scrollbar gutter and the
+/// browser sometimes routes the mouse-down to the content instead of
+/// to the scrollbar drag, which opens links when the user is just
+/// trying to scroll. Set ~2× the Scrollbar thickness used on the home
+/// page (8 px) plus a small grab buffer.
+const double _kDesktopScrollbarGutter = 16.0;
 
 /// Lightweight nav-argument bag kept for backward-compat with call-sites
 /// that still expect it. The actual cover/uncover panel lives in the
@@ -98,6 +109,20 @@ class PageWrapperState extends State<PageWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    // Reserve a right-edge gutter on desktop so clickable page content
+    // (project tiles, links, hover targets) never extends underneath
+    // the always-visible Scrollbar thumb. On tablet / mobile the
+    // platform scrollbar overlays or auto-hides and we want the
+    // content to use the full width, so the gutter is desktop-only.
+    final double width = MediaQuery.of(context).size.width;
+    final bool isDesktop = width > refinedBreakpoints.tablet;
+    final Widget scrollContent = isDesktop
+        ? Padding(
+            padding: const EdgeInsets.only(right: _kDesktopScrollbarGutter),
+            child: widget.child,
+          )
+        : widget.child;
+
     return SelectionArea(
       child: Scaffold(
         key: _scaffoldKey,
@@ -109,7 +134,7 @@ class PageWrapperState extends State<PageWrapper> {
         ),
         body: Stack(
           children: <Widget>[
-            widget.child,
+            scrollContent,
             TopNavigationBar(
               controller: widget.navigationBarAnimationController,
               selectedRouteTitle: widget.selectedPageName,
