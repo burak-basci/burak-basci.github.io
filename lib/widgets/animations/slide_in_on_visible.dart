@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-/// Wraps [child] so the first time at least 15% of it scrolls into the
-/// viewport the child slides in from fully offstage on the left and
-/// then stays at its final state. Used to make the home page project
-/// cascade tiles appear as the visitor scrolls instead of all snapping
-/// into place at the moment the cascade enters view.
+/// Wraps [child] so the first time the smallest sliver of it scrolls
+/// into the viewport the child slides in from fully offstage on the
+/// left and then stays at its final state. Used to make the home page
+/// project cascade tiles appear as the visitor scrolls instead of all
+/// snapping into place at the moment the cascade enters view.
 ///
 /// Each instance needs a unique [uniqueKey] — `VisibilityDetector`
 /// internally requires globally unique keys across the tree.
@@ -23,15 +23,22 @@ import 'package:visibility_detector/visibility_detector.dart';
 /// offset, so the tile is guaranteed to start entirely offstage to
 /// the left regardless of viewport width or final tile placement —
 /// no part of the tile peeks into view before the animation begins.
+///
+/// Fast-scroll responsiveness: the visibility threshold is intentionally
+/// very low (1%) and the cascade queue is capped + velocity-aware so a
+/// tile that's scrolled past in a single wheel flick still visibly
+/// enters as the user passes it. See [_CascadeStagger] for the queue
+/// flush logic.
 class SlideInOnVisible extends StatefulWidget {
   const SlideInOnVisible({
     required this.uniqueKey,
     required this.child,
-    this.visibilityThreshold = 0.15,
+    this.visibilityThreshold = 0.01,
     this.slideBeginX = -1.5,
     this.duration = const Duration(milliseconds: 900),
     this.staggerGroup,
-    this.staggerStep = const Duration(milliseconds: 140),
+    this.staggerStep = const Duration(milliseconds: 80),
+    this.staggerCap = 5,
     super.key,
   });
 
@@ -42,8 +49,9 @@ class SlideInOnVisible extends StatefulWidget {
   final Widget child;
 
   /// Fraction of the child that has to be in the viewport before the
-  /// entrance animation triggers. 0.15 (15%) gives a "just peeked into
-  /// view" feel; bump up for a "fully on-screen" feel.
+  /// entrance animation triggers. 0.01 (1%) gives a "just peeked into
+  /// view" feel which matters for fast-scroll users — a higher
+  /// threshold lets tiles scroll past before they ever start animating.
   final double visibilityThreshold;
 
   /// Starting horizontal offset for the slide, expressed in multiples
@@ -70,9 +78,15 @@ class SlideInOnVisible extends StatefulWidget {
   final String? staggerGroup;
 
   /// Per-step delay used to space neighbouring tile entrances inside a
-  /// cascade group. 140 ms feels like a deliberate wave without
-  /// dragging out the last tile noticeably.
+  /// cascade group. 80 ms feels like a deliberate wave but keeps even
+  /// the last tile in a 6-tile group under half a second of head delay.
   final Duration staggerStep;
+
+  /// Maximum slot index that contributes additional delay. Slots beyond
+  /// this cap all fire at `staggerStep × staggerCap`, so a very long
+  /// list of co-visible tiles doesn't tail out for seconds. With
+  /// staggerStep=80ms and staggerCap=5 the tail caps at 400ms.
+  final int staggerCap;
 
   @override
   State<SlideInOnVisible> createState() => _SlideInOnVisibleState();
@@ -85,6 +99,14 @@ class SlideInOnVisible extends StatefulWidget {
 /// time of the most recent claim so the queue can self-reset after an
 /// idle gap (i.e. when a lone tile enters view well after the last
 /// wave finished).
+///
+/// Fast-scroll detection: if a claim arrives within
+/// [_fastScrollWindow] of the previous claim, the wave is treated as a
+/// fast-scroll burst — `_fastScrollHits` is incremented, and once it
+/// crosses [_fastScrollThreshold] every subsequent claim in the burst
+/// returns slot 0 (fire immediately). This prevents the "tile invisible
+/// because its 400ms+ delay hasn't elapsed" problem when the user flicks
+/// the wheel through the cascade region.
 class _CascadeStagger {
   _CascadeStagger();
 
@@ -93,20 +115,46 @@ class _CascadeStagger {
   /// before a freshly-triggered tile starts numbering from scratch.
   static const Duration _idleReset = Duration(milliseconds: 1500);
 
+  /// If two consecutive claims arrive within this window, treat the
+  /// scroll as fast (multiple tiles passing the threshold in quick
+  /// succession). 100 ms comfortably covers tiles arriving in adjacent
+  /// frames at 60 fps while still excluding slow deliberate scrolling.
+  static const Duration _fastScrollWindow = Duration(milliseconds: 100);
+
+  /// Number of within-window claims after which the queue flips into
+  /// "flush immediately" mode for the rest of the burst.
+  static const int _fastScrollThreshold = 2;
+
   static final Map<String, _CascadeStagger> _groups = <String, _CascadeStagger>{};
 
   int _ticket = 0;
+  int _fastScrollHits = 0;
   DateTime _lastClaim = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Claim the next slot in [group]'s queue. Resets to 0 if the queue
   /// has been idle for more than [_idleReset] since the previous claim.
+  /// If consecutive claims are arriving inside [_fastScrollWindow], the
+  /// caller has effectively reported a fast-scroll burst — after
+  /// [_fastScrollThreshold] hits the queue returns slot 0 for the rest
+  /// of the burst so each tile fires as soon as it crosses the
+  /// visibility threshold instead of inheriting cumulative delay.
   static int claim(String group) {
     final _CascadeStagger entry = _groups.putIfAbsent(group, _CascadeStagger.new);
     final DateTime now = DateTime.now();
-    if (now.difference(entry._lastClaim) > _idleReset) {
+    final Duration gap = now.difference(entry._lastClaim);
+    if (gap > _idleReset) {
       entry._ticket = 0;
+      entry._fastScrollHits = 0;
+    } else if (gap <= _fastScrollWindow) {
+      entry._fastScrollHits += 1;
+    } else {
+      // Slow scroll continuation inside the same wave — back off the
+      // fast-scroll counter so a brief rapid burst followed by slow
+      // scrolling doesn't permanently disable staggering.
+      entry._fastScrollHits = 0;
     }
-    final int slot = entry._ticket;
+    final bool flushNow = entry._fastScrollHits >= _fastScrollThreshold;
+    final int slot = flushNow ? 0 : entry._ticket;
     entry._ticket += 1;
     entry._lastClaim = now;
     return slot;
@@ -150,14 +198,16 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
         if (_hasAnimated) return;
         if (info.visibleFraction >= widget.visibilityThreshold) {
           _hasAnimated = true;
-          // Queue-based stagger: tiles which share a `staggerGroup` and
-          // cross the visibility threshold inside the same idle window
-          // claim sequential slots, so the first tile in a wave fires
-          // immediately and each subsequent neighbour waits
-          // `staggerStep` longer. A lone tile entering view well after
-          // the previous wave reclaims slot 0 (the queue resets after a
-          // short idle gap inside [_CascadeStagger]) so it does NOT
-          // inherit a long pending delay from earlier tiles.
+          // Queue-based stagger with cap + fast-scroll flush. Tiles
+          // sharing a `staggerGroup` and crossing the visibility
+          // threshold inside the same idle window claim sequential
+          // slots, capped at [staggerCap] so a long list doesn't tail
+          // out for seconds. If [_CascadeStagger] detects consecutive
+          // claims arriving within its fast-scroll window it returns
+          // slot 0 for the rest of the burst — necessary so flick-
+          // scrolling past the cascade still shows tiles entering view
+          // (rather than tiles waiting out a stagger delay after the
+          // user has already scrolled past them).
           //
           // The `mounted` guard inside the delayed callback makes the
           // schedule safe if the user navigates away (e.g. into a
@@ -165,7 +215,8 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
           // would otherwise be disposed.
           int slot = 0;
           if (widget.staggerGroup != null) {
-            slot = _CascadeStagger.claim(widget.staggerGroup!);
+            final int raw = _CascadeStagger.claim(widget.staggerGroup!);
+            slot = raw > widget.staggerCap ? widget.staggerCap : raw;
           }
           if (slot == 0) {
             if (mounted) _controller.forward();
