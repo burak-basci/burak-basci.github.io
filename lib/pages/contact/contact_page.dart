@@ -431,8 +431,6 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
                       // completes.
                       child: _ContactSwapArea(
                         showSuccessCard: _showSuccessCard,
-                        formExitController: _formExitController,
-                        successCardController: _successCardController,
                         formFields: _FormFields(
                           key: const ValueKey('contact-form-fields'),
                           status: _status,
@@ -708,15 +706,11 @@ class _CascadeExitSlot extends StatelessWidget {
 class _ContactSwapArea extends StatelessWidget {
   const _ContactSwapArea({
     required this.showSuccessCard,
-    required this.formExitController,
-    required this.successCardController,
     required this.formFields,
     required this.successCard,
   });
 
   final bool showSuccessCard;
-  final AnimationController formExitController;
-  final AnimationController successCardController;
   final Widget formFields;
   final Widget successCard;
 
