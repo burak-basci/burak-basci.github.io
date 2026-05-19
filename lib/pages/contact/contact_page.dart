@@ -211,15 +211,14 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
           // `subject` above is treated specially by Web3Forms — it is
           // only used as the email-header subject line and does NOT
           // show up as a row in the body. To surface the visitor's
-          // Betreff inside the body too (so the recipient sees it
-          // alongside Name / Email / Message), we ALSO pass it under
-          // an unknown key (`Betreff` — Web3Forms renders unknown
-          // top-level keys verbatim as labelled rows using the key as
-          // the label). Capitalised so the row reads "Betreff: <text>"
-          // in the German UI's natural casing.
+          // subject inside the body too, pass it again under an
+          // unknown key. Web3Forms renders unknown top-level keys
+          // verbatim as labelled rows; `Subject` keeps the body
+          // labels uniformly English (Name / Email / Subject / Message)
+          // regardless of the UI language the visitor used.
           'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
-          'Betreff': _subjectController.text.trim(),
+          'Subject': _subjectController.text.trim(),
           'message': _messageController.text.trim(),
           'botcheck': '',
         }),
