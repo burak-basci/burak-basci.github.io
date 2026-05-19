@@ -157,13 +157,24 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
           // in the inbox view.
           'from_name': 'burakbasci.de — Kontaktformular',
           // Each field below becomes its own labeled row in the email
-          // body. Keeping the four canonical Web3Forms field names
-          // (`name`, `email`, `subject`, `message`) so the labels read
-          // cleanly and the `message` row is just the visitor's text —
-          // the previous "Name (email) sent you a message…" preamble
-          // duplicated info already shown on its own rows.
+          // body. Keeping the canonical Web3Forms field names (`name`,
+          // `email`, `message`) so the labels read cleanly and the
+          // `message` row is just the visitor's text — the previous
+          // "Name (email) sent you a message…" preamble duplicated info
+          // already shown on its own rows.
+          //
+          // `subject` above is treated specially by Web3Forms — it is
+          // only used as the email-header subject line and does NOT
+          // show up as a row in the body. To surface the visitor's
+          // Betreff inside the body too (so the recipient sees it
+          // alongside Name / Email / Message), we ALSO pass it under
+          // an unknown key (`Betreff` — Web3Forms renders unknown
+          // top-level keys verbatim as labelled rows using the key as
+          // the label). Capitalised so the row reads "Betreff: <text>"
+          // in the German UI's natural casing.
           'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
+          'Betreff': _subjectController.text.trim(),
           'message': _messageController.text.trim(),
           'botcheck': '',
         }),
