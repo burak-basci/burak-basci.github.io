@@ -954,6 +954,14 @@ class _LetterByLetterReveal extends StatelessWidget {
 /// doesn't force the success card to expand to fill the whole form
 /// area. Fires once when the success card controller plays. Quiet
 /// and small — restrained, not flashy.
+///
+/// Visual identity: uses the SAME [Icons.send] glyph the submit button
+/// renders (Material's paper-plane silhouette, see [AnimatedButton]
+/// in lib/widgets/buttons/animated_button.dart) at the SAME size
+/// ([Sizes.ICON_SIZE_16]), so the entity that lifts off the button
+/// reads as the button's own icon detaching and flying toward the
+/// success card. Only the color differs (black here vs. white on the
+/// dark button) because the plane is now over the page background.
 class _PaperPlaneArc extends StatelessWidget {
   const _PaperPlaneArc({
     required this.controller,
@@ -980,6 +988,13 @@ class _PaperPlaneArc extends StatelessWidget {
   // otherwise clip the plane off mid-flight.
   static const double _liftPx = 38;
   static const double _driftRightPx = 110;
+  // Match the submit button's icon size exactly (Sizes.ICON_SIZE_16,
+  // 16px) so the entity that lifts off reads as the same glyph the
+  // visitor just clicked — same icon family (Material `Icons.send`,
+  // the paper-plane silhouette) at the same size, only the color
+  // differs because the plane is now flying over the page background
+  // rather than sitting on the dark button.
+  static const double _glyphSize = Sizes.ICON_SIZE_16;
 
   @override
   Widget build(BuildContext context) {
@@ -1022,16 +1037,22 @@ class _PaperPlaneArc extends StatelessWidget {
         // and is translated by (dx, dy) over time. Picking 60 puts
         // the resting position inside the headline's vertical
         // bounds so the upward arc (dy up to -38) stays comfortably
-        // within the headline area's visible region.
+        // within the headline area's visible region. The horizontal
+        // offset (-_glyphSize / 2) centers the glyph on `originX`.
         return Transform.translate(
-          offset: Offset(originX - 12 + dx, 60 + dy),
+          offset: Offset(originX - _glyphSize / 2 + dx, 60 + dy),
           child: Opacity(
             opacity: opacity,
             child: Transform.rotate(
               angle: rotation,
               child: const Icon(
+                // Same glyph the submit button renders (Material
+                // `Icons.send` — a paper-plane silhouette), so the
+                // entity that arcs off feels like the button's own
+                // icon detaching. See [AnimatedButton] in
+                // lib/widgets/buttons/animated_button.dart.
                 Icons.send,
-                size: 22,
+                size: _glyphSize,
                 color: CustomColors.black,
               ),
             ),
