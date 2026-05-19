@@ -72,10 +72,14 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
   //
   // Timeline: 0.00 = at-rest on the button (wind-up start),
   // 1.00 = well past the viewport's right edge.
-  // Phases inside [_PaperPlaneFlyOff]:
-  //   0.00 → 0.18 wind-up (drift right ~15px)
-  //   0.18 → 0.42 release (curl up-left)
-  //   0.42 → 1.00 fly-off rightward, scale 1.15 → 2.0×
+  // Total flight: 2200 ms (was 1400 ms — amplified so each phase is
+  // unmistakably readable; the user reported the old timing read as
+  // "looks just like before").
+  // Phases inside [_PaperPlaneFlyOff] (on 0→1 timeline):
+  //   0.00 → 0.227 wind-up (drift right ~30 px + scale-down 1.0→0.95)
+  //   0.227 → 0.500 release (curl UP-LEFT to (-150,-180), scale to 1.4×)
+  //   0.500 → 1.000 fly-off rightward, scale 1.4 → 3.0×,
+  //                 past viewportWidth + 400 px, easeInExpo accel
   late AnimationController _planeController;
   _SendStatus _status = _SendStatus.idle;
   String? _bannerMessage;
@@ -144,15 +148,24 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
       // 5 staggered slots × 80ms stagger + 280ms per slot ≈ 680ms total.
       duration: const Duration(milliseconds: 680),
     );
-    // Plane-flight duration: ~1400ms broken into three phases:
-    //   0.00 → 0.18 (~250ms): wind-up — plane drifts ~15px right.
-    //   0.18 → 0.42 (~336ms): release — curls UP-LEFT.
-    //   0.42 → 1.00 (~812ms): exit — curves rightward, eases-in,
-    //     scales to ~2.0×, past the viewport's right edge.
+    // Plane-flight duration: 2200 ms broken into three theatrical
+    // phases (amplified from the prior 1400 ms — user reported the
+    // earlier choreography read as "looks just like before"):
+    //   0.000 → 0.227 (500 ms): wind-up — plane drifts ~30 px RIGHT
+    //     and scales down 1.0 → 0.95. Reads as the plane being
+    //     "loaded" / "drawn back" before launch.
+    //   0.227 → 0.500 (600 ms): release — curls UP-LEFT to
+    //     (-150 px, -180 px) along a quadratic Bezier, scales
+    //     1.0 → 1.4×. Wide leftward arc so the choreography reads
+    //     as a deliberate slingshot.
+    //   0.500 → 1.000 (1100 ms): fly-off — curves back rightward,
+    //     accelerates with easeInExpo, scales 1.4 → 3.0×, climbs as
+    //     it exits, lands past viewportWidth + 400 px. The
+    //     "flying toward the viewer" depth cue dominates.
     // Geometry inside [_PaperPlaneFlyOff].
     _planeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 2200),
     );
     _planeController.addStatusListener((status) {
       // Once the plane has fully exited the viewport, remove the
@@ -333,29 +346,33 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
           _bannerColor = CustomColors.lightGreen;
           _successPulseKey++;
         });
-        // Theatrical paper-plane choreography (user spec):
+        // Theatrical paper-plane choreography (amplified from earlier
+        // pass — every phase is now distinctly readable on a 1440 px
+        // viewport, with the user-reported "looks like before"
+        // perception explicitly addressed by 2× durations / displacements):
         //   t=0     POST returned success. Button transitions from
         //           spinner BACK to the paper-plane icon (Icons.send).
         //           NO check / "GESENDET" morph — the glyph stays as
         //           a paper plane through the wind-up.
         //   t=300   Plane wind-up begins: OverlayEntry inserted above
         //           the app, button's iconOpacity flips to 0, plane
-        //           controller starts. Phase A drifts the plane ~15px
-        //           to the right ("slingshot back") over ~250ms.
+        //           controller starts. Phase A drifts the plane ~30 px
+        //           to the right AND scales 1.0 → 0.95 ("loaded into
+        //           slingshot") over ~500 ms.
         //   t=400   Form cascade-exit starts (staggered fade + slide).
-        //   t=550   Phase B: plane curls UP-LEFT (~60px left, 90px up)
-        //           over ~336ms.
-        //   t=890   Phase C: plane curves back rightward, accelerates
-        //           with easeInQuad, scales 1.15 → 2.0×, exits past
-        //           the viewport's right edge (~812ms).
+        //   t=800   Phase B: plane curls UP-LEFT to (-150 px, -180 px)
+        //           over ~600 ms, scale 1.0 → 1.4×. Wide leftward arc.
+        //   t=1400  Phase C: plane curves back rightward, accelerates
+        //           with easeInExpo, climbs altitude, scales 1.4 →
+        //           3.0×, exits past viewportWidth + 400 px (~1100 ms).
         //   t=1080  Cascade exit done. Flip _showSuccessCard so the
         //           form swaps for the success card — but the
         //           letter-by-letter "Danke." reveal stays paused.
-        //   t≈1700  Plane controller completes:
+        //   t≈2500  Plane controller completes:
         //           - OverlayEntry removed,
         //           - _planeInFlight flips false,
         //           - _successCardController.forward() finally fires.
-        //   t≈1820  "Danke." headline letters start revealing.
+        //   t≈2620  "Danke." headline letters start revealing.
         _successCardSwapTimer?.cancel();
         _formExitTimer?.cancel();
         _planeLaunchTimer?.cancel();
@@ -1094,25 +1111,35 @@ class _LetterByLetterReveal extends StatelessWidget {
 /// overlay and re-positions a small icon glyph each frame off
 /// [controller]'s value.
 ///
-/// Flight is three parametric phases over t ∈ [0, 1] of the
-/// controller:
+/// THEATRICAL TIMING (amplified). The earlier choreography
+/// (250 + 336 + 812 ms = 1398 ms total, 15 px wind-up, -60/-90 curl,
+/// scale → 2.0×) read to users as "looks just like before" — too
+/// quick and too tight to register as a distinct multi-phase
+/// sequence. This pass DOUBLES every readable quantity so each phase
+/// is unmistakable:
 ///
-/// - Phase A (wind-up), t = 0.00 → 0.18:
-///   plane sits at [origin], then drifts ~15px to the RIGHT (like a
-///   slingshot pulled back). Scale stays at 1.0. Tiny rotational
-///   nudge to telegraph the wind-up.
+/// - Phase A (wind-up), t = 0.000 → 0.227 (≈500 ms on 2200 ms total):
+///   plane sits at [origin], drifts ~30 px to the RIGHT (was 15 px)
+///   AND shrinks 1.0 → 0.95 (new — telegraphs "being loaded into
+///   the slingshot"). Soft easeInOut for the drift, mirrored for
+///   the shrink. Tiny rotational nudge.
 ///
-/// - Phase B (release / leftward curl), t = 0.18 → 0.42:
-///   plane curves UP-LEFT to (origin + (-60, -90)) along a quadratic
-///   Bezier with a control point above origin. Scale eases 1.0 →
-///   1.15. Rotation tilts left to track motion.
+/// - Phase B (release / leftward curl), t = 0.227 → 0.500 (≈600 ms):
+///   plane curves UP-LEFT to (origin + (-150, -180)) — 2.5× the
+///   prior leftward extent, doubled vertical climb. Quadratic
+///   Bezier with control point pulled hard left and up so the arc
+///   bows OUTWARD (leftward) instead of just sweeping a gentle
+///   diagonal. Scale eases 0.95 → 1.4× (was 1.0 → 1.15×). Rotation
+///   tilts left to track the tangent.
 ///
-/// - Phase C (fly-off rightward + scale up), t = 0.42 → 1.00:
-///   plane curves rightward off the page using a quadratic Bezier
-///   whose end point sits past the viewport's right edge. Scale
-///   grows 1.15 → 2.0 (plane appears to fly TOWARD the viewer as
-///   it exits). Rotation tracks the rightward tangent. EaseInQuad
-///   acceleration so the exit is fast and final.
+/// - Phase C (fly-off rightward + scale up), t = 0.500 → 1.000
+///   (≈1100 ms): plane curves rightward off the page along a
+///   quadratic Bezier whose end point sits past viewportWidth + 400
+///   (was +200). Scale grows 1.4 → 3.0× (was 1.15 → 2.0×). Control
+///   point pulled higher so the plane CLIMBS as it leaves — reading
+///   as "departing skyward" rather than skimming horizontally.
+///   EaseInExpo (was easeInQuad) for a clearer, more dramatic
+///   acceleration in the final 300 ms.
 class _PaperPlaneFlyOff extends StatelessWidget {
   const _PaperPlaneFlyOff({
     required this.controller,
@@ -1137,29 +1164,49 @@ class _PaperPlaneFlyOff extends StatelessWidget {
   // visitor just clicked.
   static const double _glyphSize = Sizes.ICON_SIZE_16;
 
-  // Phase boundaries on the controller's 0→1 timeline.
-  static const double _windUpEnd = 0.18;
-  static const double _leftReleaseEnd = 0.42;
+  // Phase boundaries on the controller's 0→1 timeline. With the
+  // 2200 ms total they correspond to 500 ms wind-up, 600 ms curl-up-
+  // left, 1100 ms fly-off.
+  static const double _windUpEnd = 0.227; // ≈500 ms
+  static const double _leftReleaseEnd = 0.500; // +600 ms → 1100 ms
 
   // Phase-A displacement: how far to drift right during the wind-up.
-  // 15px reads clearly as a "pull-back" without making the plane look
-  // misplaced relative to the button.
-  static const double _windUpDx = 15.0;
+  // 30 px (doubled from 15 px) reads as a clear "pull-back" gesture
+  // rather than a sub-perceptual nudge.
+  static const double _windUpDx = 30.0;
+  // Phase-A scale at the end of wind-up. Mild shrink (0.95) suggests
+  // the plane is being "loaded" into the slingshot before launch.
+  static const double _windUpScaleEnd = 0.95;
 
-  // Phase-B end point relative to [origin]: 60px LEFT, 90px UP.
-  // Reads as the plane "turning left briefly" before committing to
-  // the rightward exit.
-  static const Offset _leftReleaseEndOffset = Offset(-60, -90);
+  // Phase-B end point relative to [origin]: 150 px LEFT, 180 px UP.
+  // (Was -60/-90 — the prior extent stayed inside the form column
+  // and the leftward motion barely registered. 150 px LEFT clears
+  // the entire form/button stack and reads as a deliberate slingshot
+  // backswing.)
+  static const Offset _leftReleaseEndOffset = Offset(-150, -180);
+  // Scale at the end of Phase B (peak of the curl-up-left). The
+  // plane is at maximum altitude here, scaled 1.4× — bigger than
+  // the previous pass's 1.15× so the leftward arc reads in the
+  // peripheral vision.
+  static const double _leftReleaseScale = 1.4;
 
-  // Final scale at exit. The plane is small to begin with (16px), so
-  // 2.0× lands at 32px — visibly larger without looking like a
-  // balloon. Sells the "flying toward the viewer" depth cue.
-  static const double _exitScale = 2.0;
+  // Final scale at exit. 3.0× (was 2.0×) lands at 48 px — the plane
+  // genuinely looms toward the viewer in the final third of the
+  // flight, making the "flying TOWARD the camera" depth cue
+  // dominate. Combined with the leftward curl, the choreography now
+  // reads as a deliberate three-act loop.
+  static const double _exitScale = 3.0;
 
-  // How far PAST the right edge the plane should travel. 200px of
-  // overshoot guarantees it's gone even on slightly-smaller-than-
-  // expected viewports.
-  static const double _exitOvershoot = 200.0;
+  // How far PAST the right edge the plane should travel. 400 px of
+  // overshoot (was 200 px) guarantees it's fully gone even with the
+  // larger 3.0× exit scale, on every reasonable viewport width.
+  static const double _exitOvershoot = 400.0;
+
+  // How far ABOVE the origin the exit point sits — controls the
+  // "climb out" cue. Doubled from -200 to -350 so the plane reads
+  // as ascending dramatically out of the top-right rather than
+  // skimming horizontally toward the edge.
+  static const double _exitClimb = -350.0;
 
   /// EaseInOutCubic for the wind-up + left-release phases.
   double _easeInOutCubic(double t) {
@@ -1168,9 +1215,16 @@ class _PaperPlaneFlyOff extends StatelessWidget {
         : 1 - math.pow(-2 * t + 2, 3).toDouble() / 2;
   }
 
-  /// EaseInQuad for Phase C — plane accelerates as it leaves, reading
-  /// as "really departing" rather than drifting off.
-  double _easeInQuad(double t) => t * t;
+  /// EaseInExpo for Phase C — much steeper than easeInQuad, so the
+  /// plane sits relatively still through the early part of the
+  /// fly-off and then EXPLODES toward the viewport edge in the last
+  /// ~300 ms. Reads as the slingshot RELEASING. Standard CSS form:
+  ///   t == 0 ? 0 : pow(2, 10*t - 10)
+  double _easeInExpo(double t) {
+    if (t <= 0.0) return 0.0;
+    if (t >= 1.0) return 1.0;
+    return math.pow(2.0, 10.0 * t - 10.0).toDouble();
+  }
 
   /// Quadratic Bezier between three points at parameter [t].
   Offset _quadBezier(Offset p0, Offset p1, Offset p2, double t) {
@@ -1182,13 +1236,15 @@ class _PaperPlaneFlyOff extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Phase-C exit point in viewport-global coords: just off the
-    // right edge of the screen, well above origin (plane gains
-    // altitude as it leaves). Captured at build time off
-    // [viewportSize] so the exit point is stable through the flight.
+    // Phase-C exit point in viewport-global coords: well past the
+    // right edge of the screen and high above the origin (plane gains
+    // significant altitude as it leaves so the departure reads as a
+    // dramatic skyward exit, not a horizontal skim). Captured at
+    // build time off [viewportSize] so the exit point is stable
+    // through the flight.
     final Offset exitPoint = Offset(
       viewportSize.width + _exitOvershoot,
-      origin.dy - 200,
+      origin.dy + _exitClimb,
     );
 
     return Positioned.fill(
@@ -1203,62 +1259,83 @@ class _PaperPlaneFlyOff extends StatelessWidget {
             double rotation;
 
             if (t <= _windUpEnd) {
-              // Phase A: wind-up. Linear-ish drift right with a soft
-              // ease so the plane "settles" backward rather than
-              // jerking. origin → (origin + windUpDx, origin.dy).
+              // Phase A: wind-up. Drift right with a soft ease so
+              // the plane "settles" backward rather than jerking.
+              // Also scales down 1.0 → 0.95 to suggest the plane is
+              // being "loaded into the slingshot" — visually
+              // distinct from a static hold.
               final double localT = t / _windUpEnd;
               final double eased = _easeInOutCubic(localT);
               pos = Offset(
                 origin.dx + _windUpDx * eased,
                 origin.dy,
               );
-              scale = 1.0;
+              scale = 1.0 + (_windUpScaleEnd - 1.0) * eased;
               // Tiny rightward tilt during wind-up — like the plane
               // is being aimed backward. ~5°.
               rotation = 0.08 * eased;
             } else if (t <= _leftReleaseEnd) {
               // Phase B: leftward release. Quadratic Bezier from
               // (origin + windUpDx, origin.dy) up-and-left to
-              // (origin + leftReleaseEndOffset). Control point pulled
-              // UP so the curve bows above the straight line — the
-              // plane sweeps a clear arc.
+              // (origin + leftReleaseEndOffset). Control point
+              // pulled HARD LEFT-AND-UP so the arc bows OUTWARD
+              // (more leftward than the chord from p0 to p2) — the
+              // plane visibly sweeps left-then-up rather than
+              // taking a soft diagonal.
               final double localT =
                   (t - _windUpEnd) / (_leftReleaseEnd - _windUpEnd);
               final double eased = _easeInOutCubic(localT);
               final Offset p0 = Offset(origin.dx + _windUpDx, origin.dy);
               final Offset p2 = origin + _leftReleaseEndOffset;
+              // Control point: leftmost extent of the curl. Pulled
+              // further left than p2 (origin.dx - 220 vs p2.dx =
+              // origin.dx - 150) so the Bezier bows OUTSIDE the
+              // chord and the leftward arc reads distinctly.
               final Offset p1 = Offset(
-                origin.dx - 25,
-                origin.dy - 60,
+                origin.dx - 220,
+                origin.dy - 110,
               );
               pos = _quadBezier(p0, p1, p2, eased);
-              scale = 1.0 + 0.15 * eased;
+              // Scale eases windUpScaleEnd (0.95) → leftReleaseScale
+              // (1.4) — the plane "unloads" from the slingshot and
+              // grows as it arcs.
+              scale = _windUpScaleEnd +
+                  (_leftReleaseScale - _windUpScaleEnd) * eased;
               // Tilt left as the plane curls up-left.
-              // ~-20° (-0.35 rad) at end.
-              rotation = -0.35 * eased;
+              // ~-25° (-0.45 rad) at end — more pronounced than the
+              // prior -0.35 rad so the tilt matches the bigger arc.
+              rotation = -0.45 * eased;
             } else {
               // Phase C: rightward exit + scale up. Quadratic Bezier
-              // from (origin + leftReleaseEndOffset) through a
-              // control point above-and-right of origin out to
-              // exitPoint past the right edge. EaseInQuad so the
-              // plane accelerates away.
+              // from (origin + leftReleaseEndOffset) up through a
+              // control point ABOVE-AND-RIGHT of origin out to
+              // exitPoint past the right edge. EaseInExpo so the
+              // plane sits relatively still then EXPLODES away in
+              // the last 300 ms — reads as the slingshot releasing.
               final double localT =
                   (t - _leftReleaseEnd) / (1.0 - _leftReleaseEnd);
-              final double eased = _easeInQuad(localT);
+              final double eased = _easeInExpo(localT);
               final Offset p0 = origin + _leftReleaseEndOffset;
               final Offset p2 = exitPoint;
+              // Control point: higher and more forward than the
+              // prior pass. Lifting p1 from (-220, +200) →
+              // (-380, +280) makes the plane CLIMB more
+              // aggressively through the exit, matching the
+              // "skyward escape" framing.
               final Offset p1 = Offset(
-                origin.dx + 200,
-                origin.dy - 220,
+                origin.dx + 280,
+                origin.dy - 380,
               );
               pos = _quadBezier(p0, p1, p2, eased);
-              // Scale grows aggressively across Phase C. The
+              // Scale grows aggressively across Phase C.
+              // leftReleaseScale (1.4) → exitScale (3.0). The
               // "flying toward viewer" cue dominates the departure.
-              scale = 1.15 + (_exitScale - 1.15) * eased;
+              scale = _leftReleaseScale +
+                  (_exitScale - _leftReleaseScale) * eased;
               // Rotation swings from leftward-leaning (Phase B end)
-              // back toward a slight rightward-up tilt as the plane
-              // commits.
-              rotation = -0.35 + 0.50 * eased;
+              // back through level into a slight rightward-up tilt
+              // as the plane commits to the exit vector.
+              rotation = -0.45 + 0.70 * eased;
             }
 
             // Opacity: hold opaque through the whole flight. Fade
