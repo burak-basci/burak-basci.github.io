@@ -169,23 +169,17 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
   late AnimationController _heroParticleDriftController;  // shared XY-drift parent
   late AnimationController _heroShapePulseController;     // shared scale-pulse parent for halos
   // Two short accent rules below the hero subtitle "breathe" their
-  // horizontal scale 0.85 → 1.00 on a 3.0 s easeInOut, reversing on
-  // each cycle so the contraction reads as a slow inhale/exhale rather
-  // than a heartbeat. Anchored to the start so the rules grow from the
-  // left, matching the column's CrossAxisAlignment.start.
-  late AnimationController _heroLineBreatheController;
-  // Sixth-wave additions — make EVERY hero text/UI element move so
-  // nothing in the hero ever sits perfectly still. All three are
-  // shared parent timers driving multiple AnimatedBuilders via phase
-  // offsets, so we never spawn a controller per character / per chip.
-  // - _heroTextBreathController:  category + subtitle opacity + scale.
-  // - _heroTitleDriftController:  per-character Lissajous drift on the
-  //   project title (each letter remaps the shared timer against its
-  //   own period seeded by index, so the letters never align in step).
-  // - _heroGradientShiftController: stop drift on the bottom shade
-  //   overlay so the gradient itself breathes alongside the cover.
-  late AnimationController _heroTextBreathController;
-  late AnimationController _heroTitleDriftController;
+  // horizontal scale dramatically (0.20 → 1.20) on independent
+  // easeInOutSine cycles. Two distinct controllers (1.4 s and 1.8 s,
+  // both reverse:true) so the rules never sync up — one is faster than
+  // the other and they slide in and out of relative phase forever.
+  // Anchored to the start so the rules grow from the left, matching
+  // the column's CrossAxisAlignment.start.
+  late AnimationController _heroLineBreatheControllerA;
+  late AnimationController _heroLineBreatheControllerB;
+  // Bottom-shade gradient breath. Reverse-cycles so the dark band at
+  // the foot of the hero slides up/down and softens/sharpens its
+  // stops smoothly — never a hard 1→0 wrap.
   late AnimationController _heroGradientShiftController;
   late AnimationController _aboutController;
   late AnimationController _aboutBodyController;
@@ -331,40 +325,28 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
       vsync: this,
       duration: const Duration(seconds: 33),
     )..repeat();
-    // 2.4 s easeInOut on the breathing accent rules. reverse:true so
-    // the controller bounces 0 → 1 → 0 smoothly without a hard wrap
-    // discontinuity, and the rules contract and expand symmetrically.
-    // Shortened 3.0 s → 2.4 s so the rhythm clearly reads as a slow
-    // inhale/exhale rather than near-stationary.
-    _heroLineBreatheController = AnimationController(
+    // Dramatic per-line breath on the two accent rules. Two
+    // controllers at different periods (1.4 s and 1.8 s) so they
+    // never tick together; each reverses so the bounce is smooth, no
+    // 1.0→0.0 snap discontinuity. Scale range 0.20 → 1.20 means the
+    // rules shrink to near-invisible on the inhale and overshoot
+    // beyond rest length on the exhale.
+    _heroLineBreatheControllerA = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2400),
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _heroLineBreatheControllerB = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
 
-    // 5.2 s easeInOut bounce for the hero typography. reverse:true so
-    // the category + subtitle opacity slowly inhale/exhale 0.86 → 1.00
-    // and the subtitle scale 0.985 → 1.015 ride the same wave on a
-    // shared sine — one controller, two elements, slight phase
-    // separation between them inside the AnimatedBuilder.
-    _heroTextBreathController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 5200),
-    )..repeat(reverse: true);
-    // 42 s parent timer for per-character drift on the title. Each
-    // letter remaps against its own period (4.7 – 8.9 s by index) and
-    // phase, giving us a slow Lissajous-style per-letter wobble of
-    // ±1.6 px without ever spawning a per-character controller.
-    _heroTitleDriftController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 42),
-    )..repeat();
-    // 18 s bottom-shade gradient breath. easeInOut + reverse so the
-    // shade band slides up/down (~10 px) and softens/sharpens its
-    // stops — the gradient itself "breathes" instead of being a
-    // static black-to-clear fill.
+    // Bottom-shade gradient breath. Stretched 18 s → 28 s (×~1.55) so
+    // the overall hero motion reads as slow ambience rather than
+    // active animation. reverse:true so the controller never has a
+    // 1.0 → 0.0 snap.
     _heroGradientShiftController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 18000),
+      duration: const Duration(milliseconds: 28000),
     )..repeat(reverse: true);
 
     _aboutController = AnimationController(
@@ -424,9 +406,8 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
     _heroCrossController.dispose();
     _heroParticleDriftController.dispose();
     _heroShapePulseController.dispose();
-    _heroLineBreatheController.dispose();
-    _heroTextBreathController.dispose();
-    _heroTitleDriftController.dispose();
+    _heroLineBreatheControllerA.dispose();
+    _heroLineBreatheControllerB.dispose();
     _heroGradientShiftController.dispose();
     _aboutController.dispose();
     _aboutBodyController.dispose();
@@ -564,10 +545,12 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                   // Combine zoom with a gentle X/Y pan so the
                   // cover image visibly "breathes" rather than just
                   // pulsing in place — a true Ken-Burns rather than a
-                  // pure scale. Amplitudes bumped (7 % → 10 % scale,
-                  // ±4 px → ±6 px pan) so the breath of the cover
-                  // visibly registers across every project hero.
-                  final double scale = 1.0 + t * 0.10; // 1.00 -> 1.10
+                  // pure scale. Minimum scale lifted from 1.00 to 1.05
+                  // so that even at the breath's smallest point the
+                  // panned cover (±6 px X, ±9 px Y) still fully
+                  // overscans the viewport — no white bars ever pull
+                  // in from the edges. 1.05 + 0.10 ⇒ 1.05 → 1.15.
+                  final double scale = 1.05 + t * 0.10; // 1.05 -> 1.15
                   final double panX = (t - 0.5) * 12.0;
                   final double panY = (t - 0.5) * 9.0;
                   return Transform.translate(
@@ -1633,95 +1616,42 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // Category line — opacity breathes 0.55 → 0.86 and the
-        // letter-spacing widens 3 → 4.6 px on the shared 5.2 s
-        // breath, anchored at top-left so the wider spacing
-        // pushes characters outward rather than re-centring.
-        AnimatedBuilder(
-          animation: _heroTextBreathController,
-          builder: (context, _) {
-            final double eased = Curves.easeInOut
-                .transform(_heroTextBreathController.value);
-            final double opacity = 0.55 + eased * 0.45; // 0.55 → 1.00
-            final double spacing = 3.0 + eased * 4.0;    // 3.0 → 7.0
-            return Text(
-              project.categoryFor(lang).toUpperCase(),
-              style: categoryStyle?.copyWith(
-                color: Colors.white.withValues(alpha: opacity),
-                letterSpacing: spacing,
-              ),
-            );
-          },
+        // Category line — STATIC. The earlier opacity + letter-spacing
+        // breath was too much shimmer on a piece of text that needs to
+        // read instantly; only the accent rules below move now.
+        Text(
+          project.categoryFor(lang).toUpperCase(),
+          style: categoryStyle,
         ),
         const SizedBox(height: 16),
-        // Title — every character drifts on its own slow
-        // Lissajous pattern driven by `_heroTitleDriftController`
-        // (42 s parent remapped per-character against a
-        // coprime-ish 4.7 → 8.9 s period seeded by index).
-        // Amplitude ±1.6 px per axis so the title feels
-        // magazine-cover alive without the words becoming
-        // unreadable.
-        _AnimatedTitleDrift(
-          text: project.titleFor(lang),
-          style: titleStyle,
-          drift: _heroTitleDriftController,
-          breath: _heroTextBreathController,
-        ),
+        // Title — STATIC. The per-character Lissajous drift made the
+        // title feel jittery; rendered as a plain Text now so the
+        // typography stays rock-solid against the breathing cover.
+        Text(project.titleFor(lang), style: titleStyle),
         const SizedBox(height: 12),
-        // Subtitle — opacity breathes 0.74 → 0.94 and the whole
-        // block subtly scales 0.985 → 1.015 about its left edge
-        // on the shared 5.2 s breath, phase-shifted from the
-        // category (1.0 - value below) so the two text blocks
-        // never brighten in sync.
+        // Subtitle — STATIC. Plain Text, no breath / no scale.
         ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: responsiveSize(mobile: 520, desktop: 720),
           ),
-          child: AnimatedBuilder(
-            animation: _heroTextBreathController,
-            builder: (context, _) {
-              final double inverted =
-                  1.0 - _heroTextBreathController.value;
-              final double eased =
-                  Curves.easeInOut.transform(inverted);
-              final double opacity = 0.60 + eased * 0.40; // 0.60 → 1.00
-              final double scale = 0.95 + eased * 0.10;   // 0.95 → 1.05
-              return Transform(
-                alignment: const Alignment(-1, 0),
-                transform: Matrix4.identity()
-                  ..scale(scale, scale, 1.0),
-                child: Text(
-                  project.subtitleFor(lang),
-                  style: subtitleStyle?.copyWith(
-                    color: Colors.white.withValues(alpha: opacity),
-                  ),
-                ),
-              );
-            },
-          ),
+          child: Text(project.subtitleFor(lang), style: subtitleStyle),
         ),
         const SizedBox(height: 24),
-        // Two short accent rules in the hero colour — mirrors the
-        // composition the user is used to from the previously baked
-        // covers, just rendered live now. Both rules "breathe" their
-        // horizontal scale 0.85 → 1.00 on a 3 s easeInOut, driven by
-        // `_heroLineBreatheController` (repeat:reverse so the
-        // controller bounces 0 → 1 → 0 without a hard wrap). The
-        // upper rule contracts on the controller's forward sweep, the
-        // lower rule on the reverse sweep — that quarter-cycle
-        // staggering keeps the two lines from breathing in unison.
-        // Anchored alignment(-1, 0) so the rule grows out from the
-        // left edge (matching CrossAxisAlignment.start above) instead
-        // of pulsing about its centre.
-        // Breathing range widened 0.85–1.0 → 0.55–1.0 so the
-        // contraction is unmistakably visible. Anchor (-1, 0) keeps
-        // the rule growing out from the column's left edge.
+        // Two short accent rules in the hero colour — the only
+        // typography-area elements that move now. Each rule is on its
+        // own controller (1.4 s and 1.8 s, both reverse:true) so they
+        // never sync up: one is faster than the other and they slide in
+        // and out of relative phase forever. Scale 0.20 → 1.20 means
+        // each rule shrinks to near-invisible on the inhale and
+        // overshoots beyond its rest length on the exhale. Anchor
+        // (-1, 0) keeps the rule growing out from the column's left
+        // edge.
         AnimatedBuilder(
-          animation: _heroLineBreatheController,
+          animation: _heroLineBreatheControllerA,
           builder: (context, child) {
-            final double eased = Curves.easeInOut
-                .transform(_heroLineBreatheController.value);
-            final double scaleX = 0.40 + eased * 0.60; // 0.40 → 1.00
+            final double eased = Curves.easeInOutSine
+                .transform(_heroLineBreatheControllerA.value);
+            final double scaleX = 0.20 + eased * 1.00; // 0.20 → 1.20
             return Transform(
               alignment: const Alignment(-1, 0),
               transform: Matrix4.identity()..scale(scaleX, 1.0, 1.0),
@@ -1736,16 +1666,11 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
         ),
         const SizedBox(height: 8),
         AnimatedBuilder(
-          animation: _heroLineBreatheController,
+          animation: _heroLineBreatheControllerB,
           builder: (context, child) {
-            // Invert the controller value (1 - v) so this rule breathes
-            // out of phase with the upper one — when the longer rule
-            // is at its widest, this shorter rule is at its narrowest,
-            // and vice versa.
-            final double inverted =
-                1.0 - _heroLineBreatheController.value;
-            final double eased = Curves.easeInOut.transform(inverted);
-            final double scaleX = 0.40 + eased * 0.60; // 0.40 → 1.00
+            final double eased = Curves.easeInOutSine
+                .transform(_heroLineBreatheControllerB.value);
+            final double scaleX = 0.20 + eased * 1.00; // 0.20 → 1.20
             return Transform(
               alignment: const Alignment(-1, 0),
               transform: Matrix4.identity()..scale(scaleX, 1.0, 1.0),
@@ -2460,120 +2385,6 @@ class _HeroCross {
   final double periodSec;
   /// 0–1 phase offset between the two crosses.
   final double phase;
-}
-
-/// Per-character drift on the project hero title. Each glyph is laid
-/// out in a `Wrap` so line-breaks behave normally; inside that wrap
-/// every visible character (whitespace is preserved as a fixed gap
-/// so it doesn't move) is wrapped in a `Transform.translate` whose
-/// offset is computed from the shared 42 s drift parent timer
-/// remapped against a per-character coprime-ish period seeded by
-/// index. On top of the per-character drift the title also
-/// opacity-breathes 0.94 → 1.00 on the shared 5.2 s text-breath
-/// controller — both controllers are already created on the parent
-/// state, so no new tickers spawned here.
-class _AnimatedTitleDrift extends StatelessWidget {
-  const _AnimatedTitleDrift({
-    required this.text,
-    required this.style,
-    required this.drift,
-    required this.breath,
-  });
-
-  final String text;
-  final TextStyle? style;
-  final AnimationController drift;
-  final AnimationController breath;
-
-  // Coprime-ish period table (seconds) so each letter wobbles on
-  // its own beat. Indexed `i % 8` so even a 30-char title stays
-  // varied.
-  static const List<double> _periodsX = <double>[
-    4.7, 5.3, 6.1, 6.8, 7.4, 8.1, 8.6, 8.9,
-  ];
-  static const List<double> _periodsY = <double>[
-    5.1, 4.9, 7.3, 6.4, 8.0, 5.8, 7.7, 6.2,
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> letters = <Widget>[];
-    for (int i = 0; i < text.length; i++) {
-      final String ch = text[i];
-      if (ch == ' ') {
-        letters.add(Text(' ', style: style));
-        continue;
-      }
-      if (ch == '\n') {
-        letters.add(const SizedBox(width: double.infinity, height: 0));
-        continue;
-      }
-      letters.add(_DriftingGlyph(
-        ch: ch,
-        style: style,
-        drift: drift,
-        breath: breath,
-        index: i,
-      ));
-    }
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: letters,
-    );
-  }
-}
-
-class _DriftingGlyph extends StatelessWidget {
-  const _DriftingGlyph({
-    required this.ch,
-    required this.style,
-    required this.drift,
-    required this.breath,
-    required this.index,
-  });
-
-  final String ch;
-  final TextStyle? style;
-  final AnimationController drift;
-  final AnimationController breath;
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-    final double periodX = _AnimatedTitleDrift
-        ._periodsX[index % _AnimatedTitleDrift._periodsX.length];
-    final double periodY = _AnimatedTitleDrift
-        ._periodsY[index % _AnimatedTitleDrift._periodsY.length];
-    final double phaseX = (index * 0.137) % 1.0;
-    final double phaseY = (index * 0.241) % 1.0;
-    return AnimatedBuilder(
-      animation: Listenable.merge(<Listenable>[drift, breath]),
-      builder: (context, _) {
-        final double tSec = drift.value * 42.0;
-        // ±8 px per axis — clearly visible per-character shimmer.
-        final double dx = 8.0 *
-            math.sin(((tSec / periodX) + phaseX) * 2 * math.pi);
-        final double dy = 8.0 *
-            math.sin(((tSec / periodY) + phaseY) * 2 * math.pi);
-        // Per-letter opacity breath 0.94 → 1.00, phase-offset by
-        // index so the title shimmers softly left-to-right.
-        final double bp = (breath.value + (index * 0.07)) % 1.0;
-        final double bEnv = Curves.easeInOut.transform(
-            0.5 - 0.5 * math.cos(bp * 2 * math.pi));
-        final double alpha = 0.94 + bEnv * 0.06;
-        return Transform.translate(
-          offset: Offset(dx, dy),
-          child: Text(
-            ch,
-            style: style?.copyWith(
-              color: (style?.color ?? Colors.white)
-                  .withValues(alpha: alpha),
-            ),
-          ),
-        );
-      },
-    );
-  }
 }
 
 /// Tiny inline-markdown parser used by the decisions / learnings bullet

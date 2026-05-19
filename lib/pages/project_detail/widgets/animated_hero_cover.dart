@@ -45,33 +45,58 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
   late final AnimationController _particles;
   late final AnimationController _illustration;
   late final AnimationController _vignette;
+  // Dedicated linear-loop controller for the falling-line layer. The
+  // fall is a continuous downward translate — reversing it would make
+  // the lines drift back up, which destroys the falling-rain feel.
+  // The wrap is invisible because each line teleports back to top
+  // off-screen (modulo math in the painter), so there is no visible
+  // 1.0 → 0.0 snap.
+  late final AnimationController _fallingLines;
 
   late final List<_Particle> _particleTable;
+  late final List<_FallingLine> _fallingLineTable;
+  late final List<_BlurredParticle> _blurredParticleTable;
   late final Listenable _ticker;
 
   @override
   void initState() {
     super.initState();
+    // Every reversible controller uses repeat(reverse: true) so it
+    // bounces 0 → 1 → 0 smoothly with no 1.0 → 0.0 snap. Periods
+    // stretched ×1.5–2× the previous values so the overall hero feels
+    // slower and more ambient.
     _gradient = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 14),
+      duration: const Duration(seconds: 24),
     )..repeat(reverse: true);
     _glow = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 6),
+      duration: const Duration(seconds: 10),
     )..repeat(reverse: true);
+    // Particles + illustration use reverse:true so the sine-driven
+    // sub-elements never all hit t=0 together (the previous
+    // repeat() without reverse was the source of the "hard reset"
+    // every cycle).
     _particles = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 30),
-    )..repeat();
+      duration: const Duration(seconds: 50),
+    )..repeat(reverse: true);
     _illustration = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 18),
-    )..repeat();
+      duration: const Duration(seconds: 30),
+    )..repeat(reverse: true);
     _vignette = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 22),
+      duration: const Duration(seconds: 38),
     )..repeat(reverse: true);
+    // Falling lines: continuous downward loop (45 s for one full
+    // sweep of the longest line). Cannot reverse — the lines would
+    // climb back up. The wrap is invisible because each line's
+    // modulo math teleports it back above the cover off-screen.
+    _fallingLines = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 45),
+    )..repeat();
 
     final math.Random rng = math.Random(widget.project.slug.hashCode);
     _particleTable = List<_Particle>.generate(
@@ -93,12 +118,67 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
       growable: false,
     );
 
+    // Falling vertical hairlines — each line gets its own seeded
+    // x-position, length, alpha, and fall-speed so they look unrelated
+    // and never align on any visible beat.
+    final math.Random rngFall = math.Random(widget.project.slug.hashCode * 31);
+    _fallingLineTable = List<_FallingLine>.generate(
+      26,
+      (int i) {
+        return _FallingLine(
+          x: 0.02 + rngFall.nextDouble() * 0.96,
+          // baseTopY is a fractional offset 0..1 used as an initial
+          // phase so lines don't all start at the same Y on page-load.
+          baseTopY: rngFall.nextDouble(),
+          // 30–120 px length at 1600x900 reference (sy-scaled in paint).
+          length: 30.0 + rngFall.nextDouble() * 90.0,
+          // Fall-speed: how many "cover heights" the line traverses
+          // per full controller cycle (45 s). 0.4–3.0 gives traversal
+          // times between ~15 s and ~110 s for the slowest, but the
+          // line table mostly clusters at 1.0–2.5 so most lines cross
+          // the cover in 18 – 45 s.
+          fallSpeed: 1.0 + rngFall.nextDouble() * 2.0,
+          alpha: 0.15 + rngFall.nextDouble() * 0.15, // 0.15 – 0.30
+          strokeWidth: 1.0 + rngFall.nextDouble() * 1.0, // 1 – 2 px
+        );
+      },
+      growable: false,
+    );
+
+    // Out-of-focus blurred particles. Larger (8–20 px), low alpha
+    // (0.05–0.15), blurred via MaskFilter so they read as background
+    // depth. Slow Lissajous periods (12–25 s remapped against the
+    // 50 s particles controller) so they drift gently.
+    final math.Random rngBlur = math.Random(widget.project.slug.hashCode * 17);
+    _blurredParticleTable = List<_BlurredParticle>.generate(
+      20,
+      (int i) {
+        return _BlurredParticle(
+          baseX: 0.05 + rngBlur.nextDouble() * 0.90,
+          baseY: 0.08 + rngBlur.nextDouble() * 0.84,
+          // Larger drift amplitudes than the focused particles so the
+          // blurred dots feel like they're parallax-floating behind.
+          ampX: 0.010 + rngBlur.nextDouble() * 0.025,
+          ampY: 0.010 + rngBlur.nextDouble() * 0.025,
+          periodX: 0.20 + rngBlur.nextDouble() * 0.50,
+          periodY: 0.20 + rngBlur.nextDouble() * 0.50,
+          phaseX: rngBlur.nextDouble() * 2 * math.pi,
+          phaseY: rngBlur.nextDouble() * 2 * math.pi,
+          radius: 8.0 + rngBlur.nextDouble() * 12.0, // 8 – 20 px
+          alpha: 0.05 + rngBlur.nextDouble() * 0.10, // 0.05 – 0.15
+          blurSigma: 4.0 + rngBlur.nextDouble() * 4.0, // 4 – 8 px blur
+        );
+      },
+      growable: false,
+    );
+
     _ticker = Listenable.merge(<Listenable>[
       _gradient,
       _glow,
       _particles,
       _illustration,
       _vignette,
+      _fallingLines,
     ]);
   }
 
@@ -109,6 +189,7 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
     _particles.dispose();
     _illustration.dispose();
     _vignette.dispose();
+    _fallingLines.dispose();
     super.dispose();
   }
 
@@ -121,11 +202,14 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
           base: base,
           category: widget.project.categoryFor(widget.lang),
           particles: _particleTable,
+          fallingLines: _fallingLineTable,
+          blurredParticles: _blurredParticleTable,
           gradient: _gradient,
           glow: _glow,
           particlesC: _particles,
           illustration: _illustration,
           vignette: _vignette,
+          fallingLinesC: _fallingLines,
           repaint: _ticker,
         ),
         size: Size.infinite,
@@ -161,6 +245,57 @@ class _Particle {
   final double alpha;
 }
 
+/// A long thin vertical hairline that drops from above the cover and
+/// scrolls downward, wrapping back to the top once it exits the
+/// bottom. Each line has its own x, length, fall speed, alpha so the
+/// 25-ish lines look completely uncorrelated.
+class _FallingLine {
+  const _FallingLine({
+    required this.x,
+    required this.baseTopY,
+    required this.length,
+    required this.fallSpeed,
+    required this.alpha,
+    required this.strokeWidth,
+  });
+  final double x;          // 0..1 — fractional x position
+  final double baseTopY;   // 0..1 — initial phase along the fall cycle
+  final double length;     // reference-space length (sy-scaled in paint)
+  final double fallSpeed;  // cover-heights per controller cycle
+  final double alpha;
+  final double strokeWidth;
+}
+
+/// A larger, low-alpha, MaskFilter-blurred circle that drifts on a
+/// slow Lissajous like the focused particles but at lower frequency
+/// and bigger radius. Gives the cover a parallax sense of depth.
+class _BlurredParticle {
+  const _BlurredParticle({
+    required this.baseX,
+    required this.baseY,
+    required this.ampX,
+    required this.ampY,
+    required this.periodX,
+    required this.periodY,
+    required this.phaseX,
+    required this.phaseY,
+    required this.radius,
+    required this.alpha,
+    required this.blurSigma,
+  });
+  final double baseX;
+  final double baseY;
+  final double ampX;
+  final double ampY;
+  final double periodX;
+  final double periodY;
+  final double phaseX;
+  final double phaseY;
+  final double radius;
+  final double alpha;
+  final double blurSigma;
+}
+
 Color _darken(Color c, double f) {
   return Color.fromARGB(
     c.alpha,
@@ -187,11 +322,14 @@ class _HeroCoverPainter extends CustomPainter {
     required this.base,
     required this.category,
     required this.particles,
+    required this.fallingLines,
+    required this.blurredParticles,
     required this.gradient,
     required this.glow,
     required this.particlesC,
     required this.illustration,
     required this.vignette,
+    required this.fallingLinesC,
     required Listenable repaint,
   })  : top = _lighten(base, 0.14),
         bottom = _darken(base, 0.50),
@@ -203,11 +341,14 @@ class _HeroCoverPainter extends CustomPainter {
   final Color base;
   final String category;
   final List<_Particle> particles;
+  final List<_FallingLine> fallingLines;
+  final List<_BlurredParticle> blurredParticles;
   final AnimationController gradient;
   final AnimationController glow;
   final AnimationController particlesC;
   final AnimationController illustration;
   final AnimationController vignette;
+  final AnimationController fallingLinesC;
 
   final Color top;
   final Color bottom;
@@ -240,6 +381,7 @@ class _HeroCoverPainter extends CustomPainter {
     final double tPart = particlesC.value;
     final double tIll = illustration.value;
     final double tVig = vignette.value;
+    final double tFall = fallingLinesC.value;
 
     // ----- Layer 1: diagonal gradient (animated stops + endpoint drift)
     final double gradShift = 0.06 * math.sin(tGrad * 2 * math.pi);
@@ -287,8 +429,26 @@ class _HeroCoverPainter extends CustomPainter {
     );
     canvas.drawCircle(glowCenter, glowRadius, Paint()..shader = glowGrad);
 
-    // ----- Layer 4: 120 drifting particles.
+    // ----- Layer 4a: blurred out-of-focus background particles.
+    // Drawn first so the focused dots + falling lines sit IN FRONT.
+    // Each blurred particle uses a fresh Paint() because MaskFilter
+    // can vary per-particle (sigma differs) and re-using the same
+    // Paint would force every dot to share the same blur.
     final double tPart2pi = tPart * 2 * math.pi;
+    for (int i = 0; i < blurredParticles.length; i++) {
+      final _BlurredParticle bp = blurredParticles[i];
+      final double dx = bp.ampX * math.sin(tPart2pi * bp.periodX + bp.phaseX);
+      final double dy = bp.ampY * math.cos(tPart2pi * bp.periodY + bp.phaseY);
+      final double x = (bp.baseX + dx) * size.width;
+      final double y = (bp.baseY + dy) * size.height;
+      final Paint blurPaint = Paint()
+        ..color = pale.withValues(alpha: bp.alpha)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, bp.blurSigma);
+      canvas.drawCircle(
+          Offset(x, y), bp.radius * math.min(sx, sy), blurPaint);
+    }
+
+    // ----- Layer 4b: 120 drifting focused particles.
     for (int i = 0; i < particles.length; i++) {
       final _Particle p = particles[i];
       final double dx = p.ampX * math.sin(tPart2pi * p.periodX + p.phaseX);
@@ -297,6 +457,30 @@ class _HeroCoverPainter extends CustomPainter {
       final double y = (p.baseY + dy) * size.height;
       _fillPaint.color = pale.withValues(alpha: p.alpha);
       canvas.drawCircle(Offset(x, y), p.radius * math.min(sx, sy), _fillPaint);
+    }
+
+    // ----- Layer 4c: falling vertical hairlines.
+    // Each line uses the dedicated _fallingLines controller (linear
+    // loop, 45 s) — tFall ∈ [0,1] over one cycle, multiplied by each
+    // line's fallSpeed to give per-line traversal times. y is wrapped
+    // by modulo so the wrap teleports the line back above the cover
+    // off-screen (length px above the top); no visible 1.0 → 0.0 snap.
+    for (int i = 0; i < fallingLines.length; i++) {
+      final _FallingLine fl = fallingLines[i];
+      final double lineLen = fl.length * sy;
+      final double range = size.height + lineLen;
+      final double yTop =
+          ((fl.baseTopY + tFall * fl.fallSpeed) % 1.0) * range - lineLen;
+      final double xPx = fl.x * size.width;
+      final Paint linePaint = Paint()
+        ..color = pale.withValues(alpha: fl.alpha)
+        ..strokeWidth = fl.strokeWidth * math.min(sx, sy)
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        Offset(xPx, yTop),
+        Offset(xPx, yTop + lineLen),
+        linePaint,
+      );
     }
 
     // ----- Layer 5: category-driven illustration.
@@ -429,17 +613,19 @@ class _HeroCoverPainter extends CustomPainter {
       c.drawCircle(p, 3 * sx, _fillPaint);
     }
     // Connecting line — alpha breathes with the t-driven sin.
+    // Per-element phase 0.83 so this isn't at t=0 when the global
+    // controller bounces past 0 / 1.
     final Offset focal = points[3];
     final Offset target = points[8];
     final double lineAlpha =
-        0.32 + 0.22 * (0.5 + 0.5 * math.sin(t2pi));
+        0.32 + 0.22 * (0.5 + 0.5 * math.sin(t2pi * 0.67 + 0.83));
     _strokePaint
       ..color = accentC.withValues(alpha: lineAlpha)
       ..strokeWidth = 2.0;
     c.drawLine(focal, target, _strokePaint);
     _fillPaint.color = accentC.withValues(alpha: 0.86);
     final double focalR =
-        9 * sx * (1.0 + 0.10 * math.sin(t2pi + 1.2));
+        9 * sx * (1.0 + 0.10 * math.sin(t2pi * 0.67 + 1.2));
     c.drawCircle(focal, focalR, _fillPaint);
   }
 
@@ -472,7 +658,9 @@ class _HeroCoverPainter extends CustomPainter {
   void _paintMonumentalBlock(Canvas c, Size sz, double sx, double sy,
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
-    final double dx = 3 * sx * math.sin(t2pi);
+    // Per-element phase 0.41 so the block dx never lands at zero
+    // when the global controller bounces past 0 / 1.
+    final double dx = 3 * sx * math.sin(t2pi * 0.67 + 0.41);
     final Rect rect = Rect.fromLTRB(
       980 * sx + dx, 130 * sy, 1480 * sx + dx, 580 * sy,
     );
@@ -537,8 +725,9 @@ class _HeroCoverPainter extends CustomPainter {
         );
       }
     }
-    // The big lit window in accent.
-    final double bigA = 0.78 + 0.14 * math.sin(t2pi * 0.5);
+    // The big lit window in accent. Per-element phase 1.93 so the
+    // window's pulse never lands on the global zero-crossing.
+    final double bigA = 0.78 + 0.14 * math.sin(t2pi * 0.33 + 1.93);
     _fillPaint.color = accentC.withValues(alpha: bigA);
     c.drawRect(
       Rect.fromLTWH(
@@ -584,9 +773,11 @@ class _HeroCoverPainter extends CustomPainter {
   void _paintFoldedPaper(Canvas c, Size sz, double sx, double sy,
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
-    // Per-fold ±1.5° rotation about the hinge.
-    final double rot1 = 0.025 * math.sin(t2pi * 0.7);
-    final double rot2 = 0.025 * math.cos(t2pi * 0.5 + 0.6);
+    // Per-fold ±1.5° rotation about the hinge. Periods slowed to
+    // 0.46 / 0.33 (×~0.66) and phase 1.27 added to rot1 so the two
+    // folds never both hit zero together.
+    final double rot1 = 0.025 * math.sin(t2pi * 0.46 + 1.27);
+    final double rot2 = 0.025 * math.cos(t2pi * 0.33 + 0.6);
     _strokePaint
       ..color = baseC.withValues(alpha: 0.51)
       ..strokeWidth = 2.0;
@@ -602,8 +793,9 @@ class _HeroCoverPainter extends CustomPainter {
       rot2,
       _strokePaint,
     );
-    // Diagonal crease — alpha breathes.
-    final double creaseA = 0.78 + 0.12 * math.sin(t2pi);
+    // Diagonal crease — alpha breathes. Phase 0.74 keeps it off the
+    // global zero-crossing.
+    final double creaseA = 0.78 + 0.12 * math.sin(t2pi * 0.67 + 0.74);
     _strokePaint
       ..color = accentC.withValues(alpha: creaseA)
       ..strokeWidth = 3.0;
@@ -695,8 +887,9 @@ class _HeroCoverPainter extends CustomPainter {
   void _paintGameArc(Canvas c, Size sz, double sx, double sy,
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
-    // The triangular arc, fill + outline.
-    final double yPulse = 4 * sy * math.sin(t2pi);
+    // The triangular arc, fill + outline. Per-element phase 1.07 so
+    // the apex y-pulse never lands at zero on the global wrap.
+    final double yPulse = 4 * sy * math.sin(t2pi * 0.67 + 1.07);
     final Path path = Path()
       ..moveTo(1100 * sx, 540 * sy)
       ..lineTo(1260 * sx, 220 * sy + yPulse)
@@ -708,9 +901,10 @@ class _HeroCoverPainter extends CustomPainter {
       ..color = baseC.withValues(alpha: 0.51)
       ..strokeWidth = 2.0;
     c.drawPath(path, _strokePaint);
-    // Baseline rule.
+    // Baseline rule. Phase 2.31 keeps the pulse off the global wrap.
     _strokePaint
-      ..color = accentC.withValues(alpha: 0.78 + 0.14 * math.sin(t2pi * 0.7))
+      ..color = accentC.withValues(
+          alpha: 0.78 + 0.14 * math.sin(t2pi * 0.46 + 2.31))
       ..strokeWidth = 4.0;
     c.drawLine(Offset(1100 * sx, 540 * sy), Offset(1420 * sx, 540 * sy),
         _strokePaint);
@@ -803,8 +997,9 @@ class _HeroCoverPainter extends CustomPainter {
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
     final Offset center = Offset(1240 * sx, 360 * sy);
-    // Outer orbit ring — alpha breathes.
-    final double ringA = 0.55 + 0.15 * math.sin(t2pi);
+    // Outer orbit ring — alpha breathes. Phase 1.48 keeps it off the
+    // wrap point.
+    final double ringA = 0.55 + 0.15 * math.sin(t2pi * 0.67 + 1.48);
     _strokePaint
       ..color = accentC.withValues(alpha: ringA)
       ..strokeWidth = 3.0;
@@ -865,8 +1060,10 @@ class _HeroCoverPainter extends CustomPainter {
     final double s = 130 * sx;
     // Simulate slow rotation around vertical axis by skewing the top
     // face's perspective offset.
-    final double skew = math.sin(t2pi * 0.5) * 0.18;
-    final double sH = s * 0.5 + s * 0.10 * math.sin(t2pi * 0.7);
+    // Periods slowed (×~0.66) and per-element phases so the cube
+    // never aligns with the global wrap.
+    final double skew = math.sin(t2pi * 0.33 + 0.53) * 0.18;
+    final double sH = s * 0.5 + s * 0.10 * math.sin(t2pi * 0.46 + 1.17);
     final Path top = Path()
       ..moveTo(cx + skew * s, cy - s)
       ..lineTo(cx + s, cy - sH)
@@ -894,7 +1091,8 @@ class _HeroCoverPainter extends CustomPainter {
       ..lineTo(cx + s, cy + sH)
       ..lineTo(cx + skew * s, cy + s)
       ..close();
-    _fillPaint.color = accentC.withValues(alpha: 0.55 + 0.20 * math.sin(t2pi));
+    _fillPaint.color = accentC
+        .withValues(alpha: 0.55 + 0.20 * math.sin(t2pi * 0.67 + 1.81));
     c.drawPath(right, _fillPaint);
     c.drawPath(right, _strokePaint);
 
@@ -924,10 +1122,15 @@ class _HeroCoverPainter extends CustomPainter {
       ..strokeWidth = 3.0;
     c.drawRRect(rRect, _strokePaint);
     // Content stripes that scroll vertically (very slow loop) inside
-    // the phone outline, clipped to the rounded rect.
+    // the phone outline, clipped to the rounded rect. Driven by the
+    // dedicated continuous-loop `fallingLinesC` so the scroll never
+    // reverses when the illustration controller bounces. Modulo math
+    // hides the 1.0 → 0.0 wrap inside the phone's clip.
     c.save();
     c.clipRRect(rRect);
-    final double scroll = (t * outer.height) % (outer.height + 80 * sy);
+    final double tFall = fallingLinesC.value;
+    final double scroll =
+        (tFall * outer.height * 2) % (outer.height + 80 * sy);
     for (int i = 0; i < 10; i++) {
       final double y = outer.top - 60 * sy + i * 60 * sy + scroll - outer.height;
       final double a = 0.15 + 0.35 * (0.5 + 0.5 * math.sin(t2pi + i * 0.6));
@@ -937,9 +1140,9 @@ class _HeroCoverPainter extends CustomPainter {
         _fillPaint,
       );
     }
-    // Top lit panel.
+    // Top lit panel. Phase 0.92 to break alignment with the global wrap.
     _fillPaint.color = accentC.withValues(
-        alpha: 0.78 + 0.12 * math.sin(t2pi * 0.7));
+        alpha: 0.78 + 0.12 * math.sin(t2pi * 0.46 + 0.92));
     c.drawRect(
       Rect.fromLTWH(
         outer.left + 50 * sx, outer.top + 60 * sy,
@@ -996,7 +1199,9 @@ class _HeroCoverPainter extends CustomPainter {
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
     // Main diagonal slash — stretches ±4% endpoint position.
-    final double stretch = 0.04 * math.sin(t2pi);
+    // Phase 1.63 + slower 0.67 multiplier so the stretch never lands
+    // on zero when the global controller bounces.
+    final double stretch = 0.04 * math.sin(t2pi * 0.67 + 1.63);
     _strokePaint
       ..color = accentC.withValues(alpha: 0.86)
       ..strokeWidth = 4.0;
