@@ -21,6 +21,7 @@ import '../../widgets/scaffolding/footer/full_footer.dart';
 import '../../widgets/scaffolding/page_wrapper.dart';
 import '../../widgets/text/self_positioning_text.dart';
 import '../../widgets/text/slide_box_transitioning_text.dart';
+import 'widgets/animated_hero_cover.dart';
 
 /// Pill CTA. Visible at rest — solid color background with white text —
 /// and lifts on hover. Replaces the AnimatedBubbleButton on the detail page
@@ -582,7 +583,7 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                   );
                 },
-                child: Image.asset(project.coverFor(lang), fit: BoxFit.cover),
+                child: AnimatedHeroCover(project: project, lang: lang),
               ),
             ),
           ),
@@ -1645,8 +1646,8 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
           builder: (context, _) {
             final double eased = Curves.easeInOut
                 .transform(_heroTextBreathController.value);
-            final double opacity = 0.55 + eased * 0.31; // 0.55 → 0.86
-            final double spacing = 3.0 + eased * 1.6;    // 3.0 → 4.6
+            final double opacity = 0.55 + eased * 0.45; // 0.55 → 1.00
+            final double spacing = 3.0 + eased * 4.0;    // 3.0 → 7.0
             return Text(
               project.categoryFor(lang).toUpperCase(),
               style: categoryStyle?.copyWith(
@@ -1687,8 +1688,8 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                   1.0 - _heroTextBreathController.value;
               final double eased =
                   Curves.easeInOut.transform(inverted);
-              final double opacity = 0.74 + eased * 0.20; // 0.74 → 0.94
-              final double scale = 0.985 + eased * 0.030;  // 0.985 → 1.015
+              final double opacity = 0.60 + eased * 0.40; // 0.60 → 1.00
+              final double scale = 0.95 + eased * 0.10;   // 0.95 → 1.05
               return Transform(
                 alignment: const Alignment(-1, 0),
                 transform: Matrix4.identity()
@@ -2553,10 +2554,10 @@ class _DriftingGlyph extends StatelessWidget {
       animation: Listenable.merge(<Listenable>[drift, breath]),
       builder: (context, _) {
         final double tSec = drift.value * 42.0;
-        // ±1.6 px per axis — visible but not so much the words look broken.
-        final double dx = 1.6 *
+        // ±8 px per axis — clearly visible per-character shimmer.
+        final double dx = 8.0 *
             math.sin(((tSec / periodX) + phaseX) * 2 * math.pi);
-        final double dy = 1.6 *
+        final double dy = 8.0 *
             math.sin(((tSec / periodY) + phaseY) * 2 * math.pi);
         // Per-letter opacity breath 0.94 → 1.00, phase-offset by
         // index so the title shimmers softly left-to-right.
