@@ -3,10 +3,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 /// Wraps [child] so the first time at least 15% of it scrolls into the
-/// viewport the child slides in from just past the left edge of the
-/// viewport and then stays at its final state. Used to make the home
-/// page project cascade tiles appear as the visitor scrolls instead of
-/// all snapping into place at the moment the cascade enters view.
+/// viewport the child slides in from fully offstage on the left and
+/// then stays at its final state. Used to make the home page project
+/// cascade tiles appear as the visitor scrolls instead of all snapping
+/// into place at the moment the cascade enters view.
 ///
 /// Each instance needs a unique [uniqueKey] — `VisibilityDetector`
 /// internally requires globally unique keys across the tree.
@@ -17,12 +17,18 @@ import 'package:visibility_detector/visibility_detector.dart';
 /// replay the slide. There is no fade — only a translate — because the
 /// tiles should feel like they are physically sliding in from behind
 /// the left edge, not materialising mid-screen.
+///
+/// The slide uses `flutter_animate`'s fractional [slideX] (offset in
+/// units of the widget's own width) rather than an absolute pixel
+/// offset, so the tile is guaranteed to start entirely offstage to
+/// the left regardless of viewport width or final tile placement —
+/// no part of the tile peeks into view before the animation begins.
 class SlideInOnVisible extends StatefulWidget {
   const SlideInOnVisible({
     required this.uniqueKey,
     required this.child,
     this.visibilityThreshold = 0.15,
-    this.slideOffsetX,
+    this.slideBeginX = -1.5,
     this.duration = const Duration(milliseconds: 900),
     super.key,
   });
@@ -38,11 +44,13 @@ class SlideInOnVisible extends StatefulWidget {
   /// view" feel; bump up for a "fully on-screen" feel.
   final double visibilityThreshold;
 
-  /// Horizontal offset in absolute pixels for the entrance slide.
-  /// Negative slides in from the left. When null we derive it from the
-  /// current viewport width so each tile starts just past the left edge
-  /// of the visible area regardless of screen size.
-  final double? slideOffsetX;
+  /// Starting horizontal offset for the slide, expressed in multiples
+  /// of the child's own width. Negative values start offstage to the
+  /// left. The default `-1.5` puts the child 1.5× its width past the
+  /// left edge of its own layout slot, guaranteeing it is fully off
+  /// the visible canvas at animation start even for tiles whose final
+  /// position is well to the right of the viewport's left edge.
+  final double slideBeginX;
 
   final Duration duration;
 
@@ -75,12 +83,12 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
 
   @override
   Widget build(BuildContext context) {
-    // Start the tile half a viewport-width offstage to the left so it
-    // genuinely reads as "sliding in from behind the visible area"
-    // rather than appearing in the middle of the screen.
-    final double offsetX = widget.slideOffsetX ??
-        -MediaQuery.of(context).size.width * 0.5;
-
+    // Use a fractional slide (units = child's own width) so the tile
+    // is guaranteed to start fully offstage to the left regardless of
+    // viewport size or final tile placement. `slideX(begin: -1.5)`
+    // puts the child 1.5× its own width past its layout slot — even
+    // tiles whose final left edge is several hundred pixels from the
+    // viewport's left edge are completely out of view at t=0.
     return VisibilityDetector(
       key: widget.uniqueKey,
       onVisibilityChanged: (VisibilityInfo info) {
@@ -92,9 +100,9 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
       },
       child: widget.child
           .animate(controller: _controller, autoPlay: false)
-          .move(
-            begin: Offset(offsetX, 0),
-            end: Offset.zero,
+          .slideX(
+            begin: widget.slideBeginX,
+            end: 0,
             duration: widget.duration,
             curve: Curves.easeOutCubic,
           ),
