@@ -422,28 +422,74 @@ class HomePageState extends State<HomePage>
                       child: SlideInOnVisible(
                         uniqueKey: ValueKey<String>('cascade-$i'),
                         staggerGroup: 'home-cascade',
-                        child: Link(
-                        uri: Uri.parse(displayUri),
-                        target: LinkTarget.self,
-                        builder: (BuildContext context, FollowLink? _) {
-                          return ProjectItemLarge(
-                            projectNumber:
-                                (i + 1) > 9 ? "${i + 1}" : "0${i + 1}",
-                            imageUrl: projects[i].coverFor(lang),
-                            hoverImageUrl: projects[i].coverColorUrl,
-                            projectItemheight: itemH,
-                            subheight: subH,
-                            duration: const Duration(milliseconds: 900),
-                            backgroundColor: CustomColors.accentColor2
-                                .withValues(alpha: 0.35),
-                            title: projects[i].titleFor(lang),
-                            subtitle: projects[i].categoryFor(lang),
-                            containerColor: projects[i].primaryColor,
-                            onTap: () {
-                              PageTransition.goTo(context, logical);
-                            },
-                          );
-                        },
+                        // Outer Stack wraps the `Link` so we can layer a
+                        // dead-zone absorber over its rightmost 32 px.
+                        //
+                        // Why HERE and not inside ProjectItemLarge:
+                        // `url_launcher`'s `Link` on web renders a
+                        // transparent HTML `<a>` element via
+                        // `Positioned.fill` on top of its child (see
+                        // `url_launcher_web/src/link.dart`). The browser's
+                        // native click on that anchor fires
+                        // `_onGlobalClick` and navigates regardless of
+                        // any in-Flutter GestureDetector painted inside
+                        // the tile. The only way to claim the rightmost
+                        // strip is to layer a Flutter widget AS A
+                        // SIBLING of the Link, AFTER it in the Stack —
+                        // Flutter web then puts the absorber's canvas
+                        // overlay above the platform-view anchor in DOM
+                        // stacking, so the click hits the absorber's
+                        // GestureDetector (empty `onTap`, opaque hit
+                        // behaviour) instead of the anchor.
+                        //
+                        // 32 px (was 24) gives a comfortable buffer over
+                        // the 8 px Scrollbar thumb so the user can grab
+                        // it without surgical precision.
+                        child: Stack(
+                          children: <Widget>[
+                            Link(
+                              uri: Uri.parse(displayUri),
+                              target: LinkTarget.self,
+                              builder: (BuildContext context, FollowLink? _) {
+                                return ProjectItemLarge(
+                                  projectNumber: (i + 1) > 9
+                                      ? "${i + 1}"
+                                      : "0${i + 1}",
+                                  imageUrl: projects[i].coverFor(lang),
+                                  hoverImageUrl: projects[i].coverColorUrl,
+                                  projectItemheight: itemH,
+                                  subheight: subH,
+                                  duration: const Duration(milliseconds: 900),
+                                  backgroundColor: CustomColors.accentColor2
+                                      .withValues(alpha: 0.35),
+                                  title: projects[i].titleFor(lang),
+                                  subtitle: projects[i].categoryFor(lang),
+                                  containerColor: projects[i].primaryColor,
+                                  onTap: () {
+                                    PageTransition.goTo(context, logical);
+                                  },
+                                );
+                              },
+                            ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              bottom: 0,
+                              width: 32,
+                              child: MouseRegion(
+                                cursor: SystemMouseCursors.basic,
+                                child: Listener(
+                                  behavior: HitTestBehavior.opaque,
+                                  onPointerDown: (_) {},
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {},
+                                    child: const SizedBox.expand(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

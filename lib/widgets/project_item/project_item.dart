@@ -575,27 +575,20 @@ class ProjectItemLargeState extends State<ProjectItemLarge> with SingleTickerPro
                 onTap: widget.onTap,
               ),
             ),
-            // Right-edge tap absorber: the rightmost 24px of every tile is
-            // covered by a transparent GestureDetector with an empty onTap
-            // and HitTestBehavior.opaque. This claims the hit-test for the
-            // pointer event itself (so it never reaches the surrounding
-            // Link/InkWell that wraps the tile) while doing nothing in
-            // response — effectively a dead zone for clicks. The page
-            // background stays full-bleed; only this thin column is inert
-            // so the always-visible Scrollbar thumb sitting above can be
-            // grabbed without navigating to the project. Placed LAST in
-            // the Stack so it paints on top of every clickable sibling.
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              width: 24,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {},
-                child: const SizedBox.expand(),
-              ),
-            ),
+            // NOTE on the right-edge dead zone:
+            // The dead zone CANNOT live inside this widget. On Flutter web,
+            // each tile is wrapped on the home page in a `Link` whose
+            // implementation (`url_launcher_web`) overlays a transparent
+            // HTML `<a>` element via `Positioned.fill` on top of the
+            // Link's child. The browser's native click on that anchor
+            // bubbles to the global click listener regardless of any
+            // GestureDetector painted inside the tile, so an absorber here
+            // sits BELOW the anchor in DOM stacking and never wins.
+            //
+            // The dead-zone absorber is therefore applied at the
+            // home_page.dart level, as a sibling of the `Link` inside an
+            // outer `Stack`, so it ends up in a higher DOM layer than the
+            // platform-view anchor. See `lib/pages/home/home_page.dart`.
           ],
         ),
       ),
