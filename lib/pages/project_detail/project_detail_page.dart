@@ -492,14 +492,11 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        // Inner desktop-only right gutter so clickable content ends
-        // BEFORE the Scrollbar thumb's column. See
-        // [kDesktopScrollbarGutter] in page_wrapper.dart.
-        child: Padding(
-          padding: desktopScrollGutterPadding(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
+        // Full-bleed content. The scrollbar's right-edge dead zone is
+        // handled per-tile (see project_item.dart).
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
           _hero(project, lang),
           const CustomSpacer(heightFactor: 0.12),
           _aboutSection(project, lang, contentWidth, horizontalPadding),
@@ -533,7 +530,6 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
             child: FullFooter(controller: _footerController),
           ),
         ],
-        ),
         ),
       ),
     );
