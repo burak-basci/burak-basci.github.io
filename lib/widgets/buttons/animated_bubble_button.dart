@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
@@ -12,6 +14,7 @@ class AnimatedBubbleButton extends StatefulWidget {
     this.titleStyle,
     this.height = 48,
     this.targetWidth = 160,
+    this.minHorizontalPadding = 28,
     this.bubbleColor = CustomColors.black100,
     this.imageColor = CustomColors.accentColor,
     this.duration = const Duration(milliseconds: 300),
@@ -23,6 +26,12 @@ class AnimatedBubbleButton extends StatefulWidget {
   final TextStyle? titleStyle;
   final double height;
   final double targetWidth;
+
+  /// Minimum inner horizontal padding (per side) between the text/arrow row
+  /// and the bubble's left/right edges. The widget grows `targetWidth` upward
+  /// if needed so this padding is always preserved.
+  // ensures text never crowds bubble edges — see German `HALLO SAGEN` regression
+  final double minHorizontalPadding;
   final Color bubbleColor;
   final Color imageColor;
   final Duration duration;
@@ -78,11 +87,36 @@ class AnimatedBubbleButtonState extends State<AnimatedBubbleButton>
       leadingDistribution: TextLeadingDistribution.even,
     );
 
+    // Compute the natural width required by the text + arrow row so the
+    // bubble can grow to accommodate longer translations (e.g. German
+    // `PROJEKTE ANSEHEN`, `HALLO SAGEN`) without the text crowding the
+    // rounded edges of the pill.
+    const double arrowWidth = 20.0; // matches Image.asset width below
+    const double arrowSpacing = 8.0; // matches SpaceW8 below
+    double measuredTextWidth = 0.0;
+    if (widget.child == null && widget.title.isNotEmpty) {
+      final TextPainter painter = TextPainter(
+        text: TextSpan(text: widget.title, style: buttonStyle),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      measuredTextWidth = painter.size.width;
+    }
+    final double naturalContentWidth = widget.child != null
+        ? 0.0
+        : measuredTextWidth + arrowSpacing + arrowWidth;
+    final double effectiveTargetWidth = widget.child != null
+        ? widget.targetWidth
+        : math.max(
+            widget.targetWidth,
+            naturalContentWidth + 2 * widget.minHorizontalPadding,
+          );
+
     return MouseRegion(
       onEnter: (e) => _mouseEnter(true),
       onExit: (e) => _mouseEnter(false),
       child: SizedBox(
-        width: widget.targetWidth,
+        width: effectiveTargetWidth,
         height: widget.height,
         child: InkWell(
           hoverColor: Colors.transparent,
@@ -92,7 +126,7 @@ class AnimatedBubbleButtonState extends State<AnimatedBubbleButton>
             children: <Widget>[
               /// Background Bubble
               AnimatedContainer(
-                width: _isHovering ? widget.targetWidth : widget.height,
+                width: _isHovering ? effectiveTargetWidth : widget.height,
                 height: widget.height,
                 alignment: Alignment.centerLeft,
                 decoration: BoxDecoration(
