@@ -108,7 +108,13 @@ class HomeAboutDevState extends State<HomeAboutDev> {
           const SpaceH32(),
           SelfPositioningWidget(
             controller: widget.controller,
-            width: 240,
+            // Bumped from 240 to 320 so the German `PROJEKTE ANSEHEN`
+            // bubble can fully render after its auto-grow kicks in. The
+            // surrounding ClipRect in SelfPositioningWidget was clipping
+            // the right edge of the fully grown bubble (~260 px wide)
+            // against the previous 240 box. 320 leaves headroom for any
+            // future translation without re-tuning.
+            width: 320,
             height: 60,
             child: Align(
               alignment: Alignment.center,

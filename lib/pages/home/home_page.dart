@@ -566,11 +566,16 @@ class HomePageState extends State<HomePage>
                     ),
                   ),
                   const SizedBox(height: 32),
+                  // Mirrors the footer's `AnimatedBubbleButton` call site so
+                  // the initial circle sits flush with the text+arrow centroid
+                  // (no fixed `targetWidth` override → widget auto-grows to a
+                  // tight natural width, which keeps the circle next to the
+                  // content instead of stranded at the far left of an
+                  // over-wide SizedBox).
                   AnimatedBubbleButton(
                     title: Tr.of('btn.say_hello').toUpperCase(),
                     bubbleColor: CustomColors.grey100,
                     imageColor: CustomColors.black,
-                    targetWidth: 220,
                     titleStyle: Get.textTheme.bodyLarge?.copyWith(
                       color: CustomColors.black,
                       fontSize: responsiveSize(

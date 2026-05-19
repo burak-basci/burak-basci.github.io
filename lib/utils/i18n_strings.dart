@@ -68,8 +68,8 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
   // visitor has just scrolled past every project; the outro acknowledges
   // it and nudges them toward the contact form without nagging.
   'home.outro.line': {
-    'en': "That's the lot. If something here resonated — or you've got a different idea in mind — say hi.",
-    'de': 'Bis hierher. Wenn dich etwas davon bewegt — oder du eine eigene Idee mitbringst — sag mir Bescheid.',
+    'en': "That was the work. If something sparked an idea — or you just want to talk shop — I'd love to hear from you.",
+    'de': 'Das war alles. Wenn etwas hängen geblieben ist — oder du eine Idee hast, die ich kennen sollte — schreib mir gern.',
   },
   'home.intro_name':         {'en': 'BURAK BASCI',                          'de': 'BURAK BASCI'},
 
