@@ -980,9 +980,12 @@ class _PaperPlaneArc extends StatelessWidget {
   // still forming, then settles before the body fades in.
   static const double _startMs = 80;
   static const double _windowMs = 1100;
-  // Arc geometry, in logical pixels.
-  static const double _liftPx = 96;
-  static const double _driftRightPx = 140;
+  // Arc geometry, in logical pixels. Kept small so the plane stays
+  // within the headline's bounds — the parent SelfPositioningWidget
+  // (which wraps the whole swap area) uses a ClipRect that would
+  // otherwise clip the plane off mid-flight.
+  static const double _liftPx = 38;
+  static const double _driftRightPx = 110;
 
   @override
   Widget build(BuildContext context) {
@@ -1020,10 +1023,14 @@ class _PaperPlaneArc extends StatelessWidget {
         final double rotation = -0.32 * parabola;
         // Position the plane using Transform.translate so we don't
         // need a Positioned (which only works in a Stack with a
-        // bounded parent). The plane sits at (originX, 0) in the
-        // headline Stack and is translated by (dx, dy) over time.
+        // bounded parent). The plane sits at (originX, 60) in the
+        // headline Stack — ~60px down from the headline's top —
+        // and is translated by (dx, dy) over time. Picking 60 puts
+        // the resting position inside the headline's vertical
+        // bounds so the upward arc (dy up to -38) stays comfortably
+        // within the headline area's visible region.
         return Transform.translate(
-          offset: Offset(originX - 12 + dx, 12 + dy),
+          offset: Offset(originX - 12 + dx, 60 + dy),
           child: Opacity(
             opacity: opacity,
             child: Transform.rotate(
