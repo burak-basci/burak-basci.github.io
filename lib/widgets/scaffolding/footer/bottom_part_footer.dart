@@ -56,7 +56,7 @@ class BottomPartFooter extends StatelessWidget {
             AnimatedUnderlineTextButton(
               text: Tr.of('footer.privacy_policy'),
               underlineColor: CustomColors.white,
-              underlineBottomOffset: 1.0,
+              underlineBottomOffset: 0.0,
               textStyle: textStyle?.copyWith(
                 decoration: TextDecoration.underline,
               ),
@@ -153,7 +153,7 @@ class CreditTextButtons extends StatelessWidget {
         AnimatedUnderlineTextButton(
           text: StringConst.DESIGNED_BY,
           underlineColor: Colors.white,
-          underlineBottomOffset: 1.0,
+          underlineBottomOffset: 0.0,
           textStyle: style?.copyWith(
             decoration: TextDecoration.underline,
           ),
