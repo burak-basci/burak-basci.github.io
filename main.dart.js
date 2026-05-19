@@ -44522,7 +44522,7 @@ r=t.T
 q=$.I
 q=A.aC((q==null?$.I=B.n:q).ak(0,l,r).ax.gn(0),"footer.privacy_policy",l)
 p=j==null?l:j.Ru(B.df)
-p=A.IG(!1,l,new A.a16(a),l,q,p,1,B.l)
+p=A.IG(!1,l,new A.a16(a),l,q,p,0,B.l)
 q=A.cR(new A.a17(j))
 o=$.I
 o=A.c2(A.aC((o==null?$.I=B.n:o).ak(0,l,r).ax.gn(0),"footer.built_with",l),l,l,l,l,j,l,l)
@@ -44561,7 +44561,7 @@ if(s==null)s=$.I=B.n
 r=this.c
 s=A.c2(A.aC(s.ak(0,q,t.T).ax.gn(0),"footer.based_on",q),q,q,q,q,r,q,q)
 r=r==null?q:r.Ru(B.df)
-return A.da(A.b([s,A.IG(!1,q,new A.a2E(),q,"Julius G.",r,1,B.l)],t.p),B.L,B.da,B.v,q)}}
+return A.da(A.b([s,A.IG(!1,q,new A.a2E(),q,"Julius G.",r,0,B.l)],t.p),B.L,B.da,B.v,q)}}
 A.a2E.prototype={
 $0(){A.l8("https://www.behance.net/gallery/63574251/Personal-Portfolio-Website-Design")},
 $S:0}
