@@ -88,7 +88,15 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
   @override
   void initState() {
     _controller = AnimationController(vsync: this);
-    _successCardController = AnimationController(vsync: this);
+    // flutter_animate adopts an external controller and sets its
+    // duration from the longest effect on first build; setting an
+    // explicit duration here makes [.forward(from: 0)] safe even on
+    // first invocation (the swap can fire before the first frame
+    // has measured the chain).
+    _successCardController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
     super.initState();
   }
 
@@ -231,8 +239,18 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
           setState(() {
             _showSuccessCard = true;
           });
-          // Fire the slide-box reveal once the card is on-stage.
-          _successCardController.forward(from: 0);
+          // Fire the slide-box reveal once the card is on-stage. The
+          // post-frame callback waits for the AnimatedSwitcher to
+          // actually build the success-card subtree (and for
+          // flutter_animate to set the controller's duration from the
+          // chained effects). Calling `forward(from: 0)` before the
+          // first build leaves duration null and the animation
+          // silently no-ops, leaving the headline + line + body
+          // permanently in their pre-reveal state.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _successCardController.forward(from: 0);
+          });
         });
       } else {
         setState(() {
