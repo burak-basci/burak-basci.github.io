@@ -740,23 +740,14 @@ class _ContactSwapArea extends StatelessWidget {
           ),
         ),
         // Success card overlays the form, anchored to the same
-        // top-left as the form. While hidden it's offstage
-        // (Visibility maintains state) so it doesn't intercept taps
-        // and the paper-plane animation only fires once the card
-        // mounts visually.
-        Positioned.fill(
-          child: IgnorePointer(
-            ignoring: !showSuccessCard,
-            child: AnimatedOpacity(
-              opacity: showSuccessCard ? 1 : 0,
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOut,
-              child: showSuccessCard
-                  ? successCard
-                  : const SizedBox.shrink(),
-            ),
-          ),
-        ),
+        // top-left as the form. NOT wrapped in Positioned.fill so
+        // it doesn't get forced to expand to the form's full height
+        // — the card sizes itself to its own (smaller) content. Only
+        // mounted once [showSuccessCard] flips. The card's headline
+        // + underline + body each fade/slide in via the
+        // [successCardController] (chained delays inside _SuccessCard),
+        // so we don't need an outer opacity transition here.
+        if (showSuccessCard) successCard,
       ],
     );
   }
@@ -806,12 +797,21 @@ class _SuccessCard extends StatelessWidget {
       fontSize: headlineFontSize,
       height: 1.1,
     );
-    return Stack(
-      clipBehavior: Clip.none,
+    // Single Column — sizes itself to the headline + underline + body
+    // content (MainAxisSize.min). The paper plane is overlaid via a
+    // Stack INSIDE the headline row so its `Positioned` lives next to
+    // the Column entry; this keeps the success card's natural height
+    // tied to text content only (no full-bleed Stack expanding to
+    // form-height that paints any visible background).
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        // Headline + paper-plane composite. The Stack only wraps the
+        // headline area; clipBehavior.none lets the plane fly outside
+        // the headline's bounds.
+        Stack(
+          clipBehavior: Clip.none,
           children: <Widget>[
             _LetterByLetterReveal(
               controller: controller,
@@ -824,66 +824,59 @@ class _SuccessCard extends StatelessWidget {
               perCharMs: 45,
               startDelayMs: 120,
             ),
-            const SizedBox(height: 32),
-            // Thin underline drawing across — draws from left after
-            // the headline finishes.
-            Container(
-              height: 1.5,
-              width: responsiveSize(
-                mobile: width * 0.5,
-                desktop: width * 0.35,
-              ),
-              color: CustomColors.black,
-            )
-                .animate(controller: controller, autoPlay: false)
-                .scaleX(
-                  begin: 0,
-                  end: 1,
-                  alignment: Alignment.centerLeft,
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.fastOutSlowIn,
-                  delay: const Duration(milliseconds: 700),
-                ),
-            const SizedBox(height: 24),
-            // Body line — fades in after the underline draws.
-            Text(
-              Tr.of('contact.success.body'),
-              style: Get.textTheme.bodyLarge?.copyWith(
-                fontFamily: StringConst.INTER,
-                color: CustomColors.grey700,
-                height: 1.7,
-                fontWeight: FontWeight.w300,
-                fontSize: bodyFontSize,
-              ),
-            )
-                .animate(controller: controller, autoPlay: false)
-                .fadeIn(
-                  duration: const Duration(milliseconds: 600),
-                  delay: const Duration(milliseconds: 1100),
-                  curve: Curves.easeOut,
-                )
-                .slideY(
-                  begin: 0.15,
-                  end: 0,
-                  duration: const Duration(milliseconds: 600),
-                  delay: const Duration(milliseconds: 1100),
-                  curve: Curves.fastOutSlowIn,
-                ),
-          ],
-        ),
-        // Paper-plane arc — fires once at the moment of celebration.
-        // Origin: ~where the submit button was (top-right of the
-        // form's content area). Destination: arcs up and to the
-        // right, fading at the apex.
-        Positioned.fill(
-          child: IgnorePointer(
-            child: _PaperPlaneArc(
+            // Paper-plane glyph arcs from ~the (former) button position
+            // up and to the right, fading at the apex.
+            _PaperPlaneArc(
               controller: controller,
               originX: width - buttonWidth * 0.5,
-              areaWidth: width,
             ),
-          ),
+          ],
         ),
+        const SizedBox(height: 32),
+        // Thin underline drawing across — draws from left after the
+        // headline finishes.
+        Container(
+          height: 1.5,
+          width: responsiveSize(
+            mobile: width * 0.5,
+            desktop: width * 0.35,
+          ),
+          color: CustomColors.black,
+        )
+            .animate(controller: controller, autoPlay: false)
+            .scaleX(
+              begin: 0,
+              end: 1,
+              alignment: Alignment.centerLeft,
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.fastOutSlowIn,
+              delay: const Duration(milliseconds: 700),
+            ),
+        const SizedBox(height: 24),
+        // Body line — fades in after the underline draws.
+        Text(
+          Tr.of('contact.success.body'),
+          style: Get.textTheme.bodyLarge?.copyWith(
+            fontFamily: StringConst.INTER,
+            color: CustomColors.grey700,
+            height: 1.7,
+            fontWeight: FontWeight.w300,
+            fontSize: bodyFontSize,
+          ),
+        )
+            .animate(controller: controller, autoPlay: false)
+            .fadeIn(
+              duration: const Duration(milliseconds: 600),
+              delay: const Duration(milliseconds: 1100),
+              curve: Curves.easeOut,
+            )
+            .slideY(
+              begin: 0.15,
+              end: 0,
+              duration: const Duration(milliseconds: 600),
+              delay: const Duration(milliseconds: 1100),
+              curve: Curves.fastOutSlowIn,
+            ),
       ],
     );
   }
@@ -961,19 +954,25 @@ class _LetterByLetterReveal extends StatelessWidget {
   }
 }
 
-/// A small paper-plane glyph that arcs from [originX] upward and to
-/// the right, fading at the apex. Fires once when the success card
-/// controller plays. Quiet and small — restrained, not flashy.
+/// A small paper-plane glyph that arcs from near the (former) button
+/// position upward and to the right, fading at the apex. Lives as a
+/// direct child of the headline Stack (no [Positioned.fill]) so it
+/// doesn't force the success card to expand to fill the whole form
+/// area. Fires once when the success card controller plays. Quiet
+/// and small — restrained, not flashy.
 class _PaperPlaneArc extends StatelessWidget {
   const _PaperPlaneArc({
     required this.controller,
     required this.originX,
-    required this.areaWidth,
   });
 
   final AnimationController controller;
+
+  /// Horizontal anchor (logical px from the headline Stack's left
+  /// edge) where the plane begins its flight. We pick a point near
+  /// the right edge of the form column — roughly where the submit
+  /// button was.
   final double originX;
-  final double areaWidth;
 
   // Timing within the success-card controller's 2600ms span. We
   // start the plane fairly early so it overlaps with the headline
@@ -994,10 +993,10 @@ class _PaperPlaneArc extends StatelessWidget {
             controller.duration?.inMilliseconds.toDouble() ?? 1.0;
         final double t = controller.value * totalMs;
         double progress = ((t - _startMs) / _windowMs).clamp(0.0, 1.0);
-        // Hide entirely before its window opens — prevents the icon
-        // from flashing at the origin on mount.
-        final bool active = t >= _startMs && progress < 1.0;
-        if (!active && progress <= 0) {
+        // Hide entirely before its window opens or after it lands —
+        // prevents the icon from flashing at the origin on mount or
+        // lingering at the apex when faded out.
+        if (t < _startMs || progress >= 1.0) {
           return const SizedBox.shrink();
         }
         // easeOutQuad — fast lift-off, settles at the apex
@@ -1019,20 +1018,20 @@ class _PaperPlaneArc extends StatelessWidget {
         // Rotate slightly into the direction of travel for a
         // gentle "in flight" feel — peaks at ~-18° at the apex.
         final double rotation = -0.32 * parabola;
-        return Positioned(
-          left: originX - 12,
-          top: 24,
+        // Position the plane using Transform.translate so we don't
+        // need a Positioned (which only works in a Stack with a
+        // bounded parent). The plane sits at (originX, 0) in the
+        // headline Stack and is translated by (dx, dy) over time.
+        return Transform.translate(
+          offset: Offset(originX - 12 + dx, 12 + dy),
           child: Opacity(
             opacity: opacity,
-            child: Transform.translate(
-              offset: Offset(dx, dy),
-              child: Transform.rotate(
-                angle: rotation,
-                child: const Icon(
-                  Icons.send,
-                  size: 22,
-                  color: CustomColors.black,
-                ),
+            child: Transform.rotate(
+              angle: rotation,
+              child: const Icon(
+                Icons.send,
+                size: 22,
+                color: CustomColors.black,
               ),
             ),
           ),
