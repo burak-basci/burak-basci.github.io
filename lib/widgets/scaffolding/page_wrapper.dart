@@ -1,51 +1,20 @@
 import "package:flutter/material.dart";
 
-import '../../../utils/adaptive_layout.dart';
 import '../../../utils/page_transition.dart';
 import '../../../utils/values/values.dart';
 import 'floating_back_button.dart';
 import 'header/app_drawer.dart';
 import 'header/top_navigation_bar.dart';
 
-/// Pixel gutter every desktop page reserves on the right edge of its
-/// scrollable content, INSIDE its own Scrollbar / scrollable viewport,
-/// so the always-visible Scrollbar thumb sits in dead space and never
-/// overlaps clickable content (project tiles, links, hover cards).
-///
-/// The gutter is realised per-page: each page wraps the child of its
-/// `SingleChildScrollView` (or other scrollable) in a
-/// `Padding(EdgeInsets.only(right: kDesktopScrollbarGutter))` on desktop.
-/// This insets the inner content WITHOUT shifting the Scrollbar — the
-/// Scrollbar still paints at the right edge of the scrollable's
-/// viewport, but the content now ends `kDesktopScrollbarGutter` pixels
-/// before the viewport's right edge. The thumb therefore occupies a
-/// strip with no tile underneath, and a mouse-down on the thumb cannot
-/// fall through to a tile.
-///
-/// Use [kDesktopScrollbarGutter] in every page that owns a scrollable
-/// view; the helper [desktopScrollGutterPadding] returns an
-/// [EdgeInsets] that is the gutter on desktop and zero on tablet /
-/// mobile (where the platform scrollbar overlays or auto-hides and
-/// using the full width is preferred).
-///
-/// Earlier attempts that wrapped `widget.child` in a Padding here in
-/// PageWrapper failed: the padding shifted the entire scrollable —
-/// Scrollbar and content together — left by the gutter, so the
-/// Scrollbar continued to sit on top of tiles in its new position. The
-/// gutter MUST be inserted between the scrollable's viewport and its
-/// child so that only the content moves inward, not the scrollbar.
-const double kDesktopScrollbarGutter = 24.0;
-
-/// Convenience helper for pages: returns a right-inset gutter on
-/// desktop and zero padding on smaller screens. Pages wrap the child
-/// of their scrollable with `Padding(padding: desktopScrollGutterPadding(context), child: ...)`.
-EdgeInsets desktopScrollGutterPadding(BuildContext context) {
-  final double width = MediaQuery.of(context).size.width;
-  final bool isDesktop = width > refinedBreakpoints.tablet;
-  return isDesktop
-      ? const EdgeInsets.only(right: kDesktopScrollbarGutter)
-      : EdgeInsets.zero;
-}
+/// Deprecated — kept as a no-op for any page that still wraps its
+/// scrollable child with this padding. The scrollbar's right-edge dead
+/// zone is now realised per-tile (see the tap absorber in
+/// `lib/widgets/project_item/project_item.dart`) so the page content
+/// goes full-bleed and the visual "white bar" on the right edge is
+/// gone. Returns [EdgeInsets.zero] in every layout.
+@Deprecated('Right-edge dead zone is now per-tile; this helper is a no-op.')
+EdgeInsets desktopScrollGutterPadding(BuildContext context) =>
+    EdgeInsets.zero;
 
 /// Lightweight nav-argument bag kept for backward-compat with call-sites
 /// that still expect it. The actual cover/uncover panel lives in the
@@ -139,17 +108,12 @@ class PageWrapperState extends State<PageWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // NOTE: the right-edge scrollbar gutter that prevents clicks from
-    // falling through to tiles underneath the Scrollbar thumb is NOT
-    // applied here — applying a Padding around `widget.child` shifts
-    // both the content AND the scrollable's own Scrollbar inward by the
-    // same amount, leaving the scrollbar still sitting directly on top
-    // of the content. Instead, each page inserts a
-    // `Padding(EdgeInsets.only(right: kDesktopScrollbarGutter))` BETWEEN
-    // its scrollable (e.g. SingleChildScrollView) and the scrollable's
-    // child column. That way the Scrollbar paints at the viewport's
-    // true right edge while the content ends one gutter-width before
-    // it, putting the thumb in genuinely empty dead space.
+    // Note: the right-edge scrollbar "dead zone" that prevents clicks
+    // from falling through to tiles when the user grabs the Scrollbar
+    // thumb is implemented per-tile (see the right-edge tap absorber in
+    // `lib/widgets/project_item/project_item.dart`). The page content
+    // here goes full-bleed so the Scrollbar paints over visible page
+    // background without a visible inner gutter.
     return SelectionArea(
       child: Scaffold(
         key: _scaffoldKey,

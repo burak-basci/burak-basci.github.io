@@ -456,14 +456,11 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        // Inner desktop-only right gutter so clickable content ends
-        // BEFORE the Scrollbar thumb's column. See
-        // [kDesktopScrollbarGutter] in page_wrapper.dart.
-        child: Padding(
-          padding: desktopScrollGutterPadding(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
+        // Full-bleed content. The scrollbar's right-edge dead zone is
+        // handled per-tile (see project_item.dart).
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
           LayoutBuilder(builder: (context, constraints) {
             final double contentAreaWidth = responsiveSize(
               mobile: Get.width * 0.8,
@@ -586,7 +583,6 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
           const CustomSpacer(heightFactor: 0.22),
           const BottomPartFooter(),
         ],
-        ),
         ),
       ),
     );

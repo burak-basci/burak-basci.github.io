@@ -300,15 +300,11 @@ class HomePageState extends State<HomePage>
             parent: AlwaysScrollableScrollPhysics(),
           ),
           padding: EdgeInsets.zero,
-          // Inner desktop-only right gutter so clickable content (project
-          // tiles, links) ends BEFORE the Scrollbar thumb's column. See
-          // [kDesktopScrollbarGutter] in page_wrapper.dart for why this
-          // padding must live INSIDE the scrollable, not outside.
-          child: Padding(
-            padding: desktopScrollGutterPadding(context),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
+          // Full-bleed content. The scrollbar's right-edge dead zone is
+          // handled per-tile (see project_item.dart).
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
           HomePageHeader(
             scrollController: _scrollController,
             textController: _headerTextController,
@@ -635,7 +631,6 @@ class HomePageState extends State<HomePage>
             ),
           ),
           ],
-          ),
           ),
         ),
       ),

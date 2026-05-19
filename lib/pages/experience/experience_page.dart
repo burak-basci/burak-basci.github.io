@@ -117,14 +117,11 @@ class ExperiencePageState extends State<ExperiencePage> with TickerProviderState
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        // Inner desktop-only right gutter so clickable content ends
-        // BEFORE the Scrollbar thumb's column. See
-        // [kDesktopScrollbarGutter] in page_wrapper.dart.
-        child: Padding(
-          padding: desktopScrollGutterPadding(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
+        // Full-bleed content. The scrollbar's right-edge dead zone is
+        // handled per-tile (see project_item.dart).
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
           DefaultPageHeader(
             scrollController: _scrollController,
             headingText: Tr.of('experience.heading'),
@@ -268,7 +265,6 @@ class ExperiencePageState extends State<ExperiencePage> with TickerProviderState
             ),
           ),
         ],
-        ),
         ),
       ),
     );

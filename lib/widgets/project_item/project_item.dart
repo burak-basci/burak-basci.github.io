@@ -575,6 +575,27 @@ class ProjectItemLargeState extends State<ProjectItemLarge> with SingleTickerPro
                 onTap: widget.onTap,
               ),
             ),
+            // Right-edge tap absorber: the rightmost 24px of every tile is
+            // covered by a transparent GestureDetector with an empty onTap
+            // and HitTestBehavior.opaque. This claims the hit-test for the
+            // pointer event itself (so it never reaches the surrounding
+            // Link/InkWell that wraps the tile) while doing nothing in
+            // response — effectively a dead zone for clicks. The page
+            // background stays full-bleed; only this thin column is inert
+            // so the always-visible Scrollbar thumb sitting above can be
+            // grabbed without navigating to the project. Placed LAST in
+            // the Stack so it paints on top of every clickable sibling.
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: 24,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {},
+                child: const SizedBox.expand(),
+              ),
+            ),
           ],
         ),
       ),
