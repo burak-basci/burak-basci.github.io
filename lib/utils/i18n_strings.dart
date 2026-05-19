@@ -245,6 +245,15 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
   },
   'contact.button.sent':    {'en': 'Message sent',  'de': 'Gesendet'},
   'contact.button.retry':   {'en': 'Try again',     'de': 'Erneut versuchen'},
+  // Headline + body shown on the success card that replaces the form
+  // in-place after a successful send. Headline is intentionally short
+  // (one or two characters wider than the form's left margin) so the
+  // slide-box reveal lands cleanly.
+  'contact.success.headline': {'en': 'Thanks.',      'de': 'Danke.'},
+  'contact.success.body': {
+    'en': "Your message is on its way. I'll be in touch soon.",
+    'de': 'Deine Nachricht ist unterwegs. Ich melde mich in Kürze bei dir.',
+  },
 
   // --- Experience page ------------------------------------------------
   'experience.heading':      {'en': 'Experience',          'de': 'Erfahrung'},

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:burak_basci_website/widgets/text/self_positioning_widget.dart';
 import 'package:flutter/foundation.dart';
 import "package:flutter/material.dart";
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
@@ -31,7 +32,7 @@ class ContactPage extends StatefulWidget {
   ContactPageState createState() => ContactPageState();
 }
 
-class ContactPageState extends State<ContactPage> with SingleTickerProviderStateMixin {
+class ContactPageState extends State<ContactPage> with TickerProviderStateMixin {
   // ---------------------------------------------------------------------------
   // Web3Forms (server-side SMTP relay).
   //
@@ -51,10 +52,24 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
   // ---------------------------------------------------------------------------
 
   late AnimationController _controller;
+  // Drives the success-card headline + line reveal. Held separately so
+  // we can fire it the moment the success card mounts (the page-level
+  // [_controller] has already finished its entry animation by then).
+  late AnimationController _successCardController;
   _SendStatus _status = _SendStatus.idle;
   String? _bannerMessage;
   Color? _bannerColor;
   Timer? _statusResetTimer;
+  Timer? _successCardSwapTimer;
+  // Flipped to true ~600ms after a successful POST. The form column
+  // cross-fades and height-morphs into the success card while this
+  // is true. Reset to false when the user navigates back to /contact
+  // (StatefulWidget gets recreated) or via the "Send another" path.
+  bool _showSuccessCard = false;
+  // Bumped on each successful send so the button's celebratory pulse
+  // re-fires (flutter_animate's `target` only re-plays when the key
+  // changes).
+  int _successPulseKey = 0;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   // Auto-validation stays disabled at all times. Validation happens
@@ -73,13 +88,16 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
   @override
   void initState() {
     _controller = AnimationController(vsync: this);
+    _successCardController = AnimationController(vsync: this);
     super.initState();
   }
 
   @override
   void dispose() {
     _statusResetTimer?.cancel();
+    _successCardSwapTimer?.cancel();
     _controller.dispose();
+    _successCardController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _subjectController.dispose();
@@ -197,15 +215,24 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
         _resetForm();
         setState(() {
           _status = _SendStatus.success;
-          _bannerMessage = Tr.of('contact.banner.success');
+          // The card itself surfaces the success message inline; we
+          // drop the banner here so the button morph + page reward
+          // are the only "you did it" cues during the swap.
+          _bannerMessage = null;
           _bannerColor = CustomColors.lightGreen;
+          _successPulseKey++;
         });
-        _statusResetTimer?.cancel();
-        _statusResetTimer = Timer(const Duration(seconds: 2), () {
+        // One-two reward: the button has just morphed spinner→check
+        // and pulsed. ~600ms later, swap the form for the success
+        // card so the page itself rewards the visitor.
+        _successCardSwapTimer?.cancel();
+        _successCardSwapTimer = Timer(const Duration(milliseconds: 600), () {
           if (!mounted) return;
           setState(() {
-            _status = _SendStatus.idle;
+            _showSuccessCard = true;
           });
+          // Fire the slide-box reveal once the card is on-stage.
+          _successCardController.forward(from: 0);
         });
       } else {
         setState(() {
@@ -344,63 +371,61 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
                     SelfPositioningWidget(
                       controller: _controller,
                       delay: const Duration(milliseconds: 800),
-                      child: Column(
-                        children: <Widget>[
-                          if (_bannerMessage != null) ...[
-                            _StatusBanner(
-                              message: _bannerMessage!,
-                              color: _bannerColor ?? CustomColors.black,
-                              isSuccess: _status == _SendStatus.success,
-                            ),
-                            const SpaceH20(),
-                          ],
-                          CustomTextFormField(
-                            labelText: Tr.of('contact.your_name'),
-                            controller: _nameController,
-                            errorText: Tr.of('contact.name_error'),
-                            validator: _validateRequired,
-                          ),
-                          const SpaceH20(),
-                          CustomTextFormField(
-                            labelText: Tr.of('contact.email_label'),
-                            controller: _emailController,
-                            errorText: Tr.of('contact.email_error'),
-                            validator: _validateEmail,
-                          ),
-                          const SpaceH20(),
-                          CustomTextFormField(
-                            labelText: Tr.of('contact.subject'),
-                            controller: _subjectController,
-                            errorText: Tr.of('contact.subject_error'),
-                            validator: _validateRequired,
-                          ),
-                          const SpaceH20(),
-                          CustomTextFormField(
-                            labelText: Tr.of('contact.message_label'),
-                            controller: _messageController,
-                            errorText: Tr.of('contact.message_error'),
-                            textInputType: TextInputType.multiline,
-                            maxLines: 10,
-                            validator: _validateRequired,
-                          ),
-                          const SpaceH20(),
-                          Align(
-                            alignment: Alignment.topRight,
-                            child: AnimatedButton(
-                              height: Sizes.HEIGHT_56,
-                              width: buttonWidth,
-                              isLoading: _status == _SendStatus.sending,
-                              title: _buttonTitle(),
-                              backgroundColor: _buttonColor(),
-                              icon: _status == _SendStatus.success
-                                  ? Icons.check
-                                  : _status == _SendStatus.error
-                                      ? Icons.refresh
-                                      : Icons.send,
-                              onPressed: _status == _SendStatus.sending ? null : _sendEmail,
-                            ),
-                          ),
-                        ],
+                      // AnimatedSize wraps the swap area so the column's
+                      // height interpolates smoothly between the form
+                      // (taller, with banner) and the success card
+                      // (shorter) — no jarring layout push when the
+                      // swap fires.
+                      child: AnimatedSize(
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.fastOutSlowIn,
+                        alignment: Alignment.topLeft,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 450),
+                          switchInCurve: Curves.fastOutSlowIn,
+                          switchOutCurve: Curves.fastOutSlowIn,
+                          transitionBuilder: (child, animation) {
+                            // Cross-fade with a tiny upward translation
+                            // on the incoming child — echoes the
+                            // SelfPositioningWidget reveal used across
+                            // the site without the heavy slide-box
+                            // overlay.
+                            final Animation<Offset> offset = Tween<Offset>(
+                              begin: const Offset(0, 0.04),
+                              end: Offset.zero,
+                            ).animate(animation);
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: offset,
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: _showSuccessCard
+                              ? _SuccessCard(
+                                  key: const ValueKey('contact-success-card'),
+                                  controller: _successCardController,
+                                  width: contentAreaWidth,
+                                )
+                              : _FormFields(
+                                  key: const ValueKey('contact-form-fields'),
+                                  status: _status,
+                                  bannerMessage: _bannerMessage,
+                                  bannerColor: _bannerColor,
+                                  successPulseKey: _successPulseKey,
+                                  buttonWidth: buttonWidth,
+                                  buttonTitle: _buttonTitle(),
+                                  buttonColor: _buttonColor(),
+                                  nameController: _nameController,
+                                  emailController: _emailController,
+                                  subjectController: _subjectController,
+                                  messageController: _messageController,
+                                  validateRequired: _validateRequired,
+                                  validateEmail: _validateEmail,
+                                  onPressed: _sendEmail,
+                                ),
+                        ),
                       ),
                     ),
                   ],
@@ -413,6 +438,230 @@ class ContactPageState extends State<ContactPage> with SingleTickerProviderState
         ],
         ),
       ),
+    );
+  }
+}
+
+/// The original contact-form column, lifted into its own widget so the
+/// [AnimatedSwitcher] above can cross-fade it out for the success card.
+/// Keeps the existing field order + spacing + error banner intact.
+class _FormFields extends StatelessWidget {
+  const _FormFields({
+    super.key,
+    required this.status,
+    required this.bannerMessage,
+    required this.bannerColor,
+    required this.successPulseKey,
+    required this.buttonWidth,
+    required this.buttonTitle,
+    required this.buttonColor,
+    required this.nameController,
+    required this.emailController,
+    required this.subjectController,
+    required this.messageController,
+    required this.validateRequired,
+    required this.validateEmail,
+    required this.onPressed,
+  });
+
+  final _SendStatus status;
+  final String? bannerMessage;
+  final Color? bannerColor;
+  final int successPulseKey;
+  final double buttonWidth;
+  final String buttonTitle;
+  final Color buttonColor;
+  final TextEditingController nameController;
+  final TextEditingController emailController;
+  final TextEditingController subjectController;
+  final TextEditingController messageController;
+  final String? Function(String?) validateRequired;
+  final String? Function(String?) validateEmail;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isSuccess = status == _SendStatus.success;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (bannerMessage != null) ...[
+          _StatusBanner(
+            message: bannerMessage!,
+            color: bannerColor ?? CustomColors.black,
+            isSuccess: isSuccess,
+          ),
+          const SpaceH20(),
+        ],
+        CustomTextFormField(
+          labelText: Tr.of('contact.your_name'),
+          controller: nameController,
+          errorText: Tr.of('contact.name_error'),
+          validator: validateRequired,
+        ),
+        const SpaceH20(),
+        CustomTextFormField(
+          labelText: Tr.of('contact.email_label'),
+          controller: emailController,
+          errorText: Tr.of('contact.email_error'),
+          validator: validateEmail,
+        ),
+        const SpaceH20(),
+        CustomTextFormField(
+          labelText: Tr.of('contact.subject'),
+          controller: subjectController,
+          errorText: Tr.of('contact.subject_error'),
+          validator: validateRequired,
+        ),
+        const SpaceH20(),
+        CustomTextFormField(
+          labelText: Tr.of('contact.message_label'),
+          controller: messageController,
+          errorText: Tr.of('contact.message_error'),
+          textInputType: TextInputType.multiline,
+          maxLines: 10,
+          validator: validateRequired,
+        ),
+        const SpaceH20(),
+        Align(
+          alignment: Alignment.topRight,
+          // A short scale pulse on the success transition — 1.0 →
+          // 1.06 → 1.0 over 260ms — pairs with the spinner→check
+          // morph inside the button to give a "Sent!" micro-reward.
+          // Keyed off [successPulseKey] so each successful send
+          // re-fires it; the pulse is otherwise a no-op (idle/
+          // sending/error never bump the key).
+          child: Animate(
+            key: ValueKey('contact-button-pulse-$successPulseKey'),
+            effects: isSuccess
+                ? const [
+                    ScaleEffect(
+                      begin: Offset(1, 1),
+                      end: Offset(1.06, 1.06),
+                      duration: Duration(milliseconds: 130),
+                      curve: Curves.easeOut,
+                    ),
+                    ScaleEffect(
+                      begin: Offset(1.06, 1.06),
+                      end: Offset(1, 1),
+                      duration: Duration(milliseconds: 130),
+                      delay: Duration(milliseconds: 130),
+                      curve: Curves.easeIn,
+                    ),
+                  ]
+                : const <Effect>[],
+            child: AnimatedButton(
+              height: Sizes.HEIGHT_56,
+              width: buttonWidth,
+              isLoading: status == _SendStatus.sending,
+              title: buttonTitle,
+              backgroundColor: buttonColor,
+              icon: isSuccess
+                  ? Icons.check
+                  : status == _SendStatus.error
+                      ? Icons.refresh
+                      : Icons.send,
+              onPressed: status == _SendStatus.sending ? null : onPressed,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Success state shown in place of the form once Web3Forms has
+/// confirmed delivery. Composition:
+///   - Large slide-box headline ("Danke." / "Thanks.") reusing the
+///     same [AnimatedSlideBoxTransitionText] used across the site.
+///   - Body line fading in just after the headline lands.
+///   - Thin horizontal line drawing left-to-right under the body —
+///     a quiet "the message is on its way" visual without going
+///     into confetti / paper-plane-icon territory.
+///   - A small check icon next to a "sent" label, mirroring the
+///     button's morph state, so the page picks up where the button
+///     left off.
+class _SuccessCard extends StatelessWidget {
+  const _SuccessCard({
+    super.key,
+    required this.controller,
+    required this.width,
+  });
+
+  final AnimationController controller;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final double headlineFontSize = responsiveSize(
+      mobile: 56,
+      desktop: 96,
+    );
+    final double bodyFontSize = responsiveSize(
+      mobile: Sizes.TEXT_SIZE_16,
+      desktop: Sizes.TEXT_SIZE_18,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        AnimatedSlideBoxTransitionText(
+          controller: controller,
+          width: width,
+          text: Tr.of('contact.success.headline'),
+          textStyle: Get.textTheme.displayLarge?.copyWith(
+            fontFamily: StringConst.VISUELT_PRO,
+            color: CustomColors.black,
+            fontSize: headlineFontSize,
+            height: 1.1,
+          ),
+        ),
+        const SizedBox(height: 32),
+        // Thin underline drawing across — width matches the body
+        // line below it, draws from left, then settles.
+        Container(
+          height: 1.5,
+          width: responsiveSize(
+            mobile: width * 0.5,
+            desktop: width * 0.35,
+          ),
+          color: CustomColors.black,
+        )
+            .animate(controller: controller, autoPlay: false)
+            .scaleX(
+              begin: 0,
+              end: 1,
+              alignment: Alignment.centerLeft,
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.fastOutSlowIn,
+              delay: const Duration(milliseconds: 900),
+            ),
+        const SizedBox(height: 24),
+        // Body line — fades in after the headline reveal completes.
+        Text(
+          Tr.of('contact.success.body'),
+          style: Get.textTheme.bodyLarge?.copyWith(
+            fontFamily: StringConst.INTER,
+            color: CustomColors.grey700,
+            height: 1.7,
+            fontWeight: FontWeight.w300,
+            fontSize: bodyFontSize,
+          ),
+        )
+            .animate(controller: controller, autoPlay: false)
+            .fadeIn(
+              duration: const Duration(milliseconds: 600),
+              delay: const Duration(milliseconds: 1100),
+              curve: Curves.easeOut,
+            )
+            .slideY(
+              begin: 0.15,
+              end: 0,
+              duration: const Duration(milliseconds: 600),
+              delay: const Duration(milliseconds: 1100),
+              curve: Curves.fastOutSlowIn,
+            ),
+      ],
     );
   }
 }
