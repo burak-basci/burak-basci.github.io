@@ -159,6 +159,20 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
   late AnimationController _heroPinpointController;       // sharp-twinkle pinpoint constellation
   late AnimationController _heroStreakController;         // slow falling-streak motes
   late AnimationController _heroCrossController;          // pulsing micro-crosses
+  // Fifth-wave ambient pieces — XY drift on top of every existing
+  // particle/halo that previously only twinkled or only orbited. One
+  // shared parent timer (45 s) whose elapsed seconds each particle
+  // remaps against its own period (8–17 s) and per-particle phase. This
+  // adds the gentle wobble the design brief calls for without adding a
+  // controller per element.
+  late AnimationController _heroParticleDriftController;  // shared XY-drift parent
+  late AnimationController _heroShapePulseController;     // shared scale-pulse parent for halos
+  // Two short accent rules below the hero subtitle "breathe" their
+  // horizontal scale 0.85 → 1.00 on a 3.0 s easeInOut, reversing on
+  // each cycle so the contraction reads as a slow inhale/exhale rather
+  // than a heartbeat. Anchored to the start so the rules grow from the
+  // left, matching the column's CrossAxisAlignment.start.
+  late AnimationController _heroLineBreatheController;
   late AnimationController _aboutController;
   late AnimationController _aboutBodyController;
   late AnimationController _decisionsController;
@@ -273,6 +287,30 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
       duration: const Duration(seconds: 99),
     )..repeat();
 
+    // Shared XY-drift parent for the twinkling dot fields. The parent
+    // ticks across 45 s; every dot remaps that against its own period
+    // (8–17 s) and phase so each dot floats on an independent sine.
+    // One controller, many cycles — same pattern the mote field uses.
+    _heroParticleDriftController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 45),
+    )..repeat();
+    // Shared scale-pulse parent for the orbiting halos. 33 s parent
+    // window; each halo reads a sine of (t / period + phase) at its
+    // own period (6.7 – 9.4 s) so the four halos pulse on completely
+    // independent cycles while we keep just one ticking controller.
+    _heroShapePulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 33),
+    )..repeat();
+    // 3.0 s easeInOut on the breathing accent rules. reverse:true so
+    // the controller bounces 0 → 1 → 0 smoothly without a hard wrap
+    // discontinuity, and the rules contract and expand symmetrically.
+    _heroLineBreatheController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    )..repeat(reverse: true);
+
     _aboutController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -328,6 +366,9 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
     _heroPinpointController.dispose();
     _heroStreakController.dispose();
     _heroCrossController.dispose();
+    _heroParticleDriftController.dispose();
+    _heroShapePulseController.dispose();
+    _heroLineBreatheController.dispose();
     _aboutController.dispose();
     _aboutBodyController.dispose();
     _decisionsController.dispose();
@@ -438,7 +479,13 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
     return SizedBox(
       width: Get.width,
       height: Get.height,
-      child: Stack(
+      // RepaintBoundary so the ambient overlay tickers (eight
+      // controllers + drift parent + shape-pulse parent) don't trigger
+      // a repaint of the surrounding scaffolding. Every animated child
+      // already has its own AnimatedBuilder rebuild scope, but the
+      // boundary makes sure the rest of the page never participates.
+      child: RepaintBoundary(
+        child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
           // The procedural cover is now a text-less background
@@ -526,7 +573,10 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
           // --- Ambient overlay 2: drifting star glow -----------------
           // A small, soft, blurred dot that orbits an ellipse in the
           // upper-right of the hero. cos/sin parametrisation keeps
-          // the path perfectly closed across the 12 s loop.
+          // the path perfectly closed across the 12 s loop. On top of
+          // the orbit the halo also scale-pulses 0.92 → 1.08 on a 7.4 s
+          // sine via the shared `_heroShapePulseController`, so it
+          // breathes as it drifts.
           Positioned.fill(
             child: IgnorePointer(
               child: LayoutBuilder(builder: (context, c) {
@@ -537,32 +587,45 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                 const double rx = 42;
                 const double ry = 26;
                 return AnimatedBuilder(
-                  animation: _heroDriftController,
+                  animation: Listenable.merge(<Listenable>[
+                    _heroDriftController,
+                    _heroShapePulseController,
+                  ]),
                   builder: (context, _) {
                     final double a =
                         _heroDriftController.value * 2 * math.pi;
                     final double x = cx + math.cos(a) * rx;
                     final double y = cy + math.sin(a) * ry;
+                    // Independent scale pulse: 33 s parent timer
+                    // remapped to a 7.4 s personal cycle.
+                    final double tPulseSec =
+                        _heroShapePulseController.value * 33.0;
+                    final double pulse = math.sin(
+                            ((tPulseSec / 7.4) + 0.00) * 2 * math.pi);
+                    final double scale = 1.0 + pulse * 0.08; // 0.92 → 1.08
                     return Stack(children: <Widget>[
                       Positioned(
                         left: x - 16,
                         top: y - 16,
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            // Soft halo via a single radial gradient —
-                            // cheaper than a BackdropFilter and stays
-                            // crisp on web.
-                            gradient: RadialGradient(
-                              colors: <Color>[
-                                project.primaryColor
-                                    .withValues(alpha: 0.42),
-                                project.primaryColor
-                                    .withValues(alpha: 0.0),
-                              ],
-                              stops: const <double>[0.25, 1.0],
+                        child: Transform.scale(
+                          scale: scale,
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              // Soft halo via a single radial gradient —
+                              // cheaper than a BackdropFilter and stays
+                              // crisp on web.
+                              gradient: RadialGradient(
+                                colors: <Color>[
+                                  project.primaryColor
+                                      .withValues(alpha: 0.42),
+                                  project.primaryColor
+                                      .withValues(alpha: 0.0),
+                                ],
+                                stops: const <double>[0.25, 1.0],
+                              ),
                             ),
                           ),
                         ),
@@ -577,36 +640,73 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
           // --- Ambient overlay 3: four tiny phase-offset signals -----
           // Each dot has its own (x, y, phase) tuple so the four
           // twinkle out of sync. 1.5 px squares so they read as
-          // pixel-level grain rather than UI dots.
+          // pixel-level grain rather than UI dots. On top of the
+          // opacity twinkle, every dot now also drifts on its own
+          // X/Y sine via the shared `_heroParticleDriftController`
+          // (45 s parent timer, each dot remapped to its own period
+          // and phase) so the four signals float gently as well as
+          // twinkle.
           Positioned.fill(
             child: IgnorePointer(
               child: LayoutBuilder(builder: (context, c) {
                 // Fractional positions so the constellation scales with
-                // the hero regardless of viewport size.
-                final List<_HeroDot> dots = <_HeroDot>[
-                  _HeroDot(fx: 0.18, fy: 0.22, phase: 0.00),
-                  _HeroDot(fx: 0.72, fy: 0.38, phase: 0.27),
-                  _HeroDot(fx: 0.34, fy: 0.78, phase: 0.55),
-                  _HeroDot(fx: 0.88, fy: 0.66, phase: 0.81),
+                // the hero regardless of viewport size. driftXPeriod /
+                // driftYPeriod use coprime-ish seconds so the x-y
+                // motion traces a slow Lissajous rather than a closed
+                // ellipse — keeps every dot from ever returning to
+                // exactly the same spot on a short loop.
+                const List<_DriftDot> dots = <_DriftDot>[
+                  _DriftDot(fx: 0.18, fy: 0.22, twinklePhase: 0.00,
+                      driftXPeriodSec: 11.0, driftYPeriodSec:  9.0,
+                      driftXPhase: 0.00, driftYPhase: 0.20,
+                      ampX: 5.0, ampY: 3.5),
+                  _DriftDot(fx: 0.72, fy: 0.38, twinklePhase: 0.27,
+                      driftXPeriodSec:  8.5, driftYPeriodSec: 12.5,
+                      driftXPhase: 0.35, driftYPhase: 0.65,
+                      ampX: 4.0, ampY: 4.5),
+                  _DriftDot(fx: 0.34, fy: 0.78, twinklePhase: 0.55,
+                      driftXPeriodSec: 13.7, driftYPeriodSec: 10.3,
+                      driftXPhase: 0.55, driftYPhase: 0.10,
+                      ampX: 3.5, ampY: 5.0),
+                  _DriftDot(fx: 0.88, fy: 0.66, twinklePhase: 0.81,
+                      driftXPeriodSec:  9.8, driftYPeriodSec: 14.1,
+                      driftXPhase: 0.80, driftYPhase: 0.40,
+                      ampX: 4.5, ampY: 3.0),
                 ];
                 return AnimatedBuilder(
-                  animation: _heroDotsController,
+                  animation: Listenable.merge(<Listenable>[
+                    _heroDotsController,
+                    _heroParticleDriftController,
+                  ]),
                   builder: (context, _) {
                     final double t = _heroDotsController.value;
+                    final double tDriftSec =
+                        _heroParticleDriftController.value * 45.0;
                     return Stack(
                       children: <Widget>[
-                        for (final _HeroDot d in dots)
+                        for (final _DriftDot d in dots)
                           Builder(builder: (_) {
                             // Per-dot sine wave; clamped low so dots
                             // never bloom past ~50 % alpha.
                             final double p =
-                                (t + d.phase) % 1.0;
+                                (t + d.twinklePhase) % 1.0;
                             final double s =
                                 0.5 + 0.5 * math.sin(p * 2 * math.pi);
                             final double opacity = 0.10 + s * 0.40;
+                            // Independent X / Y drift.
+                            final double dx = d.ampX *
+                                math.sin(((tDriftSec / d.driftXPeriodSec) +
+                                        d.driftXPhase) *
+                                    2 *
+                                    math.pi);
+                            final double dy = d.ampY *
+                                math.sin(((tDriftSec / d.driftYPeriodSec) +
+                                        d.driftYPhase) *
+                                    2 *
+                                    math.pi);
                             return Positioned(
-                              left: c.maxWidth * d.fx,
-                              top: c.maxHeight * d.fy,
+                              left: c.maxWidth * d.fx + dx,
+                              top: c.maxHeight * d.fy + dy,
                               child: Container(
                                 width: 2,
                                 height: 2,
@@ -667,38 +767,68 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
           // third of the hero. Each has a long phase-offset so they
           // bloom in sequence rather than as a cluster. Different
           // y-fractions from the existing _heroDots so the two systems
-          // never sit on top of each other.
+          // never sit on top of each other. Each dot also drifts on
+          // its own X/Y sine — small amplitude (2-4 px), longer
+          // periods than overlay 3 so the arc never appears in
+          // lockstep with the signals.
           Positioned.fill(
             child: IgnorePointer(
               child: LayoutBuilder(builder: (context, c) {
                 // Arc anchored across the upper third, dipping slightly
                 // in the middle so the constellation reads as a curve
                 // rather than a straight line of pixels.
-                final List<_HeroDot> arc = <_HeroDot>[
-                  _HeroDot(fx: 0.28, fy: 0.14, phase: 0.00),
-                  _HeroDot(fx: 0.44, fy: 0.10, phase: 0.30),
-                  _HeroDot(fx: 0.60, fy: 0.12, phase: 0.55),
-                  _HeroDot(fx: 0.76, fy: 0.18, phase: 0.78),
+                const List<_DriftDot> arc = <_DriftDot>[
+                  _DriftDot(fx: 0.28, fy: 0.14, twinklePhase: 0.00,
+                      driftXPeriodSec: 12.6, driftYPeriodSec: 14.4,
+                      driftXPhase: 0.12, driftYPhase: 0.55,
+                      ampX: 3.0, ampY: 2.2),
+                  _DriftDot(fx: 0.44, fy: 0.10, twinklePhase: 0.30,
+                      driftXPeriodSec: 15.1, driftYPeriodSec: 11.9,
+                      driftXPhase: 0.31, driftYPhase: 0.04,
+                      ampX: 2.8, ampY: 2.6),
+                  _DriftDot(fx: 0.60, fy: 0.12, twinklePhase: 0.55,
+                      driftXPeriodSec: 13.7, driftYPeriodSec: 16.2,
+                      driftXPhase: 0.62, driftYPhase: 0.43,
+                      ampX: 3.4, ampY: 2.4),
+                  _DriftDot(fx: 0.76, fy: 0.18, twinklePhase: 0.78,
+                      driftXPeriodSec: 11.3, driftYPeriodSec: 13.5,
+                      driftXPhase: 0.81, driftYPhase: 0.27,
+                      ampX: 2.6, ampY: 3.2),
                 ];
                 return AnimatedBuilder(
-                  animation: _heroConstellationController,
+                  animation: Listenable.merge(<Listenable>[
+                    _heroConstellationController,
+                    _heroParticleDriftController,
+                  ]),
                   builder: (context, _) {
                     final double t = _heroConstellationController.value;
+                    final double tDriftSec =
+                        _heroParticleDriftController.value * 45.0;
                     return Stack(
                       children: <Widget>[
-                        for (final _HeroDot d in arc)
+                        for (final _DriftDot d in arc)
                           Builder(builder: (_) {
                             // Sharper peak than the original dots so the
                             // arc reads as discrete "blinks" instead of
                             // a soft twinkle. Cubed sine keeps the tail
                             // long and the peak brief.
-                            final double p = (t + d.phase) % 1.0;
+                            final double p = (t + d.twinklePhase) % 1.0;
                             final double s =
                                 math.sin(p * 2 * math.pi).clamp(0.0, 1.0);
                             final double opacity = s * s * 0.46;
+                            final double dx = d.ampX *
+                                math.sin(((tDriftSec / d.driftXPeriodSec) +
+                                        d.driftXPhase) *
+                                    2 *
+                                    math.pi);
+                            final double dy = d.ampY *
+                                math.sin(((tDriftSec / d.driftYPeriodSec) +
+                                        d.driftYPhase) *
+                                    2 *
+                                    math.pi);
                             return Positioned(
-                              left: c.maxWidth * d.fx,
-                              top: c.maxHeight * d.fy,
+                              left: c.maxWidth * d.fx + dx,
+                              top: c.maxHeight * d.fy + dy,
                               child: Container(
                                 width: 2,
                                 height: 2,
@@ -776,7 +906,10 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                 const double rx = 34;
                 const double ry = 22;
                 return AnimatedBuilder(
-                  animation: _heroCompanionDriftController,
+                  animation: Listenable.merge(<Listenable>[
+                    _heroCompanionDriftController,
+                    _heroShapePulseController,
+                  ]),
                   builder: (context, _) {
                     // Negative phase offset (-pi/3) so its orbit is
                     // never in lockstep with the original halo even
@@ -786,26 +919,37 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                             - math.pi / 3;
                     final double x = cx + math.cos(a) * rx;
                     final double y = cy + math.sin(a) * ry;
+                    // Independent scale pulse on a 9.4 s personal
+                    // cycle — slower and out-of-phase with overlay 2
+                    // so the two halos never breathe together.
+                    final double tPulseSec =
+                        _heroShapePulseController.value * 33.0;
+                    final double pulse = math.sin(
+                            ((tPulseSec / 9.4) + 0.32) * 2 * math.pi);
+                    final double scale = 1.0 + pulse * 0.07; // 0.93 → 1.07
                     return Stack(children: <Widget>[
                       Positioned(
                         left: x - 11,
                         top: y - 11,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            // Peak alpha 0.28 — about two-thirds the
-                            // original halo's 0.42, so it reads as a
-                            // distant cousin rather than a duplicate.
-                            gradient: RadialGradient(
-                              colors: <Color>[
-                                project.primaryColor
-                                    .withValues(alpha: 0.28),
-                                project.primaryColor
-                                    .withValues(alpha: 0.0),
-                              ],
-                              stops: const <double>[0.25, 1.0],
+                        child: Transform.scale(
+                          scale: scale,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              // Peak alpha 0.28 — about two-thirds the
+                              // original halo's 0.42, so it reads as a
+                              // distant cousin rather than a duplicate.
+                              gradient: RadialGradient(
+                                colors: <Color>[
+                                  project.primaryColor
+                                      .withValues(alpha: 0.28),
+                                  project.primaryColor
+                                      .withValues(alpha: 0.0),
+                                ],
+                                stops: const <double>[0.25, 1.0],
+                              ),
                             ),
                           ),
                         ),
@@ -895,9 +1039,14 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                 return Stack(
                   children: <Widget>[
                     // Inner orbit — 15 s, smaller halo (18 px), tighter
-                    // ellipse.
+                    // ellipse. Adds an 8.1 s scale-pulse via the shared
+                    // shape-pulse parent so the halo breathes as it
+                    // orbits, independent of the other three halos.
                     AnimatedBuilder(
-                      animation: _heroOrbitAController,
+                      animation: Listenable.merge(<Listenable>[
+                        _heroOrbitAController,
+                        _heroShapePulseController,
+                      ]),
                       builder: (context, _) {
                         const double rx = 70;
                         const double ry = 44;
@@ -905,23 +1054,31 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                             _heroOrbitAController.value * 2 * math.pi;
                         final double x = cx + math.cos(a) * rx;
                         final double y = cy + math.sin(a) * ry;
+                        final double tPulseSec =
+                            _heroShapePulseController.value * 33.0;
+                        final double pulse = math.sin(
+                                ((tPulseSec / 8.1) + 0.58) * 2 * math.pi);
+                        final double scale = 1.0 + pulse * 0.06;
                         return Stack(children: <Widget>[
                           Positioned(
                             left: x - 9,
                             top: y - 9,
-                            child: Container(
-                              width: 18,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: RadialGradient(
-                                  colors: <Color>[
-                                    project.primaryColor
-                                        .withValues(alpha: 0.15),
-                                    project.primaryColor
-                                        .withValues(alpha: 0.0),
-                                  ],
-                                  stops: const <double>[0.2, 1.0],
+                            child: Transform.scale(
+                              scale: scale,
+                              child: Container(
+                                width: 18,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: <Color>[
+                                      project.primaryColor
+                                          .withValues(alpha: 0.15),
+                                      project.primaryColor
+                                          .withValues(alpha: 0.0),
+                                    ],
+                                    stops: const <double>[0.2, 1.0],
+                                  ),
                                 ),
                               ),
                             ),
@@ -931,9 +1088,14 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                     ),
                     // Outer orbit — 18 s, slightly larger halo (22 px),
                     // wider ellipse. Phase-offset by pi so the two halos
-                    // start on opposite sides of the shared centre.
+                    // start on opposite sides of the shared centre. Has
+                    // its own 6.7 s scale-pulse, again out of phase with
+                    // the inner orbit.
                     AnimatedBuilder(
-                      animation: _heroOrbitBController,
+                      animation: Listenable.merge(<Listenable>[
+                        _heroOrbitBController,
+                        _heroShapePulseController,
+                      ]),
                       builder: (context, _) {
                         const double rx = 110;
                         const double ry = 64;
@@ -942,23 +1104,31 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                                 + math.pi;
                         final double x = cx + math.cos(a) * rx;
                         final double y = cy + math.sin(a) * ry;
+                        final double tPulseSec =
+                            _heroShapePulseController.value * 33.0;
+                        final double pulse = math.sin(
+                                ((tPulseSec / 6.7) + 0.81) * 2 * math.pi);
+                        final double scale = 1.0 + pulse * 0.07;
                         return Stack(children: <Widget>[
                           Positioned(
                             left: x - 11,
                             top: y - 11,
-                            child: Container(
-                              width: 22,
-                              height: 22,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: RadialGradient(
-                                  colors: <Color>[
-                                    project.primaryColor
-                                        .withValues(alpha: 0.13),
-                                    project.primaryColor
-                                        .withValues(alpha: 0.0),
-                                  ],
-                                  stops: const <double>[0.2, 1.0],
+                            child: Transform.scale(
+                              scale: scale,
+                              child: Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: <Color>[
+                                      project.primaryColor
+                                          .withValues(alpha: 0.13),
+                                      project.primaryColor
+                                          .withValues(alpha: 0.0),
+                                    ],
+                                    stops: const <double>[0.2, 1.0],
+                                  ),
                                 ),
                               ),
                             ),
@@ -987,20 +1157,41 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                 // the hero. Five sit in the upper third, three along the
                 // left/right outer edges — never the centre.
                 const List<_HeroPinpoint> pins = <_HeroPinpoint>[
-                  _HeroPinpoint(fx: 0.08, fy: 0.18, periodSec: 8.0, phase: 0.00, white: true),
-                  _HeroPinpoint(fx: 0.22, fy: 0.07, periodSec: 8.7, phase: 0.13),
-                  _HeroPinpoint(fx: 0.41, fy: 0.04, periodSec: 9.0, phase: 0.26, white: true),
-                  _HeroPinpoint(fx: 0.58, fy: 0.09, periodSec: 10.8, phase: 0.39),
-                  _HeroPinpoint(fx: 0.79, fy: 0.05, periodSec: 11.3, phase: 0.52, white: true),
-                  _HeroPinpoint(fx: 0.94, fy: 0.22, periodSec: 12.2, phase: 0.65),
-                  _HeroPinpoint(fx: 0.03, fy: 0.48, periodSec: 13.8, phase: 0.78, white: true),
-                  _HeroPinpoint(fx: 0.96, fy: 0.62, periodSec: 14.7, phase: 0.91),
+                  _HeroPinpoint(fx: 0.08, fy: 0.18, periodSec: 8.0, phase: 0.00, white: true,
+                      driftXPeriodSec: 10.4, driftYPeriodSec: 13.2, driftXPhase: 0.05, driftYPhase: 0.62,
+                      ampX: 3.2, ampY: 2.4),
+                  _HeroPinpoint(fx: 0.22, fy: 0.07, periodSec: 8.7, phase: 0.13,
+                      driftXPeriodSec: 12.9, driftYPeriodSec:  9.7, driftXPhase: 0.18, driftYPhase: 0.41,
+                      ampX: 2.6, ampY: 2.8),
+                  _HeroPinpoint(fx: 0.41, fy: 0.04, periodSec: 9.0, phase: 0.26, white: true,
+                      driftXPeriodSec: 11.5, driftYPeriodSec: 14.7, driftXPhase: 0.33, driftYPhase: 0.08,
+                      ampX: 2.8, ampY: 2.2),
+                  _HeroPinpoint(fx: 0.58, fy: 0.09, periodSec: 10.8, phase: 0.39,
+                      driftXPeriodSec: 13.8, driftYPeriodSec: 10.6, driftXPhase: 0.47, driftYPhase: 0.71,
+                      ampX: 3.0, ampY: 2.6),
+                  _HeroPinpoint(fx: 0.79, fy: 0.05, periodSec: 11.3, phase: 0.52, white: true,
+                      driftXPeriodSec:  9.6, driftYPeriodSec: 15.4, driftXPhase: 0.59, driftYPhase: 0.24,
+                      ampX: 2.5, ampY: 3.0),
+                  _HeroPinpoint(fx: 0.94, fy: 0.22, periodSec: 12.2, phase: 0.65,
+                      driftXPeriodSec: 14.2, driftYPeriodSec: 11.1, driftXPhase: 0.72, driftYPhase: 0.49,
+                      ampX: 3.4, ampY: 2.3),
+                  _HeroPinpoint(fx: 0.03, fy: 0.48, periodSec: 13.8, phase: 0.78, white: true,
+                      driftXPeriodSec: 10.8, driftYPeriodSec: 13.9, driftXPhase: 0.83, driftYPhase: 0.16,
+                      ampX: 2.9, ampY: 2.7),
+                  _HeroPinpoint(fx: 0.96, fy: 0.62, periodSec: 14.7, phase: 0.91,
+                      driftXPeriodSec: 12.3, driftYPeriodSec:  8.8, driftXPhase: 0.95, driftYPhase: 0.36,
+                      ampX: 2.7, ampY: 3.1),
                 ];
                 return AnimatedBuilder(
-                  animation: _heroPinpointController,
+                  animation: Listenable.merge(<Listenable>[
+                    _heroPinpointController,
+                    _heroParticleDriftController,
+                  ]),
                   builder: (context, _) {
                     // 90 s parent window remapped per-pin.
                     final double tSec = _heroPinpointController.value * 90.0;
+                    final double tDriftSec =
+                        _heroParticleDriftController.value * 45.0;
                     return Stack(
                       children: <Widget>[
                         for (final _HeroPinpoint p in pins)
@@ -1019,9 +1210,22 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                             final Color tint = p.white
                                 ? Colors.white
                                 : project.primaryColor;
+                            // Per-pin X / Y drift on independent
+                            // periods so all eight pinpoints float
+                            // through their own Lissajous patterns.
+                            final double dx = p.ampX *
+                                math.sin(((tDriftSec / p.driftXPeriodSec) +
+                                        p.driftXPhase) *
+                                    2 *
+                                    math.pi);
+                            final double dy = p.ampY *
+                                math.sin(((tDriftSec / p.driftYPeriodSec) +
+                                        p.driftYPhase) *
+                                    2 *
+                                    math.pi);
                             return Positioned(
-                              left: c.maxWidth * p.fx,
-                              top: c.maxHeight * p.fy,
+                              left: c.maxWidth * p.fx + dx,
+                              top: c.maxHeight * p.fy + dy,
                               child: Container(
                                 width: 1,
                                 height: 1,
@@ -1236,6 +1440,7 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -1294,17 +1499,57 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
         const SizedBox(height: 24),
         // Two short accent rules in the hero colour — mirrors the
         // composition the user is used to from the previously baked
-        // covers, just rendered live now.
-        Container(
-          width: 92,
-          height: 3,
-          color: project.primaryColor,
+        // covers, just rendered live now. Both rules "breathe" their
+        // horizontal scale 0.85 → 1.00 on a 3 s easeInOut, driven by
+        // `_heroLineBreatheController` (repeat:reverse so the
+        // controller bounces 0 → 1 → 0 without a hard wrap). The
+        // upper rule contracts on the controller's forward sweep, the
+        // lower rule on the reverse sweep — that quarter-cycle
+        // staggering keeps the two lines from breathing in unison.
+        // Anchored alignment(-1, 0) so the rule grows out from the
+        // left edge (matching CrossAxisAlignment.start above) instead
+        // of pulsing about its centre.
+        AnimatedBuilder(
+          animation: _heroLineBreatheController,
+          builder: (context, child) {
+            final double eased = Curves.easeInOut
+                .transform(_heroLineBreatheController.value);
+            final double scaleX = 0.85 + eased * 0.15; // 0.85 → 1.00
+            return Transform(
+              alignment: const Alignment(-1, 0),
+              transform: Matrix4.identity()..scale(scaleX, 1.0, 1.0),
+              child: child,
+            );
+          },
+          child: Container(
+            width: 92,
+            height: 3,
+            color: project.primaryColor,
+          ),
         ),
         const SizedBox(height: 8),
-        Container(
-          width: 44,
-          height: 2,
-          color: Colors.white.withValues(alpha: 0.42),
+        AnimatedBuilder(
+          animation: _heroLineBreatheController,
+          builder: (context, child) {
+            // Invert the controller value (1 - v) so this rule breathes
+            // out of phase with the upper one — when the longer rule
+            // is at its widest, this shorter rule is at its narrowest,
+            // and vice versa.
+            final double inverted =
+                1.0 - _heroLineBreatheController.value;
+            final double eased = Curves.easeInOut.transform(inverted);
+            final double scaleX = 0.85 + eased * 0.15;
+            return Transform(
+              alignment: const Alignment(-1, 0),
+              transform: Matrix4.identity()..scale(scaleX, 1.0, 1.0),
+              child: child,
+            );
+          },
+          child: Container(
+            width: 44,
+            height: 2,
+            color: Colors.white.withValues(alpha: 0.42),
+          ),
         ),
       ],
     );
@@ -1867,15 +2112,44 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
 /// Static descriptor for one tiny ambient signal dot on the hero. Kept
 /// out of build() so the list literal doesn't get rebuilt on every
 /// AnimationController tick.
-class _HeroDot {
-  const _HeroDot({required this.fx, required this.fy, required this.phase});
+/// Extended descriptor for a dot that twinkles *and* drifts. Used by
+/// overlays 3 and 5 — the original `_HeroDot` only carried position +
+/// twinkle phase, but the design brief wants every particle to also
+/// float on its own gentle X/Y wobble. Each dot has independent X and
+/// Y periods (so its motion is a slow Lissajous instead of a closed
+/// ellipse), per-axis phase, and small amplitudes (2 – 5 px) so the
+/// drift reads as breath rather than as movement.
+class _DriftDot {
+  const _DriftDot({
+    required this.fx,
+    required this.fy,
+    required this.twinklePhase,
+    required this.driftXPeriodSec,
+    required this.driftYPeriodSec,
+    required this.driftXPhase,
+    required this.driftYPhase,
+    required this.ampX,
+    required this.ampY,
+  });
 
-  /// Horizontal position as a fraction of the hero width.
+  /// Horizontal anchor as a fraction of the hero width.
   final double fx;
-  /// Vertical position as a fraction of the hero height.
+  /// Vertical anchor as a fraction of the hero height.
   final double fy;
-  /// 0–1 phase offset into the global twinkle cycle.
-  final double phase;
+  /// 0–1 phase offset into the overlay's twinkle cycle.
+  final double twinklePhase;
+  /// Full X-axis drift cycle length (seconds).
+  final double driftXPeriodSec;
+  /// Full Y-axis drift cycle length (seconds).
+  final double driftYPeriodSec;
+  /// 0–1 phase offset on the X-axis sine.
+  final double driftXPhase;
+  /// 0–1 phase offset on the Y-axis sine.
+  final double driftYPhase;
+  /// X-axis drift amplitude in pixels (typically 2 – 5).
+  final double ampX;
+  /// Y-axis drift amplitude in pixels (typically 2 – 5).
+  final double ampY;
 }
 
 /// Static descriptor for one suspended-dust mote on the hero. Each mote
@@ -1912,6 +2186,12 @@ class _HeroPinpoint {
     required this.periodSec,
     required this.phase,
     this.white = false,
+    this.driftXPeriodSec = 12.0,
+    this.driftYPeriodSec = 15.0,
+    this.driftXPhase = 0.0,
+    this.driftYPhase = 0.0,
+    this.ampX = 2.5,
+    this.ampY = 2.0,
   });
 
   /// Horizontal anchor as a fraction of the hero width.
@@ -1924,6 +2204,16 @@ class _HeroPinpoint {
   final double phase;
   /// When true, render white instead of `project.primaryColor`.
   final bool white;
+  /// Independent X / Y drift parameters (seconds, 0–1, pixels).
+  /// These are driven off the shared `_heroParticleDriftController`
+  /// so every pinpoint floats on its own Lissajous without spawning
+  /// a per-pin AnimationController.
+  final double driftXPeriodSec;
+  final double driftYPeriodSec;
+  final double driftXPhase;
+  final double driftYPhase;
+  final double ampX;
+  final double ampY;
 }
 
 /// Static descriptor for one slow-falling streak mote on the hero
