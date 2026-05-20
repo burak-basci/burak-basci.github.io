@@ -488,7 +488,17 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
               onPointerDown: widget.animated ? _onPointerDown : null,
               onPointerMove: widget.animated ? _onPointerMove : null,
               onPointerHover: widget.animated ? _onPointerHover : null,
-              child: CustomPaint(
+              // ClipRect bounds the painter to the widget's layout
+              // rect. The concentric-ring vignette intentionally
+              // paints rings up to ~maxDistance / cosθ beyond the
+              // cover edge (so the corners are darkened), and
+              // CustomPaint does NOT clip to its size — without this
+              // clip the outermost ellipses leak across the page on
+              // the home-tile angled thumbnail, where the surrounding
+              // Transform also doesn't clip.
+              child: ClipRect(
+                clipBehavior: Clip.hardEdge,
+                child: CustomPaint(
                 painter: _HeroCoverPainter(
                   base: base,
                   category: widget.project.categoryFor(widget.lang),
@@ -511,6 +521,7 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
                   repaint: _ticker,
                 ),
                 size: Size.infinite,
+              ),
               ),
             ),
           ),
