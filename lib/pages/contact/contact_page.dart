@@ -184,7 +184,7 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
     // frames so motion can be replayed deterministically every flight.
     _planeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4500),
+      duration: const Duration(milliseconds: 5500),
     );
     _planeController.addStatusListener((status) {
       // Once the plane has fully exited the viewport, remove the
@@ -1219,7 +1219,7 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
 
   // Total simulated flight in wall-clock seconds. Must equal the
   // controller's duration so t∈[0,1] maps linearly to seconds.
-  static const double _flightSeconds = 4.5;
+  static const double _flightSeconds = 5.5;
 
   // High-rate integration step. 0.002s = 500 Hz which gives stable
   // velocity-squared drag/lift even during the boosted launch.
@@ -1230,13 +1230,13 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
   static const List<MapEntry<double, double>> _scaleAnchors =
       <MapEntry<double, double>>[
     MapEntry(0.0, 1.0),
-    MapEntry(0.5, 1.1),
-    MapEntry(1.5, 1.3),
-    MapEntry(2.5, 1.8),
-    MapEntry(3.0, 2.5),
-    MapEntry(3.5, 4.0),
-    MapEntry(4.0, 7.0),
-    MapEntry(4.5, 9.0),
+    MapEntry(0.6, 1.1),
+    MapEntry(1.8, 1.25),
+    MapEntry(2.8, 1.6),
+    MapEntry(3.6, 2.4),
+    MapEntry(4.3, 4.2),
+    MapEntry(4.9, 7.0),
+    MapEntry(5.5, 9.0),
   ];
 
   /// Pre-computed trajectory frames. Built once in [initState].
@@ -1248,33 +1248,40 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
     _trajectory = _buildTrajectory();
   }
 
-  /// Scripted thrust schedule. Sparse impulse windows that shape the
-  /// user-described 5-phase trajectory. Values tuned via off-line
-  /// simulation so the resulting motion tells this story:
-  ///   1) takeoff right + strong up — visible climb (~150-200 px)
-  ///   2) leftward arc at apex
-  ///   3) explicit drop phase — plane visibly falls
-  ///   4) strong recovery updraft
-  ///   5) big exit right + climbing (~7-9× scale)
+  /// Scripted thrust schedule. Sparse impulse windows that shape a
+  /// parabolic flight path so the plane reads as physically thrust+
+  /// gliding rather than following a baked curve. Story:
+  ///   1) gentler takeoff right — lower initial climb so the arc has
+  ///      room to build height OVER TIME rather than spiking
+  ///   2) sustained mild lift on the rightward coast — gives the
+  ///      first hump a rounded parabolic shape
+  ///   3) long, strong leftward thrust — flies much further left
+  ///      than before (~doubled left-x reach) with mild lift so the
+  ///      leftward arc rises in a parabola
+  ///   4) short drop pulse → earlier turn from the drop (lifted
+  ///      sooner so the plane doesn't sit at the floor)
+  ///   5) very strong recovery updraft — climbs HIGHER than the
+  ///      first peak, again a parabolic curve from a sustained-lift
+  ///      coast rather than an instant spike
+  ///   6) big rightward exit + climb
   ///
-  /// Windows:
-  ///   0.00–0.40s  takeoff impulse: strong right + strong up
-  ///   0.40–0.85s  coast w/ gentle lift (slows from drag)
-  ///   0.85–1.55s  pronounced leftward arc; minimal y-thrust (let
-  ///               lift carry it up while x reverses)
-  ///   1.55–2.00s  brief left coast, zero y-thrust → gravity takes over
-  ///   2.00–2.40s  explicit drop pulse (slight right + DOWN)
-  ///   2.40–2.95s  strong recovery updraft
-  ///   2.95–3.70s  big rightward exit + climb
-  ///   3.70+        coast (huge velocity carries plane off-screen)
+  /// Windows (5.5 s total flight):
+  ///   0.00–0.55s  takeoff: moderate right + reduced up
+  ///   0.55–1.30s  rightward coast with sustained mild lift
+  ///   1.30–2.30s  long leftward thrust + sustained lift → far left
+  ///   2.30–2.65s  short drop pulse (slight right + DOWN, brief)
+  ///   2.65–3.40s  recovery: strong updraft, mild rightward
+  ///   3.40–4.30s  continued parabolic climb while turning right
+  ///   4.30–5.20s  exit right with sustained lift (no more nose-down)
+  ///   5.20+       coast
   Offset _scriptedThrust(double t) {
-    if (t < 0.40) return const Offset(900, -800);
-    if (t < 0.85) return const Offset(0, -80);
-    if (t < 1.55) return const Offset(-500, -50);
-    if (t < 2.00) return const Offset(-60, 0);
-    if (t < 2.40) return const Offset(100, 200);
-    if (t < 2.95) return const Offset(320, -700);
-    if (t < 3.70) return const Offset(1500, -450);
+    if (t < 0.55) return const Offset(620, -500);
+    if (t < 1.30) return const Offset(60, -260);
+    if (t < 2.30) return const Offset(-900, -220);
+    if (t < 2.65) return const Offset(120, 220);
+    if (t < 3.40) return const Offset(280, -780);
+    if (t < 4.30) return const Offset(700, -420);
+    if (t < 5.20) return const Offset(1400, -260);
     return Offset.zero;
   }
 

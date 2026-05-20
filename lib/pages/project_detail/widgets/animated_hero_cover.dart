@@ -352,19 +352,22 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
     if (!widget.animated) return;
     final int baseMs = _nowMs();
     final Color tintColor = widget.project.primaryColor;
-    for (int i = 0; i < 5; i++) {
+    // Subtle 2-ring ripple: a primary ring + one follower. Smaller
+    // maxRadius, shorter life, lower peak alpha and thinner stroke
+    // than the prior 5-ring treatment so the effect is felt rather
+    // than dominant.
+    for (int i = 0; i < 2; i++) {
       final Color rippleColor = (i % 2 == 0) ? Colors.white : tintColor;
       _clickRipples.add(_ClickRipple(
-        startMs: baseMs + i * 90,
+        startMs: baseMs + i * 110,
         origin: origin,
-        maxRadius: 220.0,
+        maxRadius: 120.0,
         ringIndex: i,
-        lifetime: 1100.0,
+        lifetime: 750.0,
         color: rippleColor,
       ));
     }
-    // Hard cap to bound memory under rapid click-spam. Drop oldest.
-    while (_clickRipples.length > 30) {
+    while (_clickRipples.length > 12) {
       _clickRipples.removeAt(0);
     }
   }
@@ -1067,12 +1070,12 @@ class _HeroCoverPainter extends CustomPainter {
       // expands — matches the physical intuition of a water ripple
       // losing momentum the further it travels from the impact.
       final double radius = Curves.easeOutCubic.transform(t) * r.maxRadius;
-      // Quadratic decay starting at 0.75 (was 0.50): more opaque
-      // peak so the ring is clearly readable, then fades sharply at
-      // the tail so the final 20% of life is almost invisible.
-      final double alpha = ((1.0 - t) * (1.0 - t) * 0.75).clamp(0.0, 1.0);
+      // Quadratic decay with a low peak (0.35) — the ring is a
+      // gentle feedback nudge, not a stage effect. Stroke tapers
+      // from 1.6 to 0.6 px so it reads as a thin, ephemeral line.
+      final double alpha = ((1.0 - t) * (1.0 - t) * 0.35).clamp(0.0, 1.0);
       ripplePaint
-        ..strokeWidth = 4.0 - t * 2.0 // 4 px tapering to 2 px
+        ..strokeWidth = 1.6 - t * 1.0
         ..color = r.color.withValues(alpha: alpha);
       canvas.drawCircle(r.origin, radius, ripplePaint);
     }

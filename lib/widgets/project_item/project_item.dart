@@ -544,41 +544,29 @@ class ProjectItemLargeState extends State<ProjectItemLarge> with SingleTickerPro
                 height: containerHeight,
                 curve: Curves.fastOutSlowIn,
                 clipBehavior: Clip.hardEdge,
-                child: widget.project != null && widget.lang != null
-                    // Live Flutter cover for the hover crossfade —
-                    // matches the treatment on the detail page hero
-                    // and the next-project preview. Rendered static
-                    // (controllers don't tick) so the home grid never
-                    // burns GPU on dozens of off-screen tiles.
-                    ? OverflowBox(
+                // The behind / wipe-in panel always uses the static
+                // AI-generated `cover-color.webp` (passed in via
+                // [hoverImageUrl]) — that asset is the cinematic
+                // "photographic" cover. The angled-above thumbnail
+                // below renders the live painted [AnimatedHeroCover];
+                // showing two visually distinct treatments at the same
+                // time is intentional. If a project has no AI cover,
+                // we fall back to nothing (panel stays solid colour).
+                child: widget.hoverImageUrl == null
+                    ? null
+                    : OverflowBox(
                         maxWidth: containerWidth,
                         maxHeight: containerHeight,
                         alignment: Alignment.centerRight,
                         child: SizedBox(
                           width: containerWidth,
                           height: containerHeight,
-                          child: AnimatedHeroCover(
-                            project: widget.project!,
-                            lang: widget.lang!,
-                            animated: false,
+                          child: Image.asset(
+                            widget.hoverImageUrl!,
+                            fit: BoxFit.cover,
                           ),
                         ),
-                      )
-                    : (widget.hoverImageUrl == null
-                        ? null
-                        : OverflowBox(
-                            maxWidth: containerWidth,
-                            maxHeight: containerHeight,
-                            alignment: Alignment.centerRight,
-                            child: SizedBox(
-                              width: containerWidth,
-                              height: containerHeight,
-                              child: Image.asset(
-                                widget.hoverImageUrl!,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          )),
+                      ),
               ),
             ),
             Positioned(
