@@ -2198,11 +2198,18 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                     color: CustomColors.black,
                   ),
                 );
+                // Next-project preview now uses the live Flutter cover
+                // composition (gradient + illustration + ambient
+                // motion) instead of the old baked .webp, so the
+                // visual treatment is consistent with the hero on the
+                // detail page itself. `animated: true` is fine here —
+                // there's only ever one next-project tile on screen
+                // at a time, so the per-frame painter cost is bounded.
                 final Widget cover = ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: AspectRatio(
                     aspectRatio: 16 / 10,
-                    child: Image.asset(next.coverFor(lang), fit: BoxFit.cover),
+                    child: AnimatedHeroCover(project: next, lang: lang),
                   ),
                 )
                     .animate(controller: _nextProjectController, autoPlay: false)

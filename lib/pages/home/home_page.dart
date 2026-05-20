@@ -460,6 +460,12 @@ class HomePageState extends State<HomePage>
                                     : "0${i + 1}",
                                 imageUrl: projects[i].coverFor(lang),
                                 hoverImageUrl: projects[i].coverColorUrl,
+                                // Pass the project + lang so the tile
+                                // renders the live Flutter cover
+                                // (static mode) instead of the legacy
+                                // baked .webp.
+                                project: projects[i],
+                                lang: lang,
                                 projectItemheight: itemH,
                                 subheight: subH,
                                 duration: const Duration(milliseconds: 900),

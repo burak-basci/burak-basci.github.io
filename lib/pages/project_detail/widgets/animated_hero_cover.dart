@@ -29,10 +29,17 @@ class AnimatedHeroCover extends StatefulWidget {
     super.key,
     required this.project,
     required this.lang,
+    this.animated = true,
   });
 
   final ProjectItemData project;
   final AppLang lang;
+
+  /// When false the painter renders one static frame and the
+  /// controllers never tick — used for small thumbnails and
+  /// next-project previews where 30 fps animation everywhere would
+  /// be perf-overkill and visually noisy.
+  final bool animated;
 
   @override
   State<AnimatedHeroCover> createState() => _AnimatedHeroCoverState();
@@ -68,11 +75,11 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
     _gradient = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 24),
-    )..repeat(reverse: true);
+    );
     _glow = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 10),
-    )..repeat(reverse: true);
+    );
     // Particles + illustration use reverse:true so the sine-driven
     // sub-elements never all hit t=0 together (the previous
     // repeat() without reverse was the source of the "hard reset"
@@ -80,15 +87,15 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
     _particles = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 50),
-    )..repeat(reverse: true);
+    );
     _illustration = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 30),
-    )..repeat(reverse: true);
+    );
     _vignette = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 38),
-    )..repeat(reverse: true);
+    );
     // Falling lines: continuous downward loop (45 s for one full
     // sweep of the longest line). Cannot reverse — the lines would
     // climb back up. The wrap is invisible because each line's
@@ -96,7 +103,15 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
     _fallingLines = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 45),
-    )..repeat();
+    );
+    if (widget.animated) {
+      _gradient.repeat(reverse: true);
+      _glow.repeat(reverse: true);
+      _particles.repeat(reverse: true);
+      _illustration.repeat(reverse: true);
+      _vignette.repeat(reverse: true);
+      _fallingLines.repeat();
+    }
 
     final math.Random rng = math.Random(widget.project.slug.hashCode);
     _particleTable = List<_Particle>.generate(

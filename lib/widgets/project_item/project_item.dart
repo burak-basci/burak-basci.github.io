@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../pages/project_detail/widgets/animated_hero_cover.dart';
 import '../../utils/adaptive_layout.dart';
 import '../../utils/functions.dart';
 import '../../utils/i18n_strings.dart';
@@ -254,6 +255,8 @@ class ProjectItemLarge extends StatefulWidget {
     required this.imageUrl,
     required this.containerColor,
     this.hoverImageUrl,
+    this.project,
+    this.lang,
     this.projectItemheight,
     this.subheight,
     this.coloredContainerHeight,
@@ -269,6 +272,18 @@ class ProjectItemLarge extends StatefulWidget {
     this.onTap,
     Key? key,
   }) : super(key: key);
+
+  /// When supplied, both the main slide-in tile thumbnail AND the
+  /// hover crossfade panel render the live Flutter [AnimatedHeroCover]
+  /// instead of the static [imageUrl] / [hoverImageUrl] .webp. The
+  /// cover is rendered in static (non-ticking) mode on the home grid
+  /// so 30 fps animation across all tiles never spins the GPU; the
+  /// main hero on the detail page is the only place the cover ticks.
+  final ProjectItemData? project;
+
+  /// Active language for the live cover. Required whenever [project]
+  /// is non-null; ignored otherwise.
+  final AppLang? lang;
 
   /// signifies the position of the project in the list
   final String projectNumber;
@@ -529,21 +544,41 @@ class ProjectItemLargeState extends State<ProjectItemLarge> with SingleTickerPro
                 height: containerHeight,
                 curve: Curves.fastOutSlowIn,
                 clipBehavior: Clip.hardEdge,
-                child: widget.hoverImageUrl == null
-                    ? null
-                    : OverflowBox(
+                child: widget.project != null && widget.lang != null
+                    // Live Flutter cover for the hover crossfade —
+                    // matches the treatment on the detail page hero
+                    // and the next-project preview. Rendered static
+                    // (controllers don't tick) so the home grid never
+                    // burns GPU on dozens of off-screen tiles.
+                    ? OverflowBox(
                         maxWidth: containerWidth,
                         maxHeight: containerHeight,
                         alignment: Alignment.centerRight,
                         child: SizedBox(
                           width: containerWidth,
                           height: containerHeight,
-                          child: Image.asset(
-                            widget.hoverImageUrl!,
-                            fit: BoxFit.cover,
+                          child: AnimatedHeroCover(
+                            project: widget.project!,
+                            lang: widget.lang!,
+                            animated: false,
                           ),
                         ),
-                      ),
+                      )
+                    : (widget.hoverImageUrl == null
+                        ? null
+                        : OverflowBox(
+                            maxWidth: containerWidth,
+                            maxHeight: containerHeight,
+                            alignment: Alignment.centerRight,
+                            child: SizedBox(
+                              width: containerWidth,
+                              height: containerHeight,
+                              child: Image.asset(
+                                widget.hoverImageUrl!,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          )),
               ),
             ),
             Positioned(
@@ -553,11 +588,25 @@ class ProjectItemLargeState extends State<ProjectItemLarge> with SingleTickerPro
                 transform: Matrix4.identity()
                   ..setEntry(3, 2, 0.0095)
                   ..rotateY(0.075),
-                child: Image.asset(
-                  widget.imageUrl,
+                // The main slide-in thumbnail also uses the live cover
+                // when a [project] is supplied — non-ticking so the
+                // entire cascade is just N static custom-painted
+                // canvases instead of N animation controllers.
+                child: SizedBox(
                   width: imageWidth,
                   height: containerHeight,
-                  fit: BoxFit.cover,
+                  child: widget.project != null && widget.lang != null
+                      ? AnimatedHeroCover(
+                          project: widget.project!,
+                          lang: widget.lang!,
+                          animated: false,
+                        )
+                      : Image.asset(
+                          widget.imageUrl,
+                          width: imageWidth,
+                          height: containerHeight,
+                          fit: BoxFit.cover,
+                        ),
                 ),
               ),
             ),
