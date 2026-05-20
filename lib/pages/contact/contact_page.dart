@@ -1213,7 +1213,9 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
   // wing's normal).
   static const double _gravity = 220.0; // px / s²
   static const double _drag = 0.0018; // dimensionless × v² → px/s²
-  static const double _lift = 0.0011; // dimensionless × v² → px/s²
+  // Lowered (was 0.0011) so gravity dominates during coast windows
+  // and the plane visibly drops between climb-and-exit phases.
+  static const double _lift = 0.0006; // dimensionless × v² → px/s²
 
   // Total simulated flight in wall-clock seconds. Must equal the
   // controller's duration so t∈[0,1] maps linearly to seconds.
@@ -1249,27 +1251,30 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
   /// Scripted thrust schedule. Sparse impulse windows that shape the
   /// user-described 5-phase trajectory. Values tuned via off-line
   /// simulation so the resulting motion tells this story:
-  ///   1) takeoff right + slight up
-  ///   2) slow arc leftward at apex
-  ///   3) brief drop (down-left)
-  ///   4) recover and rise to the right
-  ///   5) big exit right + climbing
+  ///   1) takeoff right + strong up — visible climb (~150-200 px)
+  ///   2) leftward arc at apex
+  ///   3) explicit drop phase — plane visibly falls
+  ///   4) strong recovery updraft
+  ///   5) big exit right + climbing (~7-9× scale)
   ///
   /// Windows:
-  ///   0.00–0.40s  takeoff impulse: strong right + up
+  ///   0.00–0.40s  takeoff impulse: strong right + strong up
   ///   0.40–0.85s  coast w/ gentle lift (slows from drag)
-  ///   0.85–1.55s  pronounced leftward arc impulse (lift sustains height)
-  ///   1.55–2.00s  brief left-drift coast (drop phase begins)
-  ///   2.00–2.55s  updraft + slight right (recovery climb)
-  ///   2.55–3.30s  big rightward exit impulse + climb
-  ///   3.30+        coast (huge velocity carries plane off-screen)
+  ///   0.85–1.55s  pronounced leftward arc; minimal y-thrust (let
+  ///               lift carry it up while x reverses)
+  ///   1.55–2.00s  brief left coast, zero y-thrust → gravity takes over
+  ///   2.00–2.40s  explicit drop pulse (slight right + DOWN)
+  ///   2.40–2.95s  strong recovery updraft
+  ///   2.95–3.70s  big rightward exit + climb
+  ///   3.70+        coast (huge velocity carries plane off-screen)
   Offset _scriptedThrust(double t) {
-    if (t < 0.40) return const Offset(900, -380);
+    if (t < 0.40) return const Offset(900, -800);
     if (t < 0.85) return const Offset(0, -80);
-    if (t < 1.55) return const Offset(-500, -150);
-    if (t < 2.00) return const Offset(-60, -20);
-    if (t < 2.55) return const Offset(320, -360);
-    if (t < 3.30) return const Offset(1500, -260);
+    if (t < 1.55) return const Offset(-500, -50);
+    if (t < 2.00) return const Offset(-60, 0);
+    if (t < 2.40) return const Offset(100, 200);
+    if (t < 2.95) return const Offset(320, -700);
+    if (t < 3.70) return const Offset(1500, -450);
     return Offset.zero;
   }
 
@@ -1377,11 +1382,16 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
   }
 
   // -------------------- Rotation helpers -------------------- //
-  // The Material `Icons.send` glyph natively points up-and-right when
-  // rotation=0 (the nose visually sits at ≈ -π/4 from +x). Adding +π/4
-  // to the velocity-derived atan2 angle aligns the nose with the
-  // current velocity direction at all times.
-  static const double _iconNeutralAngle = math.pi / 4;
+  // The Material `Icons.send` glyph natively points horizontally to
+  // the right at rotation=0 (atan2(vy, vx)==0 → nose along +x). No
+  // neutral-angle offset is required; the velocity-derived atan2
+  // angle directly aligns the nose with the flight direction.
+  //
+  // History: an earlier version added +π/4 here, assuming the glyph
+  // pointed up-right by default; visual testing on a live page showed
+  // the plane consistently sat 45° clockwise of its actual flight
+  // direction, so the offset was removed.
+  static const double _iconNeutralAngle = 0.0;
 
   // Rotation smoothing time constant. Small enough that real direction
   // changes (turn / drop / climb) read instantly, large enough that
