@@ -371,6 +371,16 @@ class _HeroCoverPainter extends CustomPainter {
   static const double _refW = 1600.0;
   static const double _refH = 900.0;
 
+  // Global multiplier applied to illustration radii / shape sizes so
+  // the big abstract corner shapes (orbiting circles, machined
+  // component, monumental block, etc.) read as the dominant cover
+  // element at modern viewport widths. Python baked these at 1600x900,
+  // but the Flutter cover renders at 1440x900 or smaller and the
+  // illustrations were anchored at (~1200, ~360) which crowds them
+  // into the right edge. 1.7× both pushes them outward and makes
+  // them unambiguously the focal shape.
+  static const double _illMul = 1.7;
+
   @override
   void paint(Canvas canvas, Size size) {
     final Rect rect = Offset.zero & size;
@@ -600,9 +610,17 @@ class _HeroCoverPainter extends CustomPainter {
     final double cy = 360 * sy;
     final List<Offset> points = <Offset>[];
     final double t2pi = t * 2 * math.pi;
+    // Scatter spread widened by _illMul (561,361 → ~954,613) so the
+    // constellation occupies the upper-right quadrant rather than a
+    // tight cluster, and per-dot radii bumped 3 → 5 so the nodes
+    // read at viewport sizes.
+    final int spreadX = (561 * _illMul).round();
+    final int spreadY = (361 * _illMul).round();
+    final int halfX = (spreadX / 2).round();
+    final int halfY = (spreadY / 2).round();
     for (int i = 0; i < 13; i++) {
-      final double bx = cx + (rng.nextInt(561) - 280) * sx;
-      final double by = cy + (rng.nextInt(361) - 180) * sy;
+      final double bx = cx + (rng.nextInt(spreadX) - halfX) * sx;
+      final double by = cy + (rng.nextInt(spreadY) - halfY) * sy;
       // Per-dot Lissajous drift (±5-7 px), independent phase.
       final double dx = (5.0 + (i % 3) * 1.5) *
           sx *
@@ -613,7 +631,7 @@ class _HeroCoverPainter extends CustomPainter {
       final Offset p = Offset(bx + dx, by + dy);
       points.add(p);
       _fillPaint.color = baseC.withValues(alpha: 0.59);
-      c.drawCircle(p, 3 * sx, _fillPaint);
+      c.drawCircle(p, 5 * sx, _fillPaint);
     }
     // Connecting line — alpha breathes with the t-driven sin.
     // Per-element phase 0.83 so this isn't at t=0 when the global
@@ -624,11 +642,11 @@ class _HeroCoverPainter extends CustomPainter {
         0.32 + 0.22 * (0.5 + 0.5 * math.sin(t2pi * 0.67 + 0.83));
     _strokePaint
       ..color = accentC.withValues(alpha: lineAlpha)
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 2.5;
     c.drawLine(focal, target, _strokePaint);
     _fillPaint.color = accentC.withValues(alpha: 0.86);
     final double focalR =
-        9 * sx * (1.0 + 0.10 * math.sin(t2pi * 0.67 + 1.2));
+        9 * _illMul * sx * (1.0 + 0.10 * math.sin(t2pi * 0.67 + 1.2));
     c.drawCircle(focal, focalR, _fillPaint);
   }
 
@@ -637,12 +655,19 @@ class _HeroCoverPainter extends CustomPainter {
     final double cx = 1200 * sx;
     final double cy = 360 * sy;
     final double t2pi = t * 2 * math.pi;
-    final List<double> radii = <double>[160, 220, 300];
+    // Radii scaled ×_illMul (1.7) so the outermost orbit reaches ~510 px
+    // of the 1600 px reference — the rings now read as the dominant
+    // compositional element instead of crowding the right edge.
+    final List<double> radii = <double>[
+      160 * _illMul,
+      220 * _illMul,
+      300 * _illMul,
+    ];
     final List<double> speeds = <double>[0.6, 0.42, 0.26];
     for (int i = 0; i < radii.length; i++) {
       _strokePaint
         ..color = baseC.withValues(alpha: 0.31 + 0.12 * i.toDouble())
-        ..strokeWidth = 2.0;
+        ..strokeWidth = 2.5;
       final double r = radii[i] * sx;
       // Each ring rotates at a different speed → draw as a circle with
       // a small accent arc that rotates around its perimeter.
@@ -650,12 +675,12 @@ class _HeroCoverPainter extends CustomPainter {
       final double a = t2pi * speeds[i] + i * 0.9;
       final Offset orbiter = Offset(cx + r * math.cos(a), cy + r * math.sin(a));
       _fillPaint.color = accentC.withValues(alpha: 0.55);
-      c.drawCircle(orbiter, 5 * sx, _fillPaint);
+      c.drawCircle(orbiter, 7 * sx, _fillPaint);
     }
-    // Central token — gentle scale pulse.
+    // Central token — gentle scale pulse. Radius bumped 60 → 60×_illMul.
     final double pulse = 1.0 + 0.06 * math.sin(t2pi * 0.7);
     _fillPaint.color = accentC.withValues(alpha: 0.78);
-    c.drawCircle(Offset(cx, cy), 60 * sx * pulse, _fillPaint);
+    c.drawCircle(Offset(cx, cy), 60 * _illMul * sx * pulse, _fillPaint);
   }
 
   void _paintMonumentalBlock(Canvas c, Size sz, double sx, double sy,
@@ -664,8 +689,11 @@ class _HeroCoverPainter extends CustomPainter {
     // Per-element phase 0.41 so the block dx never lands at zero
     // when the global controller bounces past 0 / 1.
     final double dx = 3 * sx * math.sin(t2pi * 0.67 + 0.41);
+    // Block bounds expanded so the slab dominates the upper-right
+    // quadrant: was (980→1480, 130→580) — now extended leftward and
+    // taller to give the cover a clear monumental focal mass.
     final Rect rect = Rect.fromLTRB(
-      980 * sx + dx, 130 * sy, 1480 * sx + dx, 580 * sy,
+      720 * sx + dx, 70 * sy, 1530 * sx + dx, 680 * sy,
     );
     _fillPaint.color = baseC.withValues(alpha: 0.12);
     c.drawRect(rect, _fillPaint);
@@ -698,8 +726,10 @@ class _HeroCoverPainter extends CustomPainter {
   void _paintBuildingSilhouette(Canvas c, Size sz, double sx, double sy,
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
+    // Façade widened (1080→1340 → 980→1500) and slightly taller so the
+    // building reads as a prominent silhouette, not a thin slab.
     final Rect outer = Rect.fromLTRB(
-      1080 * sx, 90 * sy, 1340 * sx, 620 * sy,
+      980 * sx, 50 * sy, 1500 * sx, 700 * sy,
     );
     _strokePaint
       ..color = baseC.withValues(alpha: 0.47)
@@ -742,10 +772,14 @@ class _HeroCoverPainter extends CustomPainter {
   void _paintStackedStrata(Canvas c, Size sz, double sx, double sy,
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
+    // Bars stretched leftward and taller so the stacked strata
+    // occupies a much bigger swath of the upper-right quadrant. Was
+    // 520 wide × 50 tall — now ~820 wide × 70 tall, three layers
+    // spread across more vertical space.
     final List<List<double>> bars = <List<double>>[
-      <double>[960, 220, 1480, 270],
-      <double>[940, 320, 1460, 370],
-      <double>[920, 420, 1440, 470],
+      <double>[700, 180, 1530, 250],
+      <double>[680, 320, 1510, 390],
+      <double>[660, 460, 1490, 530],
     ];
     for (int i = 0; i < bars.length; i++) {
       final List<double> b = bars[i];
@@ -784,15 +818,17 @@ class _HeroCoverPainter extends CustomPainter {
     _strokePaint
       ..color = baseC.withValues(alpha: 0.51)
       ..strokeWidth = 2.0;
+    // Sheets enlarged ~1.4× (500 → 700 wide, 400 → 600 tall) so the
+    // overlapping paper rectangles fill the focal area.
     _paintRotatedRect(
       c,
-      Rect.fromLTRB(960 * sx, 130 * sy, 1460 * sx, 530 * sy),
+      Rect.fromLTRB(740 * sx, 70 * sy, 1440 * sx, 670 * sy),
       rot1,
       _strokePaint,
     );
     _paintRotatedRect(
       c,
-      Rect.fromLTRB(1010 * sx, 180 * sy, 1510 * sx, 580 * sy),
+      Rect.fromLTRB(820 * sx, 140 * sy, 1520 * sx, 740 * sy),
       rot2,
       _strokePaint,
     );
@@ -801,10 +837,10 @@ class _HeroCoverPainter extends CustomPainter {
     final double creaseA = 0.78 + 0.12 * math.sin(t2pi * 0.67 + 0.74);
     _strokePaint
       ..color = accentC.withValues(alpha: creaseA)
-      ..strokeWidth = 3.0;
+      ..strokeWidth = 3.5;
     c.drawLine(
-      Offset(960 * sx, 530 * sy),
-      Offset(1510 * sx, 180 * sy),
+      Offset(740 * sx, 670 * sy),
+      Offset(1520 * sx, 140 * sy),
       _strokePaint,
     );
   }
@@ -823,25 +859,32 @@ class _HeroCoverPainter extends CustomPainter {
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
     final Offset center = Offset(1200 * sx, 320 * sy);
-    final double outerR = 120 * sx;
+    // Outer ring radius scaled ×_illMul (120 → 204) so the wheel reads
+    // as a major shape rather than a small badge near the corner.
+    final double outerR = 120 * _illMul * sx;
     final double pulse = 1.0 + 0.03 * math.sin(t2pi * 0.6);
     _strokePaint
       ..color = baseC.withValues(alpha: 0.51)
-      ..strokeWidth = 3.0;
+      ..strokeWidth = 3.5;
     c.drawCircle(center, outerR * pulse, _strokePaint);
-    // Inner radial spokes, rotating.
+    // Inner radial spokes, rotating. Spoke endpoints scaled ×_illMul
+    // so the spoke fan fills the larger ring.
     final double rot = t2pi * 0.17;
     const int spokes = 8;
-    _strokePaint.strokeWidth = 2.0;
+    _strokePaint.strokeWidth = 2.5;
     for (int i = 0; i < spokes; i++) {
       final double a = rot + i * (2 * math.pi / spokes);
-      final Offset p1 = center + Offset(math.cos(a) * 40 * sx, math.sin(a) * 40 * sy);
-      final Offset p2 = center + Offset(math.cos(a) * 100 * sx, math.sin(a) * 100 * sy);
+      final Offset p1 = center +
+          Offset(math.cos(a) * 40 * _illMul * sx,
+              math.sin(a) * 40 * _illMul * sy);
+      final Offset p2 = center +
+          Offset(math.cos(a) * 100 * _illMul * sx,
+              math.sin(a) * 100 * _illMul * sy);
       c.drawLine(p1, p2, _strokePaint);
     }
-    // Accent square offset to the lower right.
+    // Accent square offset to the lower right. Edge scaled ×_illMul.
     final double sqPulse = 1.0 + 0.05 * math.sin(t2pi * 0.9 + 1.4);
-    final double sqSize = 70 * sx * sqPulse;
+    final double sqSize = 70 * _illMul * sx * sqPulse;
     _fillPaint.color = accentC.withValues(alpha: 0.78);
     c.drawRect(
       Rect.fromCenter(
@@ -862,13 +905,16 @@ class _HeroCoverPainter extends CustomPainter {
     final double a2 = 0.35 + 0.10 * math.sin(t2pi * 0.9 + 0.4);
     _strokePaint
       ..color = accentC.withValues(alpha: a1)
-      ..strokeWidth = 3.0;
-    c.drawCircle(center, 170 * sx * (1.0 + 0.03 * math.sin(t2pi)), _strokePaint);
-    _strokePaint.color = baseC.withValues(alpha: a2);
-    c.drawCircle(center, 130 * sx * (1.0 + 0.04 * math.cos(t2pi * 0.7)),
+      ..strokeWidth = 3.5;
+    // Stage rings scaled ×_illMul so the concentric halos read as a
+    // major staged composition rather than a small badge.
+    c.drawCircle(center, 170 * _illMul * sx * (1.0 + 0.03 * math.sin(t2pi)),
         _strokePaint);
-    // Central token + accent pulse halo.
-    final double tokR = 24 * sx * (1.0 + 0.10 * math.sin(t2pi * 1.1));
+    _strokePaint.color = baseC.withValues(alpha: a2);
+    c.drawCircle(center,
+        130 * _illMul * sx * (1.0 + 0.04 * math.cos(t2pi * 0.7)), _strokePaint);
+    // Central token + accent pulse halo. Token radius bumped.
+    final double tokR = 24 * _illMul * sx * (1.0 + 0.10 * math.sin(t2pi * 1.1));
     _fillPaint.color = accentC.withValues(alpha: 0.86);
     c.drawCircle(center, tokR, _fillPaint);
     // Perspective curtain lines.
@@ -893,10 +939,12 @@ class _HeroCoverPainter extends CustomPainter {
     // The triangular arc, fill + outline. Per-element phase 1.07 so
     // the apex y-pulse never lands at zero on the global wrap.
     final double yPulse = 4 * sy * math.sin(t2pi * 0.67 + 1.07);
+    // Triangular arc enlarged ~1.6× across both axes so it dominates
+    // the focal area instead of sitting as a tiny pennant.
     final Path path = Path()
-      ..moveTo(1100 * sx, 540 * sy)
-      ..lineTo(1260 * sx, 220 * sy + yPulse)
-      ..lineTo(1420 * sx, 540 * sy)
+      ..moveTo(880 * sx, 680 * sy)
+      ..lineTo(1240 * sx, 100 * sy + yPulse)
+      ..lineTo(1500 * sx, 680 * sy)
       ..close();
     _fillPaint.color = accentC.withValues(alpha: 0.18);
     c.drawPath(path, _fillPaint);
@@ -908,8 +956,8 @@ class _HeroCoverPainter extends CustomPainter {
     _strokePaint
       ..color = accentC.withValues(
           alpha: 0.78 + 0.14 * math.sin(t2pi * 0.46 + 2.31))
-      ..strokeWidth = 4.0;
-    c.drawLine(Offset(1100 * sx, 540 * sy), Offset(1420 * sx, 540 * sy),
+      ..strokeWidth = 5.0;
+    c.drawLine(Offset(880 * sx, 680 * sy), Offset(1500 * sx, 680 * sy),
         _strokePaint);
     // Scattered tokens drifting on Lissajous.
     for (int i = 0; i < 5; i++) {
@@ -925,22 +973,26 @@ class _HeroCoverPainter extends CustomPainter {
   void _paintStrataLines(Canvas c, Size sz, double sx, double sy,
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
-    final List<double> ys = <double>[220, 320, 420];
+    // Strata stretched and spread vertically so the three lines fill
+    // the focal area like a real strata diagram (was 220/320/420 over
+    // 520 wide; now 160/360/620 spread across the full height with
+    // 820 px width — feels architectural rather than tooltip-sized).
+    final List<double> ys = <double>[160, 360, 620];
     for (int i = 0; i < ys.length; i++) {
       final double y = ys[i] * sy;
-      final double x0 = (960 + i * 24) * sx;
-      final double x1 = 1480 * sx;
+      final double x0 = (700 + i * 30) * sx;
+      final double x1 = 1520 * sx;
       // Per-stripe translateX.
       final double dx = 6 * sx * math.sin(t2pi * (0.5 + i * 0.2) + i * 0.9);
       if (i == 0) {
         _fillPaint.color = accentC.withValues(alpha: 0.86);
-        c.drawRect(Rect.fromLTWH(x0 + dx, y, x1 - x0, 6 * sy), _fillPaint);
+        c.drawRect(Rect.fromLTWH(x0 + dx, y, x1 - x0, 10 * sy), _fillPaint);
       } else {
         _strokePaint
           ..color = baseC.withValues(alpha: 0.47)
-          ..strokeWidth = 2.0;
-        c.drawLine(Offset(x0 + dx, y + 3 * sy),
-            Offset(x1 + dx, y + 3 * sy), _strokePaint);
+          ..strokeWidth = 3.0;
+        c.drawLine(Offset(x0 + dx, y + 5 * sy),
+            Offset(x1 + dx, y + 5 * sy), _strokePaint);
       }
     }
     // Extra texture: a few short tick marks pulsing along the leading edge.
@@ -958,11 +1010,13 @@ class _HeroCoverPainter extends CustomPainter {
   void _paintSparseNetwork(Canvas c, Size sz, double sx, double sy,
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
+    // Network nodes spread across a much wider region so the graph
+    // reads as the focal element rather than a small cluster.
     final List<Offset> nodes = <Offset>[
-      Offset(1000 * sx, 220 * sy),
-      Offset(1380 * sx, 280 * sy),
-      Offset(1180 * sx, 460 * sy),
-      Offset(1450 * sx, 480 * sy),
+      Offset(780 * sx, 140 * sy),
+      Offset(1500 * sx, 240 * sy),
+      Offset(960 * sx, 600 * sy),
+      Offset(1490 * sx, 640 * sy),
     ];
     // Each node breathes scale; each edge alpha pulses.
     final List<List<int>> edges = <List<int>>[
@@ -985,15 +1039,17 @@ class _HeroCoverPainter extends CustomPainter {
     // Nodes — outline rings.
     _strokePaint
       ..color = baseC.withValues(alpha: 0.63)
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 2.5;
     for (int i = 0; i < nodes.length; i++) {
       final double pulse = 1.0 + 0.10 * math.sin(t2pi * (0.6 + i * 0.15) + i);
-      c.drawCircle(nodes[i], 6 * sx * pulse, _strokePaint);
+      // Node radii bumped 6 → 14 px so the graph nodes register at
+      // typical viewport sizes.
+      c.drawCircle(nodes[i], 14 * sx * pulse, _strokePaint);
     }
-    // First node — filled accent.
+    // First node — filled accent. Radius bumped 10 → 22 px.
     final double pulse0 = 1.0 + 0.12 * math.sin(t2pi * 0.5);
     _fillPaint.color = accentC.withValues(alpha: 0.86);
-    c.drawCircle(nodes[0], 10 * sx * pulse0, _fillPaint);
+    c.drawCircle(nodes[0], 22 * sx * pulse0, _fillPaint);
   }
 
   void _paintOrbitalToken(Canvas c, Size sz, double sx, double sy,
@@ -1001,23 +1057,25 @@ class _HeroCoverPainter extends CustomPainter {
     final double t2pi = t * 2 * math.pi;
     final Offset center = Offset(1240 * sx, 360 * sy);
     // Outer orbit ring — alpha breathes. Phase 1.48 keeps it off the
-    // wrap point.
+    // wrap point. Radius ×_illMul so the orbit dominates the corner.
     final double ringA = 0.55 + 0.15 * math.sin(t2pi * 0.67 + 1.48);
     _strokePaint
       ..color = accentC.withValues(alpha: ringA)
-      ..strokeWidth = 3.0;
-    c.drawCircle(center, 240 * sx, _strokePaint);
+      ..strokeWidth = 3.5;
+    final double outerR = 240 * _illMul * sx;
+    final double innerR = 180 * _illMul * sx;
+    c.drawCircle(center, outerR, _strokePaint);
     // Two moons orbiting at different periods.
     final double a1 = t2pi * 0.35;
     final double a2 = -t2pi * 0.48 + 1.6;
-    final Offset m1 = center + Offset(math.cos(a1) * 240 * sx, math.sin(a1) * 240 * sy);
-    final Offset m2 = center + Offset(math.cos(a2) * 180 * sx, math.sin(a2) * 180 * sy);
+    final Offset m1 = center + Offset(math.cos(a1) * outerR, math.sin(a1) * outerR);
+    final Offset m2 = center + Offset(math.cos(a2) * innerR, math.sin(a2) * innerR);
     _fillPaint.color = accentC.withValues(alpha: 0.78);
-    c.drawCircle(m1, 8 * sx, _fillPaint);
+    c.drawCircle(m1, 10 * sx, _fillPaint);
     _fillPaint.color = baseC.withValues(alpha: 0.65);
-    c.drawCircle(m2, 5 * sx, _fillPaint);
-    // Central token scale-pulses.
-    final double tokR = 60 * sx * (1.0 + 0.08 * math.sin(t2pi * 0.7));
+    c.drawCircle(m2, 7 * sx, _fillPaint);
+    // Central token scale-pulses. Radius ×_illMul.
+    final double tokR = 60 * _illMul * sx * (1.0 + 0.08 * math.sin(t2pi * 0.7));
     _fillPaint.color = baseC.withValues(alpha: 0.70);
     c.drawCircle(center, tokR, _fillPaint);
   }
@@ -1026,22 +1084,25 @@ class _HeroCoverPainter extends CustomPainter {
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
     final double y = 360 * sy;
-    // Baseline.
+    // Baseline + 30 bars — band stretched 980→1480 → 700→1520 so the
+    // waveform spans the focal area instead of clinging to the corner.
     _strokePaint
       ..color = baseC.withValues(alpha: 0.51)
-      ..strokeWidth = 2.0;
-    c.drawLine(Offset(980 * sx, y), Offset(1480 * sx, y), _strokePaint);
+      ..strokeWidth = 3.0;
+    c.drawLine(Offset(700 * sx, y), Offset(1520 * sx, y), _strokePaint);
     // 30 vertical waveform bars.
     const int bars = 30;
-    final double x0 = 980 * sx;
-    final double x1 = 1480 * sx;
+    final double x0 = 700 * sx;
+    final double x1 = 1520 * sx;
     final double step = (x1 - x0) / (bars - 1);
     for (int i = 0; i < bars; i++) {
       final double xi = x0 + i * step;
       final double phase = i * 0.45;
       // Composite sine — feels like real audio waveform with peaks
       // and troughs walking across the band.
-      final double h = (60 * sy) *
+      // Bar height envelope bumped 60 → 140 px so the peaks feel like
+      // a real audio meter rather than a thin strip.
+      final double h = (140 * sy) *
           (0.20 +
               0.80 *
                   (0.5 +
@@ -1050,7 +1111,7 @@ class _HeroCoverPainter extends CustomPainter {
       final bool accentBar = i >= bars - 8;
       _strokePaint
         ..color = (accentBar ? accentC : baseC).withValues(alpha: 0.78)
-        ..strokeWidth = 3.0;
+        ..strokeWidth = 4.0;
       c.drawLine(Offset(xi, y - h / 2), Offset(xi, y + h / 2), _strokePaint);
     }
   }
@@ -1060,7 +1121,9 @@ class _HeroCoverPainter extends CustomPainter {
     final double t2pi = t * 2 * math.pi;
     final double cx = 1240 * sx;
     final double cy = 360 * sy;
-    final double s = 130 * sx;
+    // Cube edge scaled ×_illMul (130 → 221) so the isometric cube
+    // reads as a clear focal solid instead of a thumbprint.
+    final double s = 130 * _illMul * sx;
     // Simulate slow rotation around vertical axis by skewing the top
     // face's perspective offset.
     // Periods slowed (×~0.66) and per-element phases so the cube
@@ -1115,8 +1178,10 @@ class _HeroCoverPainter extends CustomPainter {
   void _paintMobileOutline(Canvas c, Size sz, double sx, double sy,
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
+    // Phone outline scaled up: 190×460 → 320×740, anchored at the
+    // upper-right so the device reads as the dominant prop.
     final Rect outer = Rect.fromLTRB(
-      1150 * sx, 130 * sy, 1340 * sx, 590 * sy,
+      1100 * sx, 50 * sy, 1420 * sx, 790 * sy,
     );
     final RRect rRect =
         RRect.fromRectAndRadius(outer, Radius.circular(24 * sx));
@@ -1159,8 +1224,10 @@ class _HeroCoverPainter extends CustomPainter {
   void _paintWebWindow(Canvas c, Size sz, double sx, double sy,
       Color baseC, Color accentC, double t) {
     final double t2pi = t * 2 * math.pi;
+    // Window frame widened (500×400 → 820×640) so the browser-window
+    // illustration fills the focal quadrant.
     final Rect outer = Rect.fromLTRB(
-      980 * sx, 160 * sy, 1480 * sx, 560 * sy,
+      700 * sx, 90 * sy, 1520 * sx, 730 * sy,
     );
     _strokePaint
       ..color = baseC.withValues(alpha: 0.51)
@@ -1207,20 +1274,23 @@ class _HeroCoverPainter extends CustomPainter {
     final double stretch = 0.04 * math.sin(t2pi * 0.67 + 1.63);
     _strokePaint
       ..color = accentC.withValues(alpha: 0.86)
-      ..strokeWidth = 4.0;
+      ..strokeWidth = 5.5;
+    // Slash extended ~700→1530 horizontally with a steeper Y so it
+    // reads as a bold confident slash across the focal area.
     c.drawLine(
-      Offset(960 * sx * (1.0 - stretch), 540 * sy * (1.0 + stretch)),
-      Offset(1500 * sx * (1.0 + stretch * 0.5), 180 * sy * (1.0 - stretch)),
+      Offset(700 * sx * (1.0 - stretch), 720 * sy * (1.0 + stretch)),
+      Offset(1530 * sx * (1.0 + stretch * 0.5), 100 * sy * (1.0 - stretch)),
       _strokePaint,
     );
-    // Accent dots along the line, breathing alpha.
+    // Accent dots along the line, breathing alpha. Dot radius bumped
+    // 5 → 9 px so the punctuation reads at viewport sizes.
     for (int i = 0; i < 6; i++) {
       final double tlin = i / 5.0;
-      final double x = (960 + tlin * (1500 - 960)) * sx;
-      final double y = (540 + tlin * (180 - 540)) * sy;
+      final double x = (700 + tlin * (1530 - 700)) * sx;
+      final double y = (720 + tlin * (100 - 720)) * sy;
       final double a = 0.32 + 0.40 * (0.5 + 0.5 * math.sin(t2pi + i * 0.9));
       _fillPaint.color = baseC.withValues(alpha: a);
-      c.drawCircle(Offset(x, y), 5 * sx, _fillPaint);
+      c.drawCircle(Offset(x, y), 9 * sx, _fillPaint);
     }
   }
 
