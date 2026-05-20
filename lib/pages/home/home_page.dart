@@ -1,6 +1,5 @@
 import "package:flutter/material.dart";
 import 'package:get/get.dart';
-import 'package:url_launcher/link.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../utils/adaptive_layout.dart';
@@ -400,7 +399,6 @@ class HomePageState extends State<HomePage>
                 for (int i = 0; i < n; i++) {
                   final double topMargin = subH * i;
                   final String logical = '/projects/${projects[i].slug}';
-                  final String displayUri = lc.localiseRoute(logical);
                   cascade.add(
                     Container(
                       margin: EdgeInsets.only(top: topMargin),
@@ -422,60 +420,64 @@ class HomePageState extends State<HomePage>
                       child: SlideInOnVisible(
                         uniqueKey: ValueKey<String>('cascade-$i'),
                         staggerGroup: 'home-cascade',
-                        // Outer Stack wraps the `Link` so we can layer a
-                        // dead-zone absorber over its rightmost 32 px.
+                        // Outer Stack wraps a GestureDetector-wrapped tile
+                        // so we can layer a dead-zone absorber over its
+                        // rightmost 8 px (the standard Flutter Scrollbar
+                        // thumb width).
                         //
-                        // Why HERE and not inside ProjectItemLarge:
-                        // `url_launcher`'s `Link` on web renders a
-                        // transparent HTML `<a>` element via
-                        // `Positioned.fill` on top of its child (see
-                        // `url_launcher_web/src/link.dart`). The browser's
-                        // native click on that anchor fires
-                        // `_onGlobalClick` and navigates regardless of
-                        // any in-Flutter GestureDetector painted inside
-                        // the tile. The only way to claim the rightmost
-                        // strip is to layer a Flutter widget AS A
-                        // SIBLING of the Link, AFTER it in the Stack —
-                        // Flutter web then puts the absorber's canvas
-                        // overlay above the platform-view anchor in DOM
-                        // stacking, so the click hits the absorber's
-                        // GestureDetector (empty `onTap`, opaque hit
-                        // behaviour) instead of the anchor.
+                        // History: we previously wrapped the tile in
+                        // `url_launcher`'s `Link`, which on web renders a
+                        // transparent HTML `<a>` element via a platform
+                        // view on top of its child. Platform-view DOM
+                        // elements sit in a higher stacking layer than any
+                        // Flutter widget (whether painted inside the tile
+                        // OR layered as a sibling in a Flutter Stack), so
+                        // the browser routes the click to the anchor first
+                        // and navigates before any Flutter GestureDetector
+                        // ever fires. That made the absorber unreachable.
                         //
-                        // 32 px (was 24) gives a comfortable buffer over
-                        // the 8 px Scrollbar thumb so the user can grab
-                        // it without surgical precision.
+                        // Switching to a plain `GestureDetector` that calls
+                        // `PageTransition.goTo` removes the platform-view
+                        // anchor entirely, so the Flutter widget tree owns
+                        // every pointer event and the absorber finally
+                        // wins clicks in its strip.
+                        //
+                        // Trade-offs (accepted): no middle-click
+                        // open-in-new-tab and no "Copy link address" on
+                        // tiles. SEO is unaffected for tiles specifically;
+                        // crawlers still find the project URLs through
+                        // sitemap/route registration.
                         child: Stack(
                           children: <Widget>[
-                            Link(
-                              uri: Uri.parse(displayUri),
-                              target: LinkTarget.self,
-                              builder: (BuildContext context, FollowLink? _) {
-                                return ProjectItemLarge(
-                                  projectNumber: (i + 1) > 9
-                                      ? "${i + 1}"
-                                      : "0${i + 1}",
-                                  imageUrl: projects[i].coverFor(lang),
-                                  hoverImageUrl: projects[i].coverColorUrl,
-                                  projectItemheight: itemH,
-                                  subheight: subH,
-                                  duration: const Duration(milliseconds: 900),
-                                  backgroundColor: CustomColors.accentColor2
-                                      .withValues(alpha: 0.35),
-                                  title: projects[i].titleFor(lang),
-                                  subtitle: projects[i].categoryFor(lang),
-                                  containerColor: projects[i].primaryColor,
-                                  onTap: () {
-                                    PageTransition.goTo(context, logical);
-                                  },
-                                );
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {
+                                PageTransition.goTo(context, logical);
                               },
+                              child: ProjectItemLarge(
+                                projectNumber: (i + 1) > 9
+                                    ? "${i + 1}"
+                                    : "0${i + 1}",
+                                imageUrl: projects[i].coverFor(lang),
+                                hoverImageUrl: projects[i].coverColorUrl,
+                                projectItemheight: itemH,
+                                subheight: subH,
+                                duration: const Duration(milliseconds: 900),
+                                backgroundColor: CustomColors.accentColor2
+                                    .withValues(alpha: 0.35),
+                                title: projects[i].titleFor(lang),
+                                subtitle: projects[i].categoryFor(lang),
+                                containerColor: projects[i].primaryColor,
+                                onTap: () {
+                                  PageTransition.goTo(context, logical);
+                                },
+                              ),
                             ),
                             Positioned(
                               right: 0,
                               top: 0,
                               bottom: 0,
-                              width: 32,
+                              width: 8,
                               child: MouseRegion(
                                 cursor: SystemMouseCursors.basic,
                                 child: Listener(
