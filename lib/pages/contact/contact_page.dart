@@ -177,16 +177,14 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
     // reported the previous takeoff felt designed-not-flown and
     // wanted dive→climb momentum, plus a much bigger exit):
     //   0.000 → 0.180 (720 ms)  slow takeoff (easeInQuad): glide
-    //     +200 px right, gentle -30 px lift.
-    //   0.180 → 0.350 (680 ms)  slow wide leftward turn (climbs).
-    //   0.350 → 0.450 (400 ms)  360° loop.
-    //   0.450 → 0.620 (680 ms)  dive (easeInCubic) — gains speed.
-    //   0.620 → 0.770 (600 ms)  climb (easeOutCubic) — loses speed.
-    //   0.770 → 1.000 (920 ms)  final exit (easeInExpo), scale → 8×.
-    // Geometry inside [_PaperPlaneFlyOff].
+    // Plane controller is now just a clock that drives a lookup into a
+    // pre-computed physics trajectory (see [_PaperPlaneFlyOff]). The
+    // simulation is integrated at 480 Hz in initState of the fly-off
+    // widget; the controller's t∈[0,1] simply samples the recorded
+    // frames so motion can be replayed deterministically every flight.
     _planeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4000),
+      duration: const Duration(milliseconds: 4500),
     );
     _planeController.addStatusListener((status) {
       // Once the plane has fully exited the viewport, remove the
@@ -367,21 +365,25 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
           _bannerColor = CustomColors.lightGreen;
           _successPulseKey++;
         });
-        // Physics-feel paper-plane choreography (round 4 — slow
-        // takeoff, dive→climb momentum, 8× exit, per user feedback
-        // that round 3's takeoff→loop transition was awful and the
-        // takeoff itself was too fast/short).
+        // Real-physics paper-plane choreography (round 5 — per user
+        // feedback that round 4's Bezier-stitched motion was chaotic
+        // and the rotation didn't track the velocity vector).
+        // The plane is now a forward physics simulation (gravity +
+        // drag + lift + scripted thrust impulses) pre-computed in
+        // _PaperPlaneFlyOff; the controller's t∈[0,1] samples that
+        // trajectory.
         //   t=0     POST returned success.
-        //   t=300   Plane controller starts (4000 ms total).
+        //   t=300   Plane controller starts (4500 ms total).
         //   t=400   Form cascade-exit starts.
-        //   t=300 + 0..720    slow takeoff (right + lift).
-        //   t=300 + 720..1400 slow wide leftward turn (climbing).
-        //   t=300 + 1400..1800 loop (360°).
-        //   t=300 + 1800..2480 DIVE (gains speed).
-        //   t=300 + 2480..3080 CLIMB (loses speed).
-        //   t=300 + 3080..4000 FINAL exit (easeInExpo, 8× scale).
+        //   t=300 + 0..400ms     takeoff impulse (right + lift).
+        //   t=300 + 400..900ms   coast (drag + gravity).
+        //   t=300 + 900..1300ms  leftward steering impulse.
+        //   t=300 + 1300..1800ms coast (drop phase).
+        //   t=300 + 1800..2400ms updraft + slight right impulse.
+        //   t=300 + 2400..3200ms big rightward exit impulse.
+        //   t=300 + 3200..4500ms coast (huge velocity → off-screen).
         //   t=1080  Cascade exit done.
-        //   t≈4300  Plane controller completes → success card reveals.
+        //   t≈4800  Plane controller completes → success card reveals.
         _successCardSwapTimer?.cancel();
         _formExitTimer?.cancel();
         _planeLaunchTimer?.cancel();
@@ -1156,7 +1158,24 @@ class _LetterByLetterReveal extends StatelessWidget {
 /// the same glyph drawn behind the black instance) keeps it
 /// visible against the black button. The halo also acts as a soft
 /// glow over light page areas during flight.
-class _PaperPlaneFlyOff extends StatelessWidget {
+/// One sample of the pre-computed paper-plane trajectory: position,
+/// velocity (for rotation tracking), and scale at a given simulation
+/// time. Velocity is recorded alongside position so the rotation each
+/// frame can be computed without finite-difference noise.
+class _PlaneFrame {
+  const _PlaneFrame({
+    required this.t,
+    required this.pos,
+    required this.vel,
+    required this.scale,
+  });
+  final double t; // seconds since launch
+  final Offset pos; // viewport-global position
+  final Offset vel; // px/s, used for rotation = atan2(vy, vx)
+  final double scale;
+}
+
+class _PaperPlaneFlyOff extends StatefulWidget {
   const _PaperPlaneFlyOff({
     required this.controller,
     required this.origin,
@@ -1175,259 +1194,231 @@ class _PaperPlaneFlyOff extends StatelessWidget {
   /// the right edge the plane needs to travel to fully exit.
   final Size viewportSize;
 
+  @override
+  State<_PaperPlaneFlyOff> createState() => _PaperPlaneFlyOffState();
+}
+
+class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
   // Match the submit button's icon size exactly (Sizes.ICON_SIZE_16,
   // 16px) so the entity that lifts off reads as the same glyph the
   // visitor just clicked.
   static const double _glyphSize = Sizes.ICON_SIZE_16;
 
-  // Phase boundaries on the controller's 0→1 timeline. Wall-clock
-  // anchors (on the 4000 ms total): 720 / 1400 / 1800 / 2480 / 3080
-  // / 4000 ms.
-  static const double _takeoffEnd = 0.180; // 720 ms
-  static const double _turnEnd = 0.350; // 1400 ms
-  static const double _loopEnd = 0.450; // 1800 ms
-  static const double _diveEnd = 0.620; // 2480 ms
-  static const double _climbEnd = 0.770; // 3080 ms
-  // Final exit ends at 1.000 (4000 ms).
+  // -------------------- Physics simulation constants -----------------
+  // All forces are expressed in pixels and seconds. Gravity pulls down
+  // (+Y in screen coordinates). Drag opposes velocity proportional to
+  // v². Lift acts perpendicular to velocity in the upward sense (so a
+  // paper plane gliding rightward gets a small upward component, but
+  // a plane diving steeply also receives drag-balanced lift along its
+  // wing's normal).
+  static const double _gravity = 220.0; // px / s²
+  static const double _drag = 0.0018; // dimensionless × v² → px/s²
+  static const double _lift = 0.0011; // dimensionless × v² → px/s²
 
-  // Boundary positions relative to [origin]. Listed as anchor
-  // labels so the math below stays readable.
-  static const Offset _takeoffEndPos = Offset(200, -30);
-  static const Offset _turnEndPos = Offset(-180, -120);
-  // Loop center starts at _turnEndPos and advances forward over the
-  // loop window. The loop traces a circle of radius [_loopRadius]
-  // around that lerping center; at loopT=1 the plane re-emerges at
-  // angle 3π/2 above the loopCenterEnd → that's [_loopEndPos].
-  static const Offset _loopCenterAdvance = Offset(40, 10);
-  static const Offset _diveEndPos = Offset(-40, 50);
-  static const Offset _climbEndPos = Offset(200, -120);
+  // Total simulated flight in wall-clock seconds. Must equal the
+  // controller's duration so t∈[0,1] maps linearly to seconds.
+  static const double _flightSeconds = 4.5;
 
-  static const double _loopRadius = 80.0;
+  // High-rate integration step. 0.002s = 500 Hz which gives stable
+  // velocity-squared drag/lift even during the boosted launch.
+  static const double _dt = 0.002;
 
-  // Scale targets per phase boundary.
-  static const double _scaleAtTakeoffEnd = 1.0; // takeoff is constant scale
-  static const double _scaleAtTurnEnd = 1.2;
-  static const double _scaleAtLoopEnd = 1.4;
-  static const double _scaleAtDiveEnd = 1.8;
-  static const double _scaleAtClimbEnd = 2.4;
-  static const double _scaleAtExit = 8.0;
+  // Scale-vs-time anchors. Linearly interpolated between anchors.
+  // The plane grows as it "approaches the camera" — see _sampleScale.
+  static const List<MapEntry<double, double>> _scaleAnchors =
+      <MapEntry<double, double>>[
+    MapEntry(0.0, 1.0),
+    MapEntry(0.5, 1.1),
+    MapEntry(1.5, 1.3),
+    MapEntry(2.5, 1.8),
+    MapEntry(3.0, 2.5),
+    MapEntry(3.5, 4.0),
+    MapEntry(4.0, 7.0),
+    MapEntry(4.5, 9.0),
+  ];
 
-  // Exit point: well past the right edge AND high above origin.
-  static const double _exitOvershoot = 600.0;
-  static const double _exitClimb = -700.0;
+  /// Pre-computed trajectory frames. Built once in [initState].
+  late final List<_PlaneFrame> _trajectory;
 
-  /// dt used for finite-difference velocity sampling (controller t
-  /// units, NOT seconds). 0.003 ≈ 12 ms on a 4000 ms controller —
-  /// small enough to read as the instantaneous tangent, large
-  /// enough to be numerically stable at phase boundaries.
-  static const double _velocityDt = 0.003;
-
-  // Easing helpers.
-  double _easeInQuad(double t) => t * t;
-  double _easeInCubic(double t) => t * t * t;
-  double _easeOutCubic(double t) {
-    final double u = 1.0 - t;
-    return 1.0 - u * u * u;
+  @override
+  void initState() {
+    super.initState();
+    _trajectory = _buildTrajectory();
   }
 
-  double _easeInOutCubic(double t) {
-    return t < 0.5
-        ? 4 * t * t * t
-        : 1 - math.pow(-2 * t + 2, 3).toDouble() / 2;
-  }
-
-  double _easeInExpo(double t) {
-    if (t <= 0.0) return 0.0;
-    if (t >= 1.0) return 1.0;
-    return math.pow(2.0, 10.0 * t - 10.0).toDouble();
-  }
-
-  Offset _quadBezier(Offset p0, Offset p1, Offset p2, double t) {
-    final double oneMinusT = 1.0 - t;
-    return p0 * (oneMinusT * oneMinusT) +
-        p1 * (2 * oneMinusT * t) +
-        p2 * (t * t);
-  }
-
-  Offset _lerpOffset(Offset a, Offset b, double t) => Offset(
-        a.dx + (b.dx - a.dx) * t,
-        a.dy + (b.dy - a.dy) * t,
-      );
-
-  /// Master position-vs-time function. Piecewise across the six
-  /// phases. Returns viewport-global coordinates.
+  /// Scripted thrust schedule. Sparse impulse windows that shape the
+  /// user-described 5-phase trajectory. Values tuned via off-line
+  /// simulation so the resulting motion tells this story:
+  ///   1) takeoff right + slight up
+  ///   2) slow arc leftward at apex
+  ///   3) brief drop (down-left)
+  ///   4) recover and rise to the right
+  ///   5) big exit right + climbing
   ///
-  /// Each phase ends EXACTLY where the next begins (C0). Curves are
-  /// chosen so the velocity vector at each boundary points in the
-  /// same direction it does as the next phase begins (visual C1):
-  ///   takeoff end velocity is +x dominant with a slight up → turn
-  ///     starts with that same +x-leftbending vector.
-  ///   turn end velocity is +y down-into-leftward → loop starts at
-  ///     the top of the circle, tangent pointing left.
-  ///   loop end velocity is again tangent pointing right (back to
-  ///     the start angle) → dive starts heading down-right.
-  ///   dive end velocity is +x +y (down-right) → climb starts
-  ///     curving up.
-  ///   climb end velocity is up-right (-y, +x) → exit starts
-  ///     heading right and rising.
-  Offset _position(double t) {
-    final double clamped = t.clamp(0.0, 1.0);
-
-    if (clamped <= _takeoffEnd) {
-      // PHASE 1: slow takeoff. Rightward acceleration with a
-      // gentle parallel lift. Position is parameterised so the
-      // tangent at localT=1 points up-and-right — same direction
-      // the leftward turn starts in (so the boundary has matching
-      // velocity, no kink).
-      final double localT = clamped / _takeoffEnd;
-      // easeInQuad on X (accelerating). Y lifts linearly so the
-      // tangent has a consistent upward component.
-      final double xT = _easeInQuad(localT);
-      final Offset offset = Offset(
-        _takeoffEndPos.dx * xT,
-        _takeoffEndPos.dy * localT,
-      );
-      return origin + offset;
-    } else if (clamped <= _turnEnd) {
-      // PHASE 2: slow wide leftward turn. Quadratic Bezier from
-      // (takeoffEnd) to (turnEnd) with a control point at
-      // (+260, -140) — pulled OUTWARD (above and to the right of
-      // the chord) so the curve climbs while turning, with a high
-      // turning radius. The Bezier's initial tangent at localT=0
-      // is from p0 toward p1 — i.e. up-right — which matches the
-      // takeoff end velocity (also up-right). C1 at the boundary.
-      // EaseInOutCubic on localT so the plane slows mid-turn
-      // (banking losing forward velocity).
-      final double localT = (clamped - _takeoffEnd) /
-          (_turnEnd - _takeoffEnd);
-      final double eased = _easeInOutCubic(localT);
-      final Offset p0 = origin + _takeoffEndPos;
-      final Offset p1 = origin + const Offset(260, -140);
-      final Offset p2 = origin + _turnEndPos;
-      return _quadBezier(p0, p1, p2, eased);
-    } else if (clamped <= _loopEnd) {
-      // PHASE 3: LOOP. Circle of radius [_loopRadius] around a
-      // center that lerps linearly from turnEnd → turnEnd +
-      // loopCenterAdvance. Starting angle 3π/2 → 3π/2 + 2π so
-      // the plane begins directly above the center (matching the
-      // turnEnd position) and ends in the same spot one revolution
-      // later. The plane re-emerges with the same tangent vector
-      // it entered with (tangent at angle 3π/2 points to the left),
-      // so the dive phase can pick up smoothly.
-      final double loopT = (clamped - _turnEnd) /
-          (_loopEnd - _turnEnd);
-      final Offset center = _lerpOffset(
-        origin + _turnEndPos + const Offset(0, _loopRadius),
-        origin + _turnEndPos + const Offset(0, _loopRadius) +
-            _loopCenterAdvance,
-        loopT,
-      );
-      final double sweep = (3 * math.pi / 2) + 2 * math.pi * loopT;
-      return Offset(
-        center.dx + _loopRadius * math.cos(sweep),
-        center.dy + _loopRadius * math.sin(sweep),
-      );
-    } else if (clamped <= _diveEnd) {
-      // PHASE 4: DIVE. Drop from loop-end to diveEnd. Tangent at
-      // the start (loop exit) points LEFT (tangent at angle 3π/2
-      // on a clockwise circle). To avoid a snap, we make the dive
-      // start with a brief leftward + downward arc that quickly
-      // swings to down-right — using a Bezier with the control
-      // point at the loop's tangent direction.
-      //
-      // EaseInCubic on localT so the velocity grows monotonically
-      // (gains speed dropping = gravity).
-      final double localT = (clamped - _loopEnd) /
-          (_diveEnd - _loopEnd);
-      final double eased = _easeInCubic(localT);
-      // Loop end position = top of loopCenterEnd's circle =
-      // loopCenterEnd + (0, -loopRadius) = origin + turnEndPos
-      // (so the loop returns exactly to where it began).
-      final Offset p0 = origin + _turnEndPos + _loopCenterAdvance;
-      final Offset p2 = origin + _diveEndPos;
-      // Control point: pulled LEFT-AND-DOWN initially (continuing
-      // the loop's exit tangent), then the eased motion swings
-      // toward p2. -100 X relative to p0, +30 Y so the initial
-      // tangent points slightly left+down, matching loop tangent.
-      final Offset p1 = p0 + const Offset(-120, 60);
-      // Note: easeInCubic gives the dive its accelerating feel
-      // even within the Bezier interpolation.
-      return _quadBezier(p0, p1, p2, eased);
-    } else if (clamped <= _climbEnd) {
-      // PHASE 5: CLIMB. Curve up-right from diveEnd to climbEnd.
-      // EaseOutCubic on localT → velocity HIGH at start (carrying
-      // momentum from the dive) and decelerates as the plane
-      // rises. Bezier with control point ABOVE the chord so the
-      // curve genuinely climbs.
-      final double localT = (clamped - _diveEnd) /
-          (_climbEnd - _diveEnd);
-      final double eased = _easeOutCubic(localT);
-      final Offset p0 = origin + _diveEndPos;
-      final Offset p2 = origin + _climbEndPos;
-      // Control point: between p0 and p2, ABOVE both. Pulls the
-      // arc up sharply just after the dive's bottom — like a
-      // glider pulling out of a dive into a climb.
-      final Offset p1 = Offset(
-        (p0.dx + p2.dx) / 2 + 30,
-        math.min(p0.dy, p2.dy) - 80,
-      );
-      return _quadBezier(p0, p1, p2, eased);
-    } else {
-      // PHASE 6: FINAL exit. EaseInExpo so the plane sits
-      // (briefly) at climbEnd before exploding rightward. Lands
-      // past the right edge and high above origin. Scale → 8×.
-      final double localT = (clamped - _climbEnd) /
-          (1.0 - _climbEnd);
-      final double eased = _easeInExpo(localT);
-      final Offset p0 = origin + _climbEndPos;
-      final Offset p2 = Offset(
-        viewportSize.width + _exitOvershoot,
-        origin.dy + _exitClimb,
-      );
-      // Control point: ABOVE-AND-RIGHT so the plane CLIMBS as it
-      // accelerates outward. Slightly forward of p0 so the
-      // initial tangent points right (matching climb's end
-      // tangent).
-      final Offset p1 = Offset(
-        origin.dx + 500,
-        origin.dy - 500,
-      );
-      return _quadBezier(p0, p1, p2, eased);
-    }
+  /// Windows:
+  ///   0.00–0.40s  takeoff impulse: strong right + up
+  ///   0.40–0.85s  coast w/ gentle lift (slows from drag)
+  ///   0.85–1.55s  pronounced leftward arc impulse (lift sustains height)
+  ///   1.55–2.00s  brief left-drift coast (drop phase begins)
+  ///   2.00–2.55s  updraft + slight right (recovery climb)
+  ///   2.55–3.30s  big rightward exit impulse + climb
+  ///   3.30+        coast (huge velocity carries plane off-screen)
+  Offset _scriptedThrust(double t) {
+    if (t < 0.40) return const Offset(900, -380);
+    if (t < 0.85) return const Offset(0, -80);
+    if (t < 1.55) return const Offset(-500, -150);
+    if (t < 2.00) return const Offset(-60, -20);
+    if (t < 2.55) return const Offset(320, -360);
+    if (t < 3.30) return const Offset(1500, -260);
+    return Offset.zero;
   }
 
-  /// Scale-vs-time function. Monotonically increasing across the
-  /// flight: 1.0 → 1.0 (takeoff) → 1.2 (turn) → 1.4 (loop) →
-  /// 1.8 (dive) → 2.4 (climb) → 8.0 (exit).
-  double _scale(double t) {
-    final double c = t.clamp(0.0, 1.0);
-    if (c <= _takeoffEnd) {
-      return 1.0;
-    } else if (c <= _turnEnd) {
-      final double lt = (c - _takeoffEnd) / (_turnEnd - _takeoffEnd);
-      return _scaleAtTakeoffEnd +
-          (_scaleAtTurnEnd - _scaleAtTakeoffEnd) * lt;
-    } else if (c <= _loopEnd) {
-      final double lt = (c - _turnEnd) / (_loopEnd - _turnEnd);
-      return _scaleAtTurnEnd +
-          (_scaleAtLoopEnd - _scaleAtTurnEnd) * lt;
-    } else if (c <= _diveEnd) {
-      final double lt = (c - _loopEnd) / (_diveEnd - _loopEnd);
-      // Slightly faster growth during the dive — the plane is
-      // accelerating "toward" the camera too.
-      return _scaleAtLoopEnd +
-          (_scaleAtDiveEnd - _scaleAtLoopEnd) * _easeInCubic(lt);
-    } else if (c <= _climbEnd) {
-      final double lt = (c - _diveEnd) / (_climbEnd - _diveEnd);
-      return _scaleAtDiveEnd +
-          (_scaleAtClimbEnd - _scaleAtDiveEnd) * lt;
-    } else {
-      final double lt = (c - _climbEnd) / (1.0 - _climbEnd);
-      // EaseInExpo on scale too so the big 8× growth happens in
-      // the final ~250 ms — "flying into camera" dominates.
-      return _scaleAtClimbEnd +
-          (_scaleAtExit - _scaleAtClimbEnd) * _easeInExpo(lt);
+  /// Run the forward simulation and record (pos, vel, scale) at each
+  /// step. The recorded list is later sampled by the controller's
+  /// clock in the build method.
+  List<_PlaneFrame> _buildTrajectory() {
+    final List<_PlaneFrame> frames = <_PlaneFrame>[];
+    Offset pos = widget.origin;
+    // Start at rest — the launch impulse in _scriptedThrust(0..0.4)
+    // is what spawns the initial velocity. This avoids the magic
+    // "give it an initial v" tuning that hides the physics.
+    Offset vel = Offset.zero;
+
+    double t = 0.0;
+    // Record the very first frame so t=0 lookups return the origin
+    // even before any integration has happened.
+    frames.add(_PlaneFrame(
+      t: 0.0,
+      pos: pos,
+      vel: vel,
+      scale: _sampleScale(0.0),
+    ));
+
+    while (t < _flightSeconds) {
+      // ---- Forces ----
+      const Offset gravity = Offset(0, _gravity);
+
+      final double v2 = vel.distanceSquared;
+      final double vMag = math.sqrt(v2);
+      // Unit velocity (guard against div-by-zero at rest).
+      final Offset velNorm = vMag > 1e-6
+          ? Offset(vel.dx / vMag, vel.dy / vMag)
+          : Offset.zero;
+
+      // Drag: opposes velocity, magnitude proportional to v².
+      final Offset drag = velNorm * (-_drag * v2);
+
+      // Lift: perpendicular to velocity, biased so its Y component
+      // is negative (i.e. lifts UPWARD against gravity). For a paper
+      // plane that's nose-tracking, lift is normal to the wings'
+      // (≈ flight) direction.
+      double liftMag = _lift * v2;
+      Offset liftDir = Offset(-velNorm.dy, velNorm.dx); // perp CCW
+      if (liftDir.dy > 0) liftDir = -liftDir; // ensure upward
+      final Offset lift = liftDir * liftMag;
+
+      final Offset thrust = _scriptedThrust(t);
+
+      final Offset acc = gravity + drag + lift + thrust;
+
+      // ---- Integrate (semi-implicit Euler — stable for this scale) ----
+      vel = vel + acc * _dt;
+      pos = pos + vel * _dt;
+      t += _dt;
+
+      frames.add(_PlaneFrame(
+        t: t,
+        pos: pos,
+        vel: vel,
+        scale: _sampleScale(t),
+      ));
     }
+    return frames;
+  }
+
+  /// Linear interpolation across [_scaleAnchors].
+  double _sampleScale(double t) {
+    if (t <= _scaleAnchors.first.key) return _scaleAnchors.first.value;
+    if (t >= _scaleAnchors.last.key) return _scaleAnchors.last.value;
+    for (int i = 0; i < _scaleAnchors.length - 1; i++) {
+      final MapEntry<double, double> a = _scaleAnchors[i];
+      final MapEntry<double, double> b = _scaleAnchors[i + 1];
+      if (t >= a.key && t <= b.key) {
+        final double localT = (t - a.key) / (b.key - a.key);
+        return a.value + (b.value - a.value) * localT;
+      }
+    }
+    return _scaleAnchors.last.value;
+  }
+
+  /// Sample the trajectory at fractional index. Linearly interpolates
+  /// position, velocity, and scale between the bracketing recorded
+  /// frames so the lookup is smooth at any controller t.
+  _PlaneFrame _sampleTrajectory(double controllerT) {
+    final double clamped = controllerT.clamp(0.0, 1.0);
+    final double idx = clamped * (_trajectory.length - 1);
+    final int i0 = idx.floor();
+    final int i1 = math.min(i0 + 1, _trajectory.length - 1);
+    final double f = idx - i0;
+    final _PlaneFrame a = _trajectory[i0];
+    final _PlaneFrame b = _trajectory[i1];
+    return _PlaneFrame(
+      t: a.t + (b.t - a.t) * f,
+      pos: Offset(
+        a.pos.dx + (b.pos.dx - a.pos.dx) * f,
+        a.pos.dy + (b.pos.dy - a.pos.dy) * f,
+      ),
+      vel: Offset(
+        a.vel.dx + (b.vel.dx - a.vel.dx) * f,
+        a.vel.dy + (b.vel.dy - a.vel.dy) * f,
+      ),
+      scale: a.scale + (b.scale - a.scale) * f,
+    );
+  }
+
+  // -------------------- Rotation helpers -------------------- //
+  // The Material `Icons.send` glyph natively points up-and-right when
+  // rotation=0 (the nose visually sits at ≈ -π/4 from +x). Adding +π/4
+  // to the velocity-derived atan2 angle aligns the nose with the
+  // current velocity direction at all times.
+  static const double _iconNeutralAngle = math.pi / 4;
+
+  // Rotation smoothing time constant. Small enough that real direction
+  // changes (turn / drop / climb) read instantly, large enough that
+  // any tiny stray velocity wobble near zero-crossings is filtered.
+  // Lowered to 0.28 so the dramatic apex flip (when X velocity briefly
+  // reverses around the leftward turn) reads as a gentle banking
+  // rotation rather than an instant snap.
+  static const double _rotationLerpAlpha = 0.28;
+  double? _smoothedRotation;
+
+
+  /// Compute the desired rotation for a velocity vector and apply a
+  /// small low-pass filter to suppress tiny stray wobbles near zero-
+  /// velocity moments. Returns the smoothed rotation in radians.
+  double _rotationForVelocity(Offset vel) {
+    final double vMag = vel.distance;
+    // Very low velocity → keep previous smoothed rotation (no jitter
+    // when launching from rest in the first few simulation steps).
+    final double target = vMag < 1.0
+        ? (_smoothedRotation ?? _iconNeutralAngle)
+        : math.atan2(vel.dy, vel.dx) + _iconNeutralAngle;
+
+    // Angular lerp: shortest-path interpolation so a wrap from +π →
+    // −π doesn't spin the plane through a full revolution.
+    if (_smoothedRotation == null) {
+      _smoothedRotation = target;
+      return target;
+    }
+    double delta = target - _smoothedRotation!;
+    while (delta > math.pi) {
+      delta -= 2 * math.pi;
+    }
+    while (delta < -math.pi) {
+      delta += 2 * math.pi;
+    }
+    _smoothedRotation = _smoothedRotation! + delta * _rotationLerpAlpha;
+    return _smoothedRotation!;
   }
 
   @override
@@ -1435,64 +1426,24 @@ class _PaperPlaneFlyOff extends StatelessWidget {
     return Positioned.fill(
       child: IgnorePointer(
         child: AnimatedBuilder(
-          animation: controller,
+          animation: widget.controller,
           builder: (context, _) {
-            final double t = controller.value.clamp(0.0, 1.0);
+            final double t = widget.controller.value.clamp(0.0, 1.0);
 
-            // Position + scale via piecewise functions above.
-            final Offset pos = _position(t);
-            final double scale = _scale(t);
+            // Sample the pre-computed physics trajectory at the
+            // controller's clock. Position, velocity, and scale all
+            // come from the simulation — no per-build curve math.
+            final _PlaneFrame frame = _sampleTrajectory(t);
+            final Offset pos = frame.pos;
+            final double scale = frame.scale;
 
-            // Rotation: track the velocity vector via central
-            // finite-difference. atan2(vy, vx) gives the direction
-            // the plane is currently flying. The Material
-            // `Icons.send` glyph points up-and-right at angle ~0
-            // when un-rotated (i.e. the arrow nose visually
-            // points to ~ -π/4). We add a small offset to align
-            // the nose with the velocity vector.
-            //
-            // During the loop window we OVERRIDE rotation to a
-            // linear +2π sweep — that's what makes the loop read
-            // as a loop rather than a stationary circle.
-            double rotation;
-            if (t > _turnEnd && t <= _loopEnd) {
-              // Loop window. The +2π sweep aligns with the
-              // visible circular motion. Add velocity-based
-              // rotation OUTSIDE the loop window so the nose
-              // tracks the tangent everywhere else.
-              final double loopT =
-                  (t - _turnEnd) / (_loopEnd - _turnEnd);
-              // Start rotation = velocity direction at loop start
-              // (tangent to circle at angle 3π/2, sweeping
-              // clockwise = pointing in +x direction). +2π over
-              // the window.
-              rotation = 0.0 + 2 * math.pi * loopT;
-              // Subtract the icon's natural pointing offset so the
-              // nose actually leads. Icons.send points roughly
-              // up-right (≈ -π/4 from +x), so we rotate +π/4 to
-              // make the nose face the +x velocity direction.
-              rotation += math.pi / 4;
-            } else {
-              // Velocity via central difference around t.
-              final double tBack = (t - _velocityDt).clamp(0.0, 1.0);
-              final double tFwd = (t + _velocityDt).clamp(0.0, 1.0);
-              final Offset back = _position(tBack);
-              final Offset fwd = _position(tFwd);
-              final double vx = fwd.dx - back.dx;
-              final double vy = fwd.dy - back.dy;
-              // Guard against zero-velocity frames (shouldn't
-              // happen with this choreography, but if it does we
-              // leave the previous-style angle).
-              if (vx.abs() < 1e-6 && vy.abs() < 1e-6) {
-                rotation = math.pi / 4;
-              } else {
-                // atan2 gives the direction in standard math
-                // convention (+x = 0, +y = π/2). Add π/4 so the
-                // icon's natural up-right pointing aligns with
-                // the velocity direction.
-                rotation = math.atan2(vy, vx) + math.pi / 4;
-              }
-            }
+            // Rotation: derived directly from the velocity vector
+            // recorded by the simulation. atan2(vy, vx) gives the
+            // direction the plane is flying; +π/4 corrects for
+            // Icons.send's natural up-right orientation. Smoothed
+            // with a low-pass filter to suppress any micro-jitter
+            // at very low speeds (e.g. very first frames at rest).
+            final double rotation = _rotationForVelocity(frame.vel);
 
             // Opacity: hold opaque through the whole flight. Fade
             // out gently in the last 3% so off-screen frames don't
