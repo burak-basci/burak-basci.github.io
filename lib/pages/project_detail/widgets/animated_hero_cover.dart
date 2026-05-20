@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../utils/lang.dart';
@@ -60,10 +62,51 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
   // 1.0 → 0.0 snap.
   late final AnimationController _fallingLines;
 
+  // --- "More alive" controllers ---------------------------------------
+  // Slow global wind drift (120 s for one full back-and-forth) — applied
+  // as a sideways offset to every particle/blur/falling line so the
+  // entire field appears to ride a slow air current.
+  late final AnimationController _wind;
+  // 30 s aurora sweep (one direction, then invisibly resets — eased so
+  // the start/end are slow, masking the wrap-around).
+  late final AnimationController _aurora;
+  // 60 Hz time source for radar-ping lifecycles and twinkle alpha. We
+  // multiply controller.value by its duration in ms to get an unbounded
+  // elapsed-ms clock (modulo the wrap of repeat()).
+  late final AnimationController _ping;
+  // Decays the cursor parallax offset back to (0,0) when the mouse
+  // exits the widget. We drive the actual offset via lerp(_lastOffset,
+  // Offset.zero, _cursorDecay.value).
+  late final AnimationController _cursorDecay;
+
   late final List<_Particle> _particleTable;
   late final List<_FallingLine> _fallingLineTable;
   late final List<_BlurredParticle> _blurredParticleTable;
+  // Subset of indices into _particleTable that should twinkle. Roughly
+  // 15-20 particles selected at seed-time (15% probability).
+  late final List<_Twinkler> _twinklers;
   late final Listenable _ticker;
+
+  // --- Cursor parallax state ------------------------------------------
+  // Normalized cursor offset (-1..1 on each axis). Updated from
+  // MouseRegion.onHover, throttled to ~16 ms (one frame).
+  Offset _cursorNormalized = Offset.zero;
+  // Snapshot taken at the moment the mouse exits — _cursorDecay
+  // animates the displayed offset from this back to (0,0).
+  Offset _decayFrom = Offset.zero;
+  bool _cursorActive = false;
+  // Last viewport size seen during paint, used to compute the normalized
+  // offset from the local hover position.
+  Size _lastSize = Size.zero;
+  int _lastHoverUpdateMs = 0;
+
+  // --- Radar pings ----------------------------------------------------
+  final List<_RadarPing> _pings = <_RadarPing>[];
+  Timer? _pingScheduler;
+  // Deterministic per-slug RNG for ping origin selection so pings cluster
+  // believably (still away from the title area), but feel unpredictable
+  // because the spawn time itself is randomized.
+  late final math.Random _pingRng;
 
   @override
   void initState() {
@@ -104,6 +147,29 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
       vsync: this,
       duration: const Duration(seconds: 45),
     );
+    // Slow global wind drift — 120 s for a full back-and-forth, so
+    // the X-displacement crosses zero only once per minute.
+    _wind = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 120),
+    );
+    // Aurora sweep: 30 s one-direction loop. The eased band sits
+    // off-screen during the last 10% of the cycle, hiding the wrap.
+    _aurora = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 30),
+    );
+    // 1 Hz tick wrapped into an unbounded ms clock via floor(value *
+    // 1000) plus an integer wrap counter. The Listenable forces
+    // repaint at ~60 Hz so ping animations stay smooth.
+    _ping = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+    _cursorDecay = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     if (widget.animated) {
       _gradient.repeat(reverse: true);
       _glow.repeat(reverse: true);
@@ -111,6 +177,9 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
       _illustration.repeat(reverse: true);
       _vignette.repeat(reverse: true);
       _fallingLines.repeat();
+      _wind.repeat(reverse: true);
+      _aurora.repeat();
+      _ping.repeat();
     }
 
     final math.Random rng = math.Random(widget.project.slug.hashCode);
@@ -190,6 +259,25 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
       growable: false,
     );
 
+    // Twinklers: a 15% sample of the focused particles, each given its
+    // own period (1.5–3.5 s) and phase. Stored as a side-table so the
+    // base _Particle struct stays untouched (and immutable).
+    final math.Random rngTwk =
+        math.Random(widget.project.slug.hashCode * 53 ^ 0x5A5A);
+    final List<_Twinkler> twk = <_Twinkler>[];
+    for (int i = 0; i < _particleTable.length; i++) {
+      if (rngTwk.nextDouble() < 0.15) {
+        twk.add(_Twinkler(
+          index: i,
+          period: 1.5 + rngTwk.nextDouble() * 2.0, // 1.5 – 3.5 s
+          phase: rngTwk.nextDouble() * 2 * math.pi,
+        ));
+      }
+    }
+    _twinklers = List<_Twinkler>.unmodifiable(twk);
+
+    _pingRng = math.Random(widget.project.slug.hashCode * 97 ^ 0xC0DE);
+
     _ticker = Listenable.merge(<Listenable>[
       _gradient,
       _glow,
@@ -197,17 +285,105 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
       _illustration,
       _vignette,
       _fallingLines,
+      _wind,
+      _aurora,
+      _ping,
+      _cursorDecay,
     ]);
+
+    if (widget.animated) {
+      _scheduleNextPing();
+    }
+  }
+
+  /// Schedules the next radar ping to spawn 8–15 s from now (uniform
+  /// random). On fire the ping is pushed into `_pings` and the next
+  /// scheduler is queued — keeps 1–3 concurrent rings alive at most
+  /// (each ring expires after 800 ms).
+  void _scheduleNextPing() {
+    final double secs = 8.0 + _pingRng.nextDouble() * 7.0; // 8 – 15 s
+    _pingScheduler = Timer(
+      Duration(milliseconds: (secs * 1000).round()),
+      () {
+        if (!mounted) return;
+        _spawnPing();
+        _scheduleNextPing();
+      },
+    );
+  }
+
+  void _spawnPing() {
+    // Origin is chosen in normalized [0,1] coords. The title text sits
+    // roughly in the lower-left (project_detail_page composes the
+    // headline over the cover) so we bias pings to the upper-right
+    // half (x in 0.35–0.95, y in 0.10–0.70).
+    final double ox = 0.35 + _pingRng.nextDouble() * 0.60;
+    final double oy = 0.10 + _pingRng.nextDouble() * 0.60;
+    final double maxR = 80.0 + _pingRng.nextDouble() * 40.0; // 80 – 120 px
+    _pings.add(_RadarPing(
+      startMs: _nowMs(),
+      originX: ox,
+      originY: oy,
+      maxRadius: maxR,
+    ));
+    // Cap concurrent pings at 3 — drop the oldest if we somehow exceed.
+    while (_pings.length > 3) {
+      _pings.removeAt(0);
+    }
+  }
+
+  // Unbounded ms clock derived from _ping's repeating 1 s controller.
+  // We can't just read DateTime.now() inside paint (well, we can — but
+  // keeping the painter driven purely by Listenable values keeps it
+  // testable and free of side effects). For ping lifecycles we need a
+  // monotonic ms reading regardless, so we use the DateTime here only
+  // at spawn-time (outside paint).
+  int _nowMs() => DateTime.now().millisecondsSinceEpoch;
+
+  void _onHover(PointerHoverEvent event) {
+    final int nowMs = _nowMs();
+    if (nowMs - _lastHoverUpdateMs < 16) return; // throttle to ~60 Hz
+    _lastHoverUpdateMs = nowMs;
+    if (_lastSize.width <= 0 || _lastSize.height <= 0) return;
+    final double dx =
+        (event.localPosition.dx - _lastSize.width / 2) / (_lastSize.width / 2);
+    final double dy =
+        (event.localPosition.dy - _lastSize.height / 2) / (_lastSize.height / 2);
+    setState(() {
+      _cursorActive = true;
+      _cursorNormalized = Offset(
+        dx.clamp(-1.0, 1.0),
+        dy.clamp(-1.0, 1.0),
+      );
+    });
+  }
+
+  void _onExit(PointerExitEvent event) {
+    _cursorActive = false;
+    _decayFrom = _cursorNormalized;
+    _cursorDecay
+      ..reset()
+      ..forward();
+  }
+
+  void _onEnter(PointerEnterEvent event) {
+    _cursorActive = true;
+    _cursorDecay.stop();
   }
 
   @override
   void dispose() {
+    _pingScheduler?.cancel();
     _gradient.dispose();
     _glow.dispose();
     _particles.dispose();
     _illustration.dispose();
     _vignette.dispose();
     _fallingLines.dispose();
+    _wind.dispose();
+    _aurora.dispose();
+    _ping.dispose();
+    _cursorDecay.dispose();
     super.dispose();
   }
 
@@ -215,22 +391,51 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
   Widget build(BuildContext context) {
     final Color base = widget.project.primaryColor;
     return RepaintBoundary(
-      child: CustomPaint(
-        painter: _HeroCoverPainter(
-          base: base,
-          category: widget.project.categoryFor(widget.lang),
-          particles: _particleTable,
-          fallingLines: _fallingLineTable,
-          blurredParticles: _blurredParticleTable,
-          gradient: _gradient,
-          glow: _glow,
-          particlesC: _particles,
-          illustration: _illustration,
-          vignette: _vignette,
-          fallingLinesC: _fallingLines,
-          repaint: _ticker,
-        ),
-        size: Size.infinite,
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          // Cache the size so MouseRegion.onHover can normalize the
+          // local position without round-tripping through the painter.
+          _lastSize = Size(constraints.maxWidth, constraints.maxHeight);
+          // The decayed cursor offset: lerp from the snapshot taken at
+          // exit-time toward Offset.zero over 600 ms. While active the
+          // offset is the live _cursorNormalized.
+          final Offset effectiveCursor = _cursorActive
+              ? _cursorNormalized
+              : Offset.lerp(
+                    _decayFrom,
+                    Offset.zero,
+                    Curves.easeOut.transform(_cursorDecay.value),
+                  ) ??
+                  Offset.zero;
+          return MouseRegion(
+            onEnter: widget.animated ? _onEnter : null,
+            onExit: widget.animated ? _onExit : null,
+            onHover: widget.animated ? _onHover : null,
+            child: CustomPaint(
+              painter: _HeroCoverPainter(
+                base: base,
+                category: widget.project.categoryFor(widget.lang),
+                particles: _particleTable,
+                fallingLines: _fallingLineTable,
+                blurredParticles: _blurredParticleTable,
+                twinklers: _twinklers,
+                pings: _pings,
+                cursor: effectiveCursor,
+                gradient: _gradient,
+                glow: _glow,
+                particlesC: _particles,
+                illustration: _illustration,
+                vignette: _vignette,
+                fallingLinesC: _fallingLines,
+                windC: _wind,
+                auroraC: _aurora,
+                pingC: _ping,
+                repaint: _ticker,
+              ),
+              size: Size.infinite,
+            ),
+          );
+        },
       ),
     );
   }
@@ -314,6 +519,36 @@ class _BlurredParticle {
   final double blurSigma;
 }
 
+/// A particle that twinkles. `index` references the focused-particle
+/// table; the painter multiplies that particle's baseAlpha by a
+/// sinusoid driven by `period` (seconds) and `phase`.
+class _Twinkler {
+  const _Twinkler({
+    required this.index,
+    required this.period,
+    required this.phase,
+  });
+  final int index;
+  final double period;
+  final double phase;
+}
+
+/// An expanding-ring radar ping. Origins are stored in normalized
+/// [0,1] coordinates so the same ping renders consistently across
+/// resolutions. Lifecycle is 800 ms — past that, the painter culls it.
+class _RadarPing {
+  _RadarPing({
+    required this.startMs,
+    required this.originX,
+    required this.originY,
+    required this.maxRadius,
+  });
+  final int startMs;
+  final double originX;
+  final double originY;
+  final double maxRadius;
+}
+
 Color _darken(Color c, double f) {
   return Color.fromARGB(
     c.alpha,
@@ -342,12 +577,18 @@ class _HeroCoverPainter extends CustomPainter {
     required this.particles,
     required this.fallingLines,
     required this.blurredParticles,
+    required this.twinklers,
+    required this.pings,
+    required this.cursor,
     required this.gradient,
     required this.glow,
     required this.particlesC,
     required this.illustration,
     required this.vignette,
     required this.fallingLinesC,
+    required this.windC,
+    required this.auroraC,
+    required this.pingC,
     required Listenable repaint,
   })  : top = _lighten(base, 0.14),
         bottom = _darken(base, 0.50),
@@ -361,12 +602,25 @@ class _HeroCoverPainter extends CustomPainter {
   final List<_Particle> particles;
   final List<_FallingLine> fallingLines;
   final List<_BlurredParticle> blurredParticles;
+  final List<_Twinkler> twinklers;
+  // Live, mutable ping list owned by the state. We read+cull from
+  // inside paint (expired entries removed in-place). It's not great
+  // CustomPainter hygiene but it sidesteps re-allocating lists at
+  // 60 Hz; the painter never escapes the widget so the coupling is
+  // safe.
+  final List<_RadarPing> pings;
+  // Effective normalized cursor offset (-1..1), already smoothed for
+  // exit-decay by the state.
+  final Offset cursor;
   final AnimationController gradient;
   final AnimationController glow;
   final AnimationController particlesC;
   final AnimationController illustration;
   final AnimationController vignette;
   final AnimationController fallingLinesC;
+  final AnimationController windC;
+  final AnimationController auroraC;
+  final AnimationController pingC;
 
   final Color top;
   final Color bottom;
@@ -410,6 +664,18 @@ class _HeroCoverPainter extends CustomPainter {
     final double tIll = illustration.value;
     final double tVig = vignette.value;
     final double tFall = fallingLinesC.value;
+    final double tWind = windC.value;
+    final double tAur = auroraC.value;
+
+    // ----- Subtle effect offsets ---------------------------------------
+    // Wind: ±40 px sideways, ±12 px vertical, 120 s reversing cycle. y
+    // is phase-offset π/3 so x and y never zero-cross simultaneously.
+    final double windX = math.sin(tWind * 2 * math.pi) * 40.0 * sx;
+    final double windY = math.sin(tWind * 2 * math.pi + math.pi / 3) * 12.0 * sy;
+    // Cursor parallax: particles shift WITH the cursor (max ±12 px),
+    // illustration shifts AGAINST (max ±6 px) → fake parallax depth.
+    final double parX = cursor.dx * 12.0;
+    final double parY = cursor.dy * 12.0;
 
     // ----- Layer 1: diagonal gradient (animated stops + endpoint drift)
     final double gradShift = 0.06 * math.sin(tGrad * 2 * math.pi);
@@ -457,6 +723,12 @@ class _HeroCoverPainter extends CustomPainter {
     );
     canvas.drawCircle(glowCenter, glowRadius, Paint()..shader = glowGrad);
 
+    // ----- Layer 3b: aurora sweep -------------------------------------
+    // A soft diagonal band of light traverses the cover every ~30 s.
+    // Rendered BELOW particles, ABOVE the radial glow & diagonal lines,
+    // so the field of dots layers on top of the moving light.
+    _paintAurora(canvas, size, tAur);
+
     // ----- Layer 4a: blurred out-of-focus background particles.
     // Drawn first so the focused dots + falling lines sit IN FRONT.
     // Each blurred particle uses a fresh Paint() because MaskFilter
@@ -467,8 +739,8 @@ class _HeroCoverPainter extends CustomPainter {
       final _BlurredParticle bp = blurredParticles[i];
       final double dx = bp.ampX * math.sin(tPart2pi * bp.periodX + bp.phaseX);
       final double dy = bp.ampY * math.cos(tPart2pi * bp.periodY + bp.phaseY);
-      final double x = (bp.baseX + dx) * size.width;
-      final double y = (bp.baseY + dy) * size.height;
+      final double x = (bp.baseX + dx) * size.width + windX + parX;
+      final double y = (bp.baseY + dy) * size.height + windY + parY;
       final Paint blurPaint = Paint()
         ..color = pale.withValues(alpha: bp.alpha)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, bp.blurSigma);
@@ -476,15 +748,32 @@ class _HeroCoverPainter extends CustomPainter {
           Offset(x, y), bp.radius * math.min(sx, sy), blurPaint);
     }
 
-    // ----- Layer 4b: 120 drifting focused particles.
+    // ----- Layer 4b: 120 drifting focused particles (twinklers
+    //                  modulate alpha against a 1.5–3.5 s sinusoid).
+    //
+    // Build an index→twinkle-alpha-multiplier table. Time source is the
+    // 1 s _ping controller wrapped into a long-running clock: every
+    // 60 Hz tick advances tSec by ~1/60. Falling back on
+    // DateTime.now() (in seconds, fractional) ensures the twinkle
+    // period stays stable across rebuilds.
+    final double tSec = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    final Map<int, double> twkAlpha = <int, double>{};
+    for (final _Twinkler t in twinklers) {
+      final double s = math.sin(tSec * 2 * math.pi / t.period + t.phase);
+      twkAlpha[t.index] = 0.4 + 0.6 * (0.5 + 0.5 * s);
+    }
+
     for (int i = 0; i < particles.length; i++) {
       final _Particle p = particles[i];
       final double dx = p.ampX * math.sin(tPart2pi * p.periodX + p.phaseX);
       final double dy = p.ampY * math.cos(tPart2pi * p.periodY + p.phaseY);
-      final double x = (p.baseX + dx) * size.width;
-      final double y = (p.baseY + dy) * size.height;
-      _fillPaint.color = pale.withValues(alpha: p.alpha);
-      canvas.drawCircle(Offset(x, y), p.radius * math.min(sx, sy), _fillPaint);
+      final double x = (p.baseX + dx) * size.width + windX + parX;
+      final double y = (p.baseY + dy) * size.height + windY + parY;
+      final double alpha =
+          (p.alpha * (twkAlpha[i] ?? 1.0)).clamp(0.0, 1.0);
+      _fillPaint.color = pale.withValues(alpha: alpha);
+      canvas.drawCircle(
+          Offset(x, y), p.radius * math.min(sx, sy), _fillPaint);
     }
 
     // ----- Layer 4c: falling vertical hairlines.
@@ -493,13 +782,17 @@ class _HeroCoverPainter extends CustomPainter {
     // line's fallSpeed to give per-line traversal times. y is wrapped
     // by modulo so the wrap teleports the line back above the cover
     // off-screen (length px above the top); no visible 1.0 → 0.0 snap.
+    //
+    // Wind is applied as a sideways translate (full windX), but the
+    // ±12 px Y wind is omitted so the rain still reads as falling
+    // straight down.
     for (int i = 0; i < fallingLines.length; i++) {
       final _FallingLine fl = fallingLines[i];
       final double lineLen = fl.length * sy;
       final double range = size.height + lineLen;
       final double yTop =
           ((fl.baseTopY + tFall * fl.fallSpeed) % 1.0) * range - lineLen;
-      final double xPx = fl.x * size.width;
+      final double xPx = fl.x * size.width + windX + parX;
       final Paint linePaint = Paint()
         ..color = pale.withValues(alpha: fl.alpha)
         ..strokeWidth = fl.strokeWidth * math.min(sx, sy)
@@ -511,9 +804,18 @@ class _HeroCoverPainter extends CustomPainter {
       );
     }
 
+    // ----- Layer 4d: radar pings (expanding-ring fades) ---------------
+    _paintPings(canvas, size);
+
     // ----- Layer 5: category-driven illustration.
+    // Inverse-direction parallax (max ±6 px) for fake-depth: the focal
+    // shape shifts AGAINST the cursor while the particle field shifts
+    // WITH it, the way a window-display works.
+    canvas.save();
+    canvas.translate(cursor.dx * -6.0, cursor.dy * -6.0);
     _dispatchIllustration(_pickIllustrationKey(category),
         canvas, size, sx, sy, pale, accent, tIll);
+    canvas.restore();
 
     // ----- Layer 6: vignette (last so it darkens everything).
     final double vigStrength = 0.55 + 0.12 * tVig;
@@ -528,6 +830,93 @@ class _HeroCoverPainter extends CustomPainter {
       <double>[0.0, 0.55, 1.0],
     );
     canvas.drawRect(rect, Paint()..shader = vigGrad);
+  }
+
+  /// Paints the slow diagonal aurora sweep. The band travels along its
+  /// perpendicular axis from off-screen left to off-screen right over a
+  /// 30 s eased cycle, then sits invisibly past the right edge for the
+  /// last 10% of the cycle so the wrap-to-zero is undetectable.
+  void _paintAurora(Canvas canvas, Size size, double t) {
+    // 35° from vertical (i.e. 55° from horizontal) — a soft tilt.
+    const double angleDeg = 35.0;
+    final double angleRad = angleDeg * math.pi / 180.0;
+    // Sweep progress: 0..1 maps to the band's center traveling across
+    // the perpendicular axis. We squash t to [0,1] over the first 90%
+    // of the controller and pin to 1.0 (off-screen-right) for the last
+    // 10% — masks the teleport.
+    double sweep;
+    if (t < 0.9) {
+      sweep = Curves.easeInOutSine.transform(t / 0.9);
+    } else {
+      sweep = 1.05; // safely past the right edge
+    }
+    // Map sweep [0,1] to perpendicular position: -0.5 (off-screen left)
+    // to +1.5 (off-screen right) of the cover.
+    final double perp = -0.5 + sweep * 2.0;
+
+    // The band is a wide diagonal strip. We draw a single rect with a
+    // perpendicular gradient (low-alpha primary at center, transparent
+    // edges), rotated into place.
+    canvas.save();
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angleRad);
+    // Band thickness: ~22% of the cover's longest dimension. Length:
+    // 2.4× longest dimension to guarantee the gradient edges stay off
+    // the visible rect even after rotation.
+    final double longest = math.max(size.width, size.height);
+    final double bandThickness = longest * 0.22;
+    final double bandLength = longest * 2.4;
+    // Center offset along perpendicular axis (x in the rotated frame).
+    final double cx = (perp - 0.5) * size.width;
+    final Rect bandRect = Rect.fromCenter(
+      center: Offset(cx, 0),
+      width: bandThickness,
+      height: bandLength,
+    );
+    final ui.Gradient bandGrad = ui.Gradient.linear(
+      Offset(bandRect.left, 0),
+      Offset(bandRect.right, 0),
+      <Color>[
+        accent.withValues(alpha: 0.0),
+        accent.withValues(alpha: 0.06), // peak alpha — barely a tint
+        accent.withValues(alpha: 0.0),
+      ],
+      <double>[0.0, 0.5, 1.0],
+    );
+    canvas.drawRect(bandRect, Paint()..shader = bandGrad);
+    canvas.restore();
+  }
+
+  /// Draws all active radar pings. Each ping has an 800 ms lifecycle:
+  /// expanding from 0 → maxRadius while alpha fades 0.30 → 0. Expired
+  /// pings are culled in-place from the shared list.
+  void _paintPings(Canvas canvas, Size size) {
+    if (pings.isEmpty) return;
+    final int nowMs = DateTime.now().millisecondsSinceEpoch;
+    // Cull expired pings (iterate backwards so removals don't shift
+    // the rest of the indices we still need to visit).
+    for (int i = pings.length - 1; i >= 0; i--) {
+      final _RadarPing p = pings[i];
+      final double t = (nowMs - p.startMs) / 800.0;
+      if (t >= 1.0) {
+        pings.removeAt(i);
+      }
+    }
+    final Paint pingPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    for (final _RadarPing p in pings) {
+      final double t = (nowMs - p.startMs) / 800.0;
+      if (t < 0 || t >= 1.0) continue;
+      final Offset origin = Offset(
+        p.originX * size.width,
+        p.originY * size.height,
+      );
+      final double radius = t * p.maxRadius;
+      pingPaint.color = accent.withValues(alpha: (1.0 - t) * 0.30);
+      canvas.drawCircle(origin, radius, pingPaint);
+    }
   }
 
   /// Maps a project category string to the matching illustration key.
@@ -1311,7 +1700,9 @@ class _HeroCoverPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _HeroCoverPainter old) {
-    return old.base != base || old.category != category;
+    return old.base != base ||
+        old.category != category ||
+        old.cursor != cursor;
   }
 }
 
