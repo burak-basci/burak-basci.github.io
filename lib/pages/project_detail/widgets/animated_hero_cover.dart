@@ -108,6 +108,14 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
   // because the spawn time itself is randomized.
   late final math.Random _pingRng;
 
+  // --- Click ripples --------------------------------------------------
+  // Stone-in-water ripple effect spawned by clicking the cover. Each
+  // click pushes 3 staggered concentric rings (offsets 0/100/200 ms)
+  // sharing the same origin. Painter culls expired entries each frame.
+  // Cap the active list at 30 rings to avoid pathological click-spam
+  // memory growth.
+  final List<_ClickRipple> _clickRipples = <_ClickRipple>[];
+
   @override
   void initState() {
     super.initState();
@@ -332,6 +340,35 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
     }
   }
 
+  /// Spawns a stone-in-water ripple at [origin] (cover-local pixels).
+  /// 3 concentric rings are pushed at the same point with staggered
+  /// start times (0 / 100 / 200 ms offsets) so they read as a primary
+  /// ripple followed by 2 follower rings — like water dispersing from
+  /// where a pebble struck the surface.
+  void _spawnClickRipples(Offset origin) {
+    if (!widget.animated) return;
+    final int baseMs = _nowMs();
+    final Color rippleColor = widget.project.primaryColor;
+    for (int i = 0; i < 3; i++) {
+      _clickRipples.add(_ClickRipple(
+        startMs: baseMs + i * 100,
+        origin: origin,
+        maxRadius: 220.0,
+        ringIndex: i,
+        lifetime: 1100.0,
+        color: rippleColor,
+      ));
+    }
+    // Hard cap to bound memory under rapid click-spam. Drop oldest.
+    while (_clickRipples.length > 30) {
+      _clickRipples.removeAt(0);
+    }
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    _spawnClickRipples(details.localPosition);
+  }
+
   // Unbounded ms clock derived from _ping's repeating 1 s controller.
   // We can't just read DateTime.now() inside paint (well, we can — but
   // keeping the painter driven purely by Listenable values keeps it
@@ -411,28 +448,38 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
             onEnter: widget.animated ? _onEnter : null,
             onExit: widget.animated ? _onExit : null,
             onHover: widget.animated ? _onHover : null,
-            child: CustomPaint(
-              painter: _HeroCoverPainter(
-                base: base,
-                category: widget.project.categoryFor(widget.lang),
-                particles: _particleTable,
-                fallingLines: _fallingLineTable,
-                blurredParticles: _blurredParticleTable,
-                twinklers: _twinklers,
-                pings: _pings,
-                cursor: effectiveCursor,
-                gradient: _gradient,
-                glow: _glow,
-                particlesC: _particles,
-                illustration: _illustration,
-                vignette: _vignette,
-                fallingLinesC: _fallingLines,
-                windC: _wind,
-                auroraC: _aurora,
-                pingC: _ping,
-                repaint: _ticker,
+            // GestureDetector sits INSIDE the MouseRegion so cursor
+            // parallax (driven by onHover/onEnter/onExit) keeps working
+            // — those are pointer-listener-level events that
+            // GestureDetector doesn't intercept. opaque hit-test ensures
+            // tap-downs anywhere on the painted area register.
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapDown: widget.animated ? _onTapDown : null,
+              child: CustomPaint(
+                painter: _HeroCoverPainter(
+                  base: base,
+                  category: widget.project.categoryFor(widget.lang),
+                  particles: _particleTable,
+                  fallingLines: _fallingLineTable,
+                  blurredParticles: _blurredParticleTable,
+                  twinklers: _twinklers,
+                  pings: _pings,
+                  clickRipples: _clickRipples,
+                  cursor: effectiveCursor,
+                  gradient: _gradient,
+                  glow: _glow,
+                  particlesC: _particles,
+                  illustration: _illustration,
+                  vignette: _vignette,
+                  fallingLinesC: _fallingLines,
+                  windC: _wind,
+                  auroraC: _aurora,
+                  pingC: _ping,
+                  repaint: _ticker,
+                ),
+                size: Size.infinite,
               ),
-              size: Size.infinite,
             ),
           );
         },
@@ -549,6 +596,35 @@ class _RadarPing {
   final double maxRadius;
 }
 
+/// A click-spawned ripple. Unlike the radar pings, ripples carry their
+/// origin in raw cover-local pixels (so the click point maps 1:1 to the
+/// drawn ring center), plus a per-ring stagger via [startMs] offset and
+/// a project-tinted [color] for a more pronounced visual.
+///
+/// Visual params:
+///   • [maxRadius] 220 px — substantially larger than the 80–120 px
+///     radar pings so the user feedback feels deliberate.
+///   • [lifetime] 1100 ms — long enough that the staggered followers
+///     overlap with the primary ring during the bulk of its life.
+///   • alpha curve in the painter is `(1-t)^2 * 0.50` — quadratic
+///     decay imitating water-ripple energy dissipation.
+class _ClickRipple {
+  _ClickRipple({
+    required this.startMs,
+    required this.origin,
+    required this.maxRadius,
+    required this.ringIndex,
+    required this.lifetime,
+    required this.color,
+  });
+  final int startMs;
+  final Offset origin;
+  final double maxRadius;
+  final int ringIndex;
+  final double lifetime;
+  final Color color;
+}
+
 Color _darken(Color c, double f) {
   return Color.fromARGB(
     c.alpha,
@@ -579,6 +655,7 @@ class _HeroCoverPainter extends CustomPainter {
     required this.blurredParticles,
     required this.twinklers,
     required this.pings,
+    required this.clickRipples,
     required this.cursor,
     required this.gradient,
     required this.glow,
@@ -609,6 +686,10 @@ class _HeroCoverPainter extends CustomPainter {
   // 60 Hz; the painter never escapes the widget so the coupling is
   // safe.
   final List<_RadarPing> pings;
+  // Live, mutable click-ripple list. Each click spawns 3 staggered
+  // entries; painter culls expired ones in-place each frame. Same
+  // shared-mutable convention as `pings` above.
+  final List<_ClickRipple> clickRipples;
   // Effective normalized cursor offset (-1..1), already smoothed for
   // exit-decay by the state.
   final Offset cursor;
@@ -807,6 +888,9 @@ class _HeroCoverPainter extends CustomPainter {
     // ----- Layer 4d: radar pings (expanding-ring fades) ---------------
     _paintPings(canvas, size);
 
+    // ----- Layer 4e: click ripples (stone-in-water feedback) ----------
+    _paintClickRipples(canvas);
+
     // ----- Layer 5: category-driven illustration.
     // Inverse-direction parallax (max ±6 px) for fake-depth: the focal
     // shape shifts AGAINST the cursor while the particle field shifts
@@ -916,6 +1000,44 @@ class _HeroCoverPainter extends CustomPainter {
       final double radius = t * p.maxRadius;
       pingPaint.color = accent.withValues(alpha: (1.0 - t) * 0.30);
       canvas.drawCircle(origin, radius, pingPaint);
+    }
+  }
+
+  /// Draws all active click ripples. Each ripple has a `lifetime`-ms
+  /// lifecycle: radius grows linearly from 0 → maxRadius while alpha
+  /// follows a quadratic (1-t)² decay (≈ water-ripple energy dissipation).
+  /// Stroke width tapers from 2 px down to 1 px as the ring expands so
+  /// the older, larger rings read as thinner / weaker. Expired entries
+  /// are culled in-place from the shared list. Driven by the same
+  /// `pingC` 60 Hz repaint clock that powers the radar pings — no new
+  /// controller needed.
+  void _paintClickRipples(Canvas canvas) {
+    if (clickRipples.isEmpty) return;
+    final int nowMs = DateTime.now().millisecondsSinceEpoch;
+    // Cull expired ripples (iterate backwards so removals don't shift
+    // indices we still need to visit).
+    for (int i = clickRipples.length - 1; i >= 0; i--) {
+      final _ClickRipple r = clickRipples[i];
+      final int age = nowMs - r.startMs;
+      if (age > r.lifetime) {
+        clickRipples.removeAt(i);
+      }
+    }
+    final Paint ripplePaint = Paint()..style = PaintingStyle.stroke;
+    for (final _ClickRipple r in clickRipples) {
+      final double age = (nowMs - r.startMs).toDouble();
+      if (age < 0) continue; // staggered follower hasn't started yet
+      if (age > r.lifetime) continue; // safety, will be culled next pass
+      final double t = age / r.lifetime;
+      final double radius = t * r.maxRadius;
+      // Quadratic decay: starts at 0.50, fades sharply at the tail so
+      // the final 20% of life is almost invisible — feels like real
+      // water-ripple energy dissipation.
+      final double alpha = ((1.0 - t) * (1.0 - t) * 0.50).clamp(0.0, 1.0);
+      ripplePaint
+        ..strokeWidth = 2.0 - t * 1.0 // 2 px shrinking to 1 px
+        ..color = r.color.withValues(alpha: alpha);
+      canvas.drawCircle(r.origin, radius, ripplePaint);
     }
   }
 
