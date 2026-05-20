@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:burak_basci_website/widgets/text/self_positioning_widget.dart';
 import 'package:flutter/foundation.dart';
@@ -1248,42 +1249,42 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
     _trajectory = _buildTrajectory();
   }
 
-  /// Scripted thrust schedule. Sparse impulse windows that shape a
-  /// runway-takeoff → parabolic-loop → level-exit flight. Story:
-  ///   0) RUNWAY: horizontal acceleration with thrust-y tuned to
-  ///      exactly cancel gravity (-220). The plane gains rightward
-  ///      velocity at zero pitch for ~0.5 s, so atan2(vy,vx) keeps
-  ///      the nose level — it reads as a "landebahn" roll before
-  ///      the climb kicks in.
-  ///   1) liftoff: gentler upward thrust, nose pitches up gradually
-  ///   2) long leftward arc — flies far left with mild lift
-  ///   3) short drop pulse → earlier turn from the fall
-  ///   4) strong recovery updraft — climbs back up
-  ///   5) continued mild climb while turning right
-  ///   6) LEVEL OUT — strong positive y thrust neutralises the
-  ///      upward velocity from the recovery so the plane stops
-  ///      climbing and turns its nose toward horizontal
-  ///   7) horizontal EXIT — plane exits the right edge of the
-  ///      viewport, not the top
+  /// Scripted thrust schedule. Six clean phases that produce the
+  /// user-spec'd single-loop trajectory:
+  ///   1) PARABOLIC CLIMB — strong up + moderate right thrust. The
+  ///      plane shoots up-right in one steep arc, no runway slide
+  ///      first (the prior runway phase was creating the lower
+  ///      curve of an S).
+  ///   2) APEX + LEFT TURN — leftward thrust, zero y thrust. Gravity
+  ///      decelerates the climb naturally; lateral thrust reverses
+  ///      the x-component so the plane turns at the top of the arc.
+  ///   3) FALL — near-zero thrust. Gravity dominates and the plane
+  ///      genuinely accelerates downward; lift + drag keep the
+  ///      descent rounded rather than a freefall straight line.
+  ///   4) RECOVERY — up + right thrust pulls the plane out of the
+  ///      dive, curving up-right. Magnitude chosen so the second
+  ///      peak does NOT exceed the first (which would re-introduce
+  ///      the S shape).
+  ///   5) CLIMB OUT — moderate right + slight up thrust to extend
+  ///      the exit arc.
+  ///   6) LEVEL EXIT — strong right + positive y thrust neutralises
+  ///      residual upward velocity so the plane exits the right
+  ///      edge of the viewport rather than the top.
   ///
   /// Windows (5.5 s total flight):
-  ///   0.00–0.50s  RUNWAY: right thrust, y = -220 (cancels gravity)
-  ///   0.50–1.10s  liftoff: gentle climb
-  ///   1.10–2.10s  leftward arc + mild lift → far left
-  ///   2.10–2.45s  short drop pulse
-  ///   2.45–3.10s  recovery updraft: climbs back up
-  ///   3.10–4.10s  continued mild climb right
-  ///   4.10–4.80s  LEVEL OUT: positive y to neutralise climb velocity
-  ///   4.80–5.50s  horizontal EXIT to the right
+  ///   0.00–0.75s  PARABOLIC CLIMB: up + right
+  ///   0.75–1.40s  APEX + LEFT TURN: leftward only
+  ///   1.40–2.60s  FALL: gravity-dominated descent
+  ///   2.60–3.40s  RECOVERY: up + right
+  ///   3.40–4.40s  CLIMB OUT: continued mild ascent
+  ///   4.40–5.50s  LEVEL EXIT: nose down, exit right
   Offset _scriptedThrust(double t) {
-    if (t < 0.50) return const Offset(750, -220);
-    if (t < 1.10) return const Offset(200, -380);
-    if (t < 2.10) return const Offset(-900, -150);
-    if (t < 2.45) return const Offset(120, 220);
-    if (t < 3.10) return const Offset(280, -600);
-    if (t < 4.10) return const Offset(700, -180);
-    if (t < 4.80) return const Offset(1000, 320);
-    if (t < 5.50) return const Offset(1700, 100);
+    if (t < 0.75) return const Offset(350, -780);
+    if (t < 1.40) return const Offset(-850, 50);
+    if (t < 2.60) return const Offset(-80, 60);
+    if (t < 3.40) return const Offset(800, -650);
+    if (t < 4.40) return const Offset(900, -100);
+    if (t < 5.50) return const Offset(1600, 350);
     return Offset.zero;
   }
 
@@ -1484,30 +1485,22 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
                       scale: scale,
                       child: Transform.rotate(
                         angle: rotation,
-                        // VISIBILITY: white halo behind the black
-                        // glyph keeps the plane visible against
-                        // both the black button (rest) and the
-                        // light page (flight). Same glyph rendered
-                        // twice: a slightly enlarged white instance
-                        // underneath, then the canonical black
-                        // instance on top. Reads as a subtle glow,
-                        // not a stroke — the white pixels only
-                        // peek out around the edges of the black
-                        // silhouette.
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: const <Widget>[
-                            Icon(
-                              Icons.send,
-                              size: _glyphSize + 4,
-                              color: Colors.white,
-                            ),
-                            Icon(
-                              Icons.send,
-                              size: _glyphSize,
-                              color: CustomColors.black,
-                            ),
-                          ],
+                        // DYNAMIC-INVERSION paper plane. A ClipPath
+                        // restricts the visible region to a paper-
+                        // plane silhouette (Material `Icons.send`
+                        // outline). Inside that clip a BackdropFilter
+                        // runs a colour-matrix that inverts the
+                        // backdrop pixels (negate RGB, add 255), so
+                        // the plane always reads as the inverse of
+                        // whatever sits behind it — white over a
+                        // black submit button, black over a white
+                        // success card, anything-vs-anything as it
+                        // flies across the page. The empty SizedBox
+                        // child only exists to give the BackdropFilter
+                        // a layout box; nothing is painted ON TOP of
+                        // the backdrop — the inversion IS the visual.
+                        child: const _InvertingPaperPlane(
+                          size: _glyphSize,
                         ),
                       ),
                     ),
@@ -1520,6 +1513,59 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
       ),
     );
   }
+}
+
+/// Paper-plane silhouette that paints whatever sits behind it in
+/// inverted colour. Achieves the user-spec'd "plane is always the
+/// inverse of what's behind it" by composing a [ClipPath] (the
+/// paper-plane outline) with a [BackdropFilter] running a colour-
+/// matrix invert (negate RGB, add 255). The child SizedBox supplies
+/// layout; nothing is painted on top of the inverted backdrop —
+/// the inversion IS the visible plane.
+class _InvertingPaperPlane extends StatelessWidget {
+  const _InvertingPaperPlane({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipPath(
+      clipper: const _PaperPlaneClipper(),
+      child: BackdropFilter(
+        filter: const ui.ColorFilter.matrix(<double>[
+          -1, 0, 0, 0, 255,
+          0, -1, 0, 0, 255,
+          0, 0, -1, 0, 255,
+          0, 0, 0, 1, 0,
+        ]),
+        child: SizedBox(width: size, height: size),
+      ),
+    );
+  }
+}
+
+/// Material `Icons.send` outline transcribed into a [Path] so it can
+/// be used as a [ClipPath]. Coordinates are the canonical 24×24
+/// Material viewport, scaled to the actual clip size.
+class _PaperPlaneClipper extends CustomClipper<Path> {
+  const _PaperPlaneClipper();
+
+  @override
+  Path getClip(Size size) {
+    final double s = size.width / 24.0;
+    final Path path = Path();
+    path.moveTo(2 * s, 21 * s);
+    path.lineTo(23 * s, 12 * s);
+    path.lineTo(2 * s, 3 * s);
+    path.lineTo(2 * s, 10 * s);
+    path.lineTo(17 * s, 12 * s);
+    path.lineTo(2 * s, 14 * s);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant _PaperPlaneClipper oldClipper) => false;
 }
 
 class _StatusBanner extends StatelessWidget {
