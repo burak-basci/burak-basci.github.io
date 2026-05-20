@@ -444,7 +444,15 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
                     Curves.easeOut.transform(_cursorDecay.value),
                   ) ??
                   Offset.zero;
-          return MouseRegion(
+          // SelectionContainer.disabled detaches this subtree from the
+          // surrounding SelectionArea (declared in page_wrapper.dart), so
+          // the SelectableRegion's tap-gesture-recognizer no longer
+          // competes with our GestureDetector in the gesture arena.
+          // Without this, on Flutter Web the SelectableRegion's
+          // `web-selectable-region-context-menu` DOM wrapper steals the
+          // tap and the click ripple never spawns.
+          return SelectionContainer.disabled(
+            child: MouseRegion(
             onEnter: widget.animated ? _onEnter : null,
             onExit: widget.animated ? _onExit : null,
             onHover: widget.animated ? _onHover : null,
@@ -481,6 +489,7 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
                 size: Size.infinite,
               ),
             ),
+          ),
           );
         },
       ),
