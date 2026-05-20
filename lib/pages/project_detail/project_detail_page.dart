@@ -201,14 +201,14 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
       duration: const Duration(milliseconds: 2000),
     );
     // Continuous Ken-Burns "breathing" on the hero cover — zoom
-    // 1.00 → 1.07 on an ease-in-out, reverses on completion so the
-    // background drifts in and out beneath the static text overlay
-    // for a calm cinematic ambience. Period shortened 8 s → 7 s and
-    // amplitude bumped 6 % → 7 % so the breath of the background
-    // visibly registers without overwhelming the typography.
+    // 1.05 → 1.15 with a gentle pan. Period extended 7 s → 17 s
+    // (~2.4× slower) so the breath feels like a slow exhale rather
+    // than a perceptible pulse. The user feedback explicitly asked
+    // for "at least 2× slower; should feel like a slow exhale, not
+    // a perceptible pulse."
     _heroBreathController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 7000),
+      duration: const Duration(milliseconds: 17000),
     )..repeat(reverse: true);
     _waveController = AnimationController(
       vsync: this,
@@ -325,19 +325,21 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
       vsync: this,
       duration: const Duration(seconds: 33),
     )..repeat();
-    // Dramatic per-line breath on the two accent rules. Two
-    // controllers at different periods (1.4 s and 1.8 s) so they
-    // never tick together; each reverses so the bounce is smooth, no
-    // 1.0→0.0 snap discontinuity. Scale range 0.20 → 1.20 means the
-    // rules shrink to near-invisible on the inhale and overshoot
-    // beyond rest length on the exhale.
+    // Subtle per-line breath on the two accent rules. Two controllers
+    // at different periods (3.0 s and 3.6 s) so they never tick
+    // together; each reverses so the bounce is smooth, no 1.0→0.0
+    // snap discontinuity. Period roughly doubled from the previous
+    // 1.4/1.8 s so the rules drift instead of pulsing. Scale range
+    // is compressed downstream (0.80 → 1.00) — see the AnimatedBuilders
+    // in _heroTypographyColumn — so the rules just gently elongate
+    // about ±10% off rest length rather than shrinking to a stub.
     _heroLineBreatheControllerA = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 3000),
     )..repeat(reverse: true);
     _heroLineBreatheControllerB = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 3600),
     )..repeat(reverse: true);
 
     // Bottom-shade gradient breath. Stretched 18 s → 28 s (×~1.55) so
@@ -1639,19 +1641,18 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
         const SizedBox(height: 24),
         // Two short accent rules in the hero colour — the only
         // typography-area elements that move now. Each rule is on its
-        // own controller (1.4 s and 1.8 s, both reverse:true) so they
-        // never sync up: one is faster than the other and they slide in
-        // and out of relative phase forever. Scale 0.20 → 1.20 means
-        // each rule shrinks to near-invisible on the inhale and
-        // overshoots beyond its rest length on the exhale. Anchor
-        // (-1, 0) keeps the rule growing out from the column's left
-        // edge.
+        // own controller (3.0 s and 3.6 s, both reverse:true) so they
+        // never sync up. Scale range compressed to 0.80 → 1.00 (was
+        // 0.20 → 1.20) — amplitude reduced 80% per user feedback so
+        // the rules drift gently around rest length instead of
+        // shrinking to near-invisible. Anchor (-1, 0) keeps the rule
+        // growing out from the column's left edge.
         AnimatedBuilder(
           animation: _heroLineBreatheControllerA,
           builder: (context, child) {
             final double eased = Curves.easeInOutSine
                 .transform(_heroLineBreatheControllerA.value);
-            final double scaleX = 0.20 + eased * 1.00; // 0.20 → 1.20
+            final double scaleX = 0.80 + eased * 0.20; // 0.80 → 1.00
             return Transform(
               alignment: const Alignment(-1, 0),
               transform: Matrix4.identity()..scale(scaleX, 1.0, 1.0),
@@ -1670,7 +1671,7 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
           builder: (context, child) {
             final double eased = Curves.easeInOutSine
                 .transform(_heroLineBreatheControllerB.value);
-            final double scaleX = 0.20 + eased * 1.00; // 0.20 → 1.20
+            final double scaleX = 0.80 + eased * 0.20; // 0.80 → 1.00
             return Transform(
               alignment: const Alignment(-1, 0),
               transform: Matrix4.identity()..scale(scaleX, 1.0, 1.0),

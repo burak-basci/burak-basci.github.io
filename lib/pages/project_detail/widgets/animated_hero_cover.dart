@@ -130,8 +130,11 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
           // baseTopY is a fractional offset 0..1 used as an initial
           // phase so lines don't all start at the same Y on page-load.
           baseTopY: rngFall.nextDouble(),
-          // 30–120 px length at 1600x900 reference (sy-scaled in paint).
-          length: 30.0 + rngFall.nextDouble() * 90.0,
+          // 10–40 px length at 1600x900 reference (sy-scaled in paint).
+          // Previously 30–120 px — that read as visible vertical
+          // streaks and felt heavier than the calmer brief; the
+          // shorter range turns each line into a quiet hairline mote.
+          length: 10.0 + rngFall.nextDouble() * 30.0,
           // Fall-speed: how many "cover heights" the line traverses
           // per full controller cycle (45 s). 0.4–3.0 gives traversal
           // times between ~15 s and ~110 s for the slowest, but the
