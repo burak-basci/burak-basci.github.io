@@ -341,17 +341,21 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
   }
 
   /// Spawns a stone-in-water ripple at [origin] (cover-local pixels).
-  /// 3 concentric rings are pushed at the same point with staggered
-  /// start times (0 / 100 / 200 ms offsets) so they read as a primary
-  /// ripple followed by 2 follower rings — like water dispersing from
-  /// where a pebble struck the surface.
+  /// 5 concentric rings are pushed at the same point with staggered
+  /// start times (0 / 90 / 180 / 270 / 360 ms offsets) so they read as
+  /// a primary ripple followed by 4 follower rings — like water
+  /// dispersing from where a pebble struck the surface. Even-indexed
+  /// rings are painted white (reliably visible on any cover, including
+  /// dark backgrounds), odd-indexed rings carry the project tint to
+  /// keep chromatic identity in the effect.
   void _spawnClickRipples(Offset origin) {
     if (!widget.animated) return;
     final int baseMs = _nowMs();
-    final Color rippleColor = widget.project.primaryColor;
-    for (int i = 0; i < 3; i++) {
+    final Color tintColor = widget.project.primaryColor;
+    for (int i = 0; i < 5; i++) {
+      final Color rippleColor = (i % 2 == 0) ? Colors.white : tintColor;
       _clickRipples.add(_ClickRipple(
-        startMs: baseMs + i * 100,
+        startMs: baseMs + i * 90,
         origin: origin,
         maxRadius: 220.0,
         ringIndex: i,
@@ -365,8 +369,8 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
     }
   }
 
-  void _onTapDown(TapDownDetails details) {
-    _spawnClickRipples(details.localPosition);
+  void _onPointerDown(PointerDownEvent event) {
+    _spawnClickRipples(event.localPosition);
   }
 
   // Unbounded ms clock derived from _ping's repeating 1 s controller.
@@ -377,15 +381,19 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
   // at spawn-time (outside paint).
   int _nowMs() => DateTime.now().millisecondsSinceEpoch;
 
-  void _onHover(PointerHoverEvent event) {
+  /// Updates the normalized cursor position from a local-coordinate point.
+  /// Driven by both [PointerHoverEvent] (mouse moves with no button) and
+  /// [PointerMoveEvent] (mouse moves with a button held down) so the
+  /// parallax keeps tracking during click-and-hold drags.
+  void _updateParallax(Offset localPosition) {
     final int nowMs = _nowMs();
     if (nowMs - _lastHoverUpdateMs < 16) return; // throttle to ~60 Hz
     _lastHoverUpdateMs = nowMs;
     if (_lastSize.width <= 0 || _lastSize.height <= 0) return;
     final double dx =
-        (event.localPosition.dx - _lastSize.width / 2) / (_lastSize.width / 2);
+        (localPosition.dx - _lastSize.width / 2) / (_lastSize.width / 2);
     final double dy =
-        (event.localPosition.dy - _lastSize.height / 2) / (_lastSize.height / 2);
+        (localPosition.dy - _lastSize.height / 2) / (_lastSize.height / 2);
     setState(() {
       _cursorActive = true;
       _cursorNormalized = Offset(
@@ -394,6 +402,12 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
       );
     });
   }
+
+  void _onPointerHover(PointerHoverEvent event) =>
+      _updateParallax(event.localPosition);
+
+  void _onPointerMove(PointerMoveEvent event) =>
+      _updateParallax(event.localPosition);
 
   void _onExit(PointerExitEvent event) {
     _cursorActive = false;
@@ -447,23 +461,30 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
           // SelectionContainer.disabled detaches this subtree from the
           // surrounding SelectionArea (declared in page_wrapper.dart), so
           // the SelectableRegion's tap-gesture-recognizer no longer
-          // competes with our GestureDetector in the gesture arena.
+          // competes with our pointer Listener in the gesture arena.
           // Without this, on Flutter Web the SelectableRegion's
           // `web-selectable-region-context-menu` DOM wrapper steals the
           // tap and the click ripple never spawns.
+          //
+          // Layering (outer → inner):
+          //   • MouseRegion(onEnter, onExit) — drives the decay-to-zero
+          //     of the parallax offset when the cursor leaves the cover.
+          //   • Listener(onPointerDown, onPointerMove, onPointerHover) —
+          //     unlike GestureDetector this does NOT enter the gesture
+          //     arena, so a press-and-hold doesn't hijack the pointer.
+          //     onPointerHover fires while no button is pressed,
+          //     onPointerMove fires while a button IS pressed — together
+          //     they keep the parallax tracking during click-and-hold
+          //     drags. onPointerDown spawns the click ripple.
           return SelectionContainer.disabled(
             child: MouseRegion(
             onEnter: widget.animated ? _onEnter : null,
             onExit: widget.animated ? _onExit : null,
-            onHover: widget.animated ? _onHover : null,
-            // GestureDetector sits INSIDE the MouseRegion so cursor
-            // parallax (driven by onHover/onEnter/onExit) keeps working
-            // — those are pointer-listener-level events that
-            // GestureDetector doesn't intercept. opaque hit-test ensures
-            // tap-downs anywhere on the painted area register.
-            child: GestureDetector(
+            child: Listener(
               behavior: HitTestBehavior.opaque,
-              onTapDown: widget.animated ? _onTapDown : null,
+              onPointerDown: widget.animated ? _onPointerDown : null,
+              onPointerMove: widget.animated ? _onPointerMove : null,
+              onPointerHover: widget.animated ? _onPointerHover : null,
               child: CustomPaint(
                 painter: _HeroCoverPainter(
                   base: base,
@@ -615,8 +636,10 @@ class _RadarPing {
 ///     radar pings so the user feedback feels deliberate.
 ///   • [lifetime] 1100 ms — long enough that the staggered followers
 ///     overlap with the primary ring during the bulk of its life.
-///   • alpha curve in the painter is `(1-t)^2 * 0.50` — quadratic
+///   • alpha curve in the painter is `(1-t)^2 * 0.75` — quadratic
 ///     decay imitating water-ripple energy dissipation.
+///   • radius curve in the painter is `easeOutCubic(t) * maxRadius`
+///     so the ring decelerates as it expands away from the click.
 class _ClickRipple {
   _ClickRipple({
     required this.startMs,
@@ -1013,13 +1036,14 @@ class _HeroCoverPainter extends CustomPainter {
   }
 
   /// Draws all active click ripples. Each ripple has a `lifetime`-ms
-  /// lifecycle: radius grows linearly from 0 → maxRadius while alpha
-  /// follows a quadratic (1-t)² decay (≈ water-ripple energy dissipation).
-  /// Stroke width tapers from 2 px down to 1 px as the ring expands so
-  /// the older, larger rings read as thinner / weaker. Expired entries
-  /// are culled in-place from the shared list. Driven by the same
-  /// `pingC` 60 Hz repaint clock that powers the radar pings — no new
-  /// controller needed.
+  /// lifecycle: radius expands from 0 → maxRadius following an ease-out
+  /// cubic curve (fast at impact, decelerating as energy dissipates —
+  /// like a real water ripple) while alpha follows a quadratic (1-t)²
+  /// decay. Stroke width tapers from 4 px down to 2 px as the ring
+  /// expands so the older, larger rings read as thinner / weaker.
+  /// Expired entries are culled in-place from the shared list. Driven
+  /// by the same `pingC` 60 Hz repaint clock that powers the radar
+  /// pings — no new controller needed.
   void _paintClickRipples(Canvas canvas) {
     if (clickRipples.isEmpty) return;
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -1038,13 +1062,17 @@ class _HeroCoverPainter extends CustomPainter {
       if (age < 0) continue; // staggered follower hasn't started yet
       if (age > r.lifetime) continue; // safety, will be culled next pass
       final double t = age / r.lifetime;
-      final double radius = t * r.maxRadius;
-      // Quadratic decay: starts at 0.50, fades sharply at the tail so
-      // the final 20% of life is almost invisible — feels like real
-      // water-ripple energy dissipation.
-      final double alpha = ((1.0 - t) * (1.0 - t) * 0.50).clamp(0.0, 1.0);
+      // Ease-out cubic on the radius: the ring shoots out from the
+      // click point with initial energy then decelerates as it
+      // expands — matches the physical intuition of a water ripple
+      // losing momentum the further it travels from the impact.
+      final double radius = Curves.easeOutCubic.transform(t) * r.maxRadius;
+      // Quadratic decay starting at 0.75 (was 0.50): more opaque
+      // peak so the ring is clearly readable, then fades sharply at
+      // the tail so the final 20% of life is almost invisible.
+      final double alpha = ((1.0 - t) * (1.0 - t) * 0.75).clamp(0.0, 1.0);
       ripplePaint
-        ..strokeWidth = 2.0 - t * 1.0 // 2 px shrinking to 1 px
+        ..strokeWidth = 4.0 - t * 2.0 // 4 px tapering to 2 px
         ..color = r.color.withValues(alpha: alpha);
       canvas.drawCircle(r.origin, radius, ripplePaint);
     }
