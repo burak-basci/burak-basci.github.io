@@ -1249,39 +1249,41 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
   }
 
   /// Scripted thrust schedule. Sparse impulse windows that shape a
-  /// parabolic flight path so the plane reads as physically thrust+
-  /// gliding rather than following a baked curve. Story:
-  ///   1) gentler takeoff right — lower initial climb so the arc has
-  ///      room to build height OVER TIME rather than spiking
-  ///   2) sustained mild lift on the rightward coast — gives the
-  ///      first hump a rounded parabolic shape
-  ///   3) long, strong leftward thrust — flies much further left
-  ///      than before (~doubled left-x reach) with mild lift so the
-  ///      leftward arc rises in a parabola
-  ///   4) short drop pulse → earlier turn from the drop (lifted
-  ///      sooner so the plane doesn't sit at the floor)
-  ///   5) very strong recovery updraft — climbs HIGHER than the
-  ///      first peak, again a parabolic curve from a sustained-lift
-  ///      coast rather than an instant spike
-  ///   6) big rightward exit + climb
+  /// runway-takeoff → parabolic-loop → level-exit flight. Story:
+  ///   0) RUNWAY: horizontal acceleration with thrust-y tuned to
+  ///      exactly cancel gravity (-220). The plane gains rightward
+  ///      velocity at zero pitch for ~0.5 s, so atan2(vy,vx) keeps
+  ///      the nose level — it reads as a "landebahn" roll before
+  ///      the climb kicks in.
+  ///   1) liftoff: gentler upward thrust, nose pitches up gradually
+  ///   2) long leftward arc — flies far left with mild lift
+  ///   3) short drop pulse → earlier turn from the fall
+  ///   4) strong recovery updraft — climbs back up
+  ///   5) continued mild climb while turning right
+  ///   6) LEVEL OUT — strong positive y thrust neutralises the
+  ///      upward velocity from the recovery so the plane stops
+  ///      climbing and turns its nose toward horizontal
+  ///   7) horizontal EXIT — plane exits the right edge of the
+  ///      viewport, not the top
   ///
   /// Windows (5.5 s total flight):
-  ///   0.00–0.55s  takeoff: moderate right + reduced up
-  ///   0.55–1.30s  rightward coast with sustained mild lift
-  ///   1.30–2.30s  long leftward thrust + sustained lift → far left
-  ///   2.30–2.65s  short drop pulse (slight right + DOWN, brief)
-  ///   2.65–3.40s  recovery: strong updraft, mild rightward
-  ///   3.40–4.30s  continued parabolic climb while turning right
-  ///   4.30–5.20s  exit right with sustained lift (no more nose-down)
-  ///   5.20+       coast
+  ///   0.00–0.50s  RUNWAY: right thrust, y = -220 (cancels gravity)
+  ///   0.50–1.10s  liftoff: gentle climb
+  ///   1.10–2.10s  leftward arc + mild lift → far left
+  ///   2.10–2.45s  short drop pulse
+  ///   2.45–3.10s  recovery updraft: climbs back up
+  ///   3.10–4.10s  continued mild climb right
+  ///   4.10–4.80s  LEVEL OUT: positive y to neutralise climb velocity
+  ///   4.80–5.50s  horizontal EXIT to the right
   Offset _scriptedThrust(double t) {
-    if (t < 0.55) return const Offset(620, -500);
-    if (t < 1.30) return const Offset(60, -260);
-    if (t < 2.30) return const Offset(-900, -220);
-    if (t < 2.65) return const Offset(120, 220);
-    if (t < 3.40) return const Offset(280, -780);
-    if (t < 4.30) return const Offset(700, -420);
-    if (t < 5.20) return const Offset(1400, -260);
+    if (t < 0.50) return const Offset(750, -220);
+    if (t < 1.10) return const Offset(200, -380);
+    if (t < 2.10) return const Offset(-900, -150);
+    if (t < 2.45) return const Offset(120, 220);
+    if (t < 3.10) return const Offset(280, -600);
+    if (t < 4.10) return const Offset(700, -180);
+    if (t < 4.80) return const Offset(1000, 320);
+    if (t < 5.50) return const Offset(1700, 100);
     return Offset.zero;
   }
 

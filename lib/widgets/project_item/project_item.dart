@@ -579,22 +579,48 @@ class ProjectItemLargeState extends State<ProjectItemLarge> with SingleTickerPro
                 // The main slide-in thumbnail also uses the live cover
                 // when a [project] is supplied — non-ticking so the
                 // entire cascade is just N static custom-painted
-                // canvases instead of N animation controllers.
+                // canvases instead of N animation controllers. On
+                // hover a compact text overlay (category, title,
+                // subtitle, accent rule) fades in over the painted
+                // cover so the foreground tile mirrors the treatment
+                // the visitor will see on the detail page hero.
                 child: SizedBox(
                   width: imageWidth,
                   height: containerHeight,
-                  child: widget.project != null && widget.lang != null
-                      ? AnimatedHeroCover(
-                          project: widget.project!,
-                          lang: widget.lang!,
-                          animated: false,
-                        )
-                      : Image.asset(
-                          widget.imageUrl,
-                          width: imageWidth,
-                          height: containerHeight,
-                          fit: BoxFit.cover,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[
+                      widget.project != null && widget.lang != null
+                          ? AnimatedHeroCover(
+                              project: widget.project!,
+                              lang: widget.lang!,
+                              animated: false,
+                            )
+                          : Image.asset(
+                              widget.imageUrl,
+                              width: imageWidth,
+                              height: containerHeight,
+                              fit: BoxFit.cover,
+                            ),
+                      if (widget.project != null && widget.lang != null)
+                        Positioned(
+                          left: 20,
+                          right: 20,
+                          bottom: 20,
+                          child: IgnorePointer(
+                            child: AnimatedOpacity(
+                              opacity: _isHovering ? 1.0 : 0.0,
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeOutCubic,
+                              child: _HoverHeroOverlay(
+                                project: widget.project!,
+                                lang: widget.lang!,
+                              ),
+                            ),
+                          ),
                         ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -827,6 +853,71 @@ class ProjectItemSmState extends State<ProjectItemSm> with SingleTickerProviderS
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Compact text overlay used on the home-tile angled thumbnail when
+/// the visitor hovers a project. Mirrors the layout of the detail
+/// page's hero text (category line above, big title, subtitle, then
+/// a short accent rule in the project's primary colour) but uses
+/// smaller font sizes so it fits the thumbnail box.
+class _HoverHeroOverlay extends StatelessWidget {
+  const _HoverHeroOverlay({required this.project, required this.lang});
+
+  final ProjectItemData project;
+  final AppLang lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle categoryStyle = TextStyle(
+      fontFamily: 'Inter',
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 2.4,
+      color: Colors.white.withValues(alpha: 0.78),
+    );
+    const TextStyle titleStyle = TextStyle(
+      fontFamily: 'VisueltPro',
+      fontSize: 22,
+      fontWeight: FontWeight.w700,
+      height: 1.1,
+      color: Colors.white,
+    );
+    final TextStyle subtitleStyle = TextStyle(
+      fontFamily: 'Inter',
+      fontSize: 11,
+      fontWeight: FontWeight.w300,
+      height: 1.35,
+      color: Colors.white.withValues(alpha: 0.84),
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          project.categoryFor(lang).toUpperCase(),
+          style: categoryStyle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          project.titleFor(lang),
+          style: titleStyle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          project.subtitleFor(lang),
+          style: subtitleStyle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 10),
+        Container(width: 48, height: 2, color: project.primaryColor),
+      ],
     );
   }
 }

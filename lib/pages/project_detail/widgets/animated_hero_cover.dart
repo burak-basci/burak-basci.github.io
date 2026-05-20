@@ -352,11 +352,11 @@ class _AnimatedHeroCoverState extends State<AnimatedHeroCover>
     if (!widget.animated) return;
     final int baseMs = _nowMs();
     final Color tintColor = widget.project.primaryColor;
-    // Subtle 2-ring ripple: a primary ring + one follower. Smaller
-    // maxRadius, shorter life, lower peak alpha and thinner stroke
-    // than the prior 5-ring treatment so the effect is felt rather
-    // than dominant.
-    for (int i = 0; i < 2; i++) {
+    // Subtle 3-ring ripple: a primary ring + two followers,
+    // staggered close together so they read as a quick triple-tap
+    // of water. Size / alpha / stroke kept gentle — the effect is
+    // felt rather than dominant.
+    for (int i = 0; i < 3; i++) {
       final Color rippleColor = (i % 2 == 0) ? Colors.white : tintColor;
       _clickRipples.add(_ClickRipple(
         startMs: baseMs + i * 110,
@@ -936,19 +936,57 @@ class _HeroCoverPainter extends CustomPainter {
         canvas, size, sx, sy, pale, accent, tIll);
     canvas.restore();
 
-    // ----- Layer 6: vignette (last so it darkens everything).
-    final double vigStrength = 0.55 + 0.12 * tVig;
-    final ui.Gradient vigGrad = ui.Gradient.radial(
-      Offset(size.width / 2, size.height / 2),
-      math.sqrt(size.width * size.width + size.height * size.height) / 1.7,
-      <Color>[
-        const Color(0x00000000),
-        const Color(0x00000000),
-        Color.fromARGB((vigStrength * 255).toInt(), 0, 0, 0),
-      ],
-      <double>[0.0, 0.55, 1.0],
-    );
-    canvas.drawRect(rect, Paint()..shader = vigGrad);
+    // ----- Layer 6: concentric-ellipse vignette (faithful to the
+    // Python gen_covers.py vignette: many thin oval outlines drawn
+    // from the far edge inward, with a cubic alpha falloff so the
+    // band is dark at the corners and nearly invisible at the
+    // center). Read as "many circles like a spiral" on darker
+    // covers — atmospheric layer that the smooth-gradient version
+    // had wiped away.
+    _paintConcentricVignette(canvas, size, tVig);
+  }
+
+  /// Many thin ellipse outlines from the far edge inward, alpha
+  /// falling cubically with distance from center. Faithful port of
+  /// the Python vignette (`add_vignette` in gen_covers.py) which uses
+  /// `range(maxD, 0, -8)` to overlap rings, creating the moiré-ring
+  /// pattern the user described as "many circles like a spiral".
+  /// Subtle breath via [tVig] expands/contracts the ring set by
+  /// ±2.5 % over its 38 s reverse cycle so the rings drift instead
+  /// of locking in place.
+  void _paintConcentricVignette(Canvas canvas, Size size, double tVig) {
+    final double cx = size.width / 2;
+    final double cy = size.height / 2;
+    final double maxD = math.sqrt(cx * cx + cy * cy);
+    // Slow breathing: 0.975 ↔ 1.025 over the controller cycle so the
+    // bands shift inward/outward a touch without ever fully resetting.
+    final double breath = 0.975 + 0.05 * tVig;
+    final double maxR = maxD * breath;
+    final Paint p = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+    // 12-px step keeps the ring count moderate (~80) while still
+    // overlapping each previous outline by ~⅓ stroke-width — enough
+    // to produce the banded moiré on dark covers but cheap to paint.
+    const double step = 12.0;
+    // Strength tuned per-strain: 0.45 darkens the corners enough to
+    // frame the cover while keeping the rings legible as individual
+    // bands rather than melting into a smooth gradient.
+    const double strength = 0.45;
+    for (double r = maxR; r > 0; r -= step) {
+      final double tt = (r / maxR).clamp(0.0, 1.0);
+      final int alpha = (strength * 255.0 * tt * tt * tt).toInt();
+      if (alpha < 3) continue; // skip near-invisible inner rings
+      p.color = Color.fromARGB(alpha, 0, 0, 0);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(cx, cy),
+          width: 2 * r,
+          height: 1.4 * r, // 0.7 height-ratio like the Python source
+        ),
+        p,
+      );
+    }
   }
 
   /// Paints the slow diagonal aurora sweep. The band travels along its
