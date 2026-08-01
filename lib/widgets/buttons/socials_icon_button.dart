@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../utils/functions.dart';
 import '../../../utils/values/values.dart';
 import '../../utils/values/spaces.dart';
 
 class SocialData {
-  final FaIconData iconData;
+  final IconData iconData;
   final String url;
   final String name;
   final Color? color;
@@ -130,7 +129,7 @@ class _AnimatedSocialIconButtonState extends State<AnimatedSocialIconButton>
       onExit: (e) => _mouseEnter(false),
       child: InkWell(
         onTap: () => Functions.launchUrl(widget.socialData[widget.index].url),
-        child: FaIcon(
+        child: Icon(
           widget.socialData[widget.index].iconData,
           color: widget.socialData[widget.index].color ?? widget.color,
           size: widget.size,

@@ -38,7 +38,7 @@ dependencies:
   get: ^4.6.6
   cloud_firestore: ^4.8.5
   firebase_core: ^2.15.1
-  font_awesome_flutter: ^11.0.0
+  font_awesome_flutter: ^10.7.0
   url_launcher: ^6.2.4
   visibility_detector: ^0.4.0+2
   flutter_spinkit: ^5.2.0
@@ -76,15 +76,12 @@ flutter:
     - assets/images/projects/catersmart/
     - assets/images/projects/coldmailing/
     - assets/images/projects/csfloat/
-    - assets/images/projects/cv-plugin/
-    - assets/images/projects/django-canva/
     - assets/images/projects/durak/
     - assets/images/projects/flappy-griffon/
     - assets/images/projects/formal-docs/
     - assets/images/projects/freelance/
     - assets/images/projects/home-assistant/
     - assets/images/projects/legal-evidence/
-    - assets/images/projects/image-uploader/
     - assets/images/projects/image-upscaler/
     - assets/images/projects/immopilot/
     - assets/images/projects/jumpnrun/
@@ -93,7 +90,6 @@ flutter:
     - assets/images/projects/luminarep/
     - assets/images/projects/nestnode/
     - assets/images/projects/open-design/
-    - assets/images/projects/paper-citysim/
     - assets/images/projects/patent-search/
     - assets/images/projects/postflow/
     - assets/images/projects/pscoat/
@@ -104,12 +100,10 @@ flutter:
     - assets/images/projects/theater/
     - assets/images/projects/thesis-night/
     - assets/images/projects/this-site/
-    - assets/images/projects/turtlebot/
     - assets/images/projects/unity-hackathon/
     - assets/images/projects/utopia/
     - assets/images/projects/voice-assistant/
     - assets/images/projects/vr-anxiety/
-    - assets/images/projects/whisper/
     - assets/images/projects/widgets-pkg/
     - assets/images/projects/wp-plugins/
 

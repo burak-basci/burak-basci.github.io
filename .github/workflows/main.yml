@@ -8,12 +8,15 @@ jobs:
       # Checkout Repository
       - uses: actions/checkout@v1
 
-      # Install Flutter command. Must match what the working tree
-      # builds against locally: font_awesome_flutter ^11 requires
-      # Dart >=3.9, so Flutter 3.44.x (Dart 3.12) is the floor.
+      # Install Flutter command. Deliberately pinned to 3.32.8 — the
+      # engine the site has shipped with since May. A 3.44 deploy on
+      # 2026-08-01 made the home page visibly laggy on real hardware,
+      # so builds (CI and local deploys) stay on this version until
+      # a newer engine is perf-verified. font_awesome must stay ^10.x
+      # while on this pin (Dart 3.8 here; FA ^11 needs >=3.9).
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.4'
+          flutter-version: '3.32.8'
           channel: 'stable'
 
       # Build Website

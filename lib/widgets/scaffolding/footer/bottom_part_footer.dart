@@ -117,7 +117,7 @@ class BottomPartFooter extends StatelessWidget {
                   Tr.of('footer.built_with_love'),
                   style: textStyle,
                 ),
-                const FaIcon(
+                const Icon(
                   FontAwesomeIcons.solidHeart,
                   size: 14,
                   color: CustomColors.errorRed,
@@ -193,7 +193,7 @@ class BuiltWithFlutterText extends StatelessWidget {
           Tr.of('footer.built_with_love'),
           style: style,
         ),
-        const FaIcon(
+        const Icon(
           FontAwesomeIcons.solidHeart,
           size: 14,
           color: CustomColors.errorRed,

@@ -156,13 +156,13 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
     // Plane controller is just a clock that drives a lookup into the
     // pre-baked sketch-path trajectory (see [_PaperPlaneFlyOff]); its
     // t∈[0,1] samples the recorded frames so motion replays
-    // deterministically every flight. 3200 ms: ~500 ms glide, ~1800 ms
-    // for the two loops, ~900 ms accelerating exit. Under the probe
+    // deterministically every flight. 2800 ms: ~420 ms glide, ~1260 ms
+    // for the loop, ~1120 ms accelerating exit. Under the probe
     // harness the clock runs at half speed so timed screenshots can
     // catch every phase of the path.
     _planeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: _kAnimProbe ? 6400 : 3200),
+      duration: const Duration(milliseconds: _kAnimProbe ? 5600 : 2800),
     );
     _planeController.addStatusListener((status) {
       // Once the plane has fully exited the viewport, remove the
@@ -361,10 +361,10 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
         // path is pre-baked in _PaperPlaneFlyOff; the controller's
         // t∈[0,1] samples it.
         //   t=0     POST returned success.
-        //   t=300   Plane controller starts (3200 ms total).
+        //   t=300   Plane controller starts (2800 ms total).
         //   t=400   Form cascade-exit starts.
         //   t=1080  Cascade exit done.
-        //   t≈3500  Plane controller completes → success card reveals.
+        //   t≈3100  Plane controller completes → success card reveals.
         _successCardSwapTimer?.cancel();
         _formExitTimer?.cancel();
         _planeLaunchTimer?.cancel();
@@ -1110,7 +1110,7 @@ class _LetterByLetterReveal extends StatelessWidget {
 /// a straight tangential exit toward the upper right, with the plane
 /// growing exponentially the whole way out. The trajectory is now an
 /// explicit parametric curve of that drawing — lead-in glide →
-/// exponential spiral (2 loop-the-loop turns) → linear exit — baked
+/// exponential spiral (one loop-the-loop) → linear exit — baked
 /// into frames once at launch (see [_buildTrajectory]).
 ///
 /// ROTATION: tracks the velocity vector recorded per frame
@@ -1181,8 +1181,8 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
   // sampling / velocity-rotation machinery is untouched.
 
   // Phase boundaries as fractions of the whole flight.
-  static const double _leadEndT = 0.16; // glide off the button
-  static const double _spiralEndT = 0.72; // two growing loops
+  static const double _leadEndT = 0.15; // glide off the button
+  static const double _spiralEndT = 0.60; // one growing loop
   // exit phase: _spiralEndT → 1.0
 
   // Lead-in: a slow, slightly sagging glide to the LEFT, like the
@@ -1195,11 +1195,13 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
 
   // Spiral: enters at the lead-in's end heading left, loops clockwise
   // on screen (left → up → right → down: a loop-the-loop) with the
-  // radius growing exponentially — the sketch's small circle swelling
-  // into the big one.
+  // radius growing exponentially — a tight entry curl opening into
+  // ONE big loop. Round 7: _spiralTurns 2 → 1 after owner feedback
+  // that the plane "spins 3-4 times" — total nose rotation is now
+  // ~1.3 turns (one clear loop plus the entry curl), not ~2.3.
   static const double _spiralStartRadius = 15.0;
   static const double _spiralEndRadius = 165.0;
-  static const double _spiralTurns = 2.0;
+  static const double _spiralTurns = 1.0;
 
   // Exit climb-angle clamps (radians above the horizon). The actual
   // angle is solved per launch so the exit line points straight at
