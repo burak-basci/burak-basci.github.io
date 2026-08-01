@@ -8,12 +8,12 @@ jobs:
       # Checkout Repository
       - uses: actions/checkout@v1
 
-      # Install Flutter command. Version must satisfy pubspec.yaml's
-      # `sdk: '>=3.2.6 <4.0.0'`. 3.32.8 ships Dart 3.8.x and is what the
-      # working tree builds against locally.
+      # Install Flutter command. Must match what the working tree
+      # builds against locally: font_awesome_flutter ^11 requires
+      # Dart >=3.9, so Flutter 3.44.x (Dart 3.12) is the floor.
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.8'
+          flutter-version: '3.44.4'
           channel: 'stable'
 
       # Build Website
