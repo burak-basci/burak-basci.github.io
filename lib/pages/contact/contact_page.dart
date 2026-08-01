@@ -156,13 +156,13 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
     // Plane controller is just a clock that drives a lookup into the
     // pre-baked sketch-path trajectory (see [_PaperPlaneFlyOff]); its
     // t∈[0,1] samples the recorded frames so motion replays
-    // deterministically every flight. 2800 ms: ~420 ms glide, ~1260 ms
-    // for the loop, ~1120 ms accelerating exit. Under the probe
-    // harness the clock runs at half speed so timed screenshots can
-    // catch every phase of the path.
+    // deterministically every flight. 3000 ms: ~900 ms runway roll,
+    // ~1140 ms for the loop, ~960 ms flat accelerating exit. Under
+    // the probe harness the clock runs at half speed so timed
+    // screenshots can catch every phase of the path.
     _planeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: _kAnimProbe ? 5600 : 2800),
+      duration: const Duration(milliseconds: _kAnimProbe ? 6000 : 3000),
     );
     _planeController.addStatusListener((status) {
       // Once the plane has fully exited the viewport, remove the
@@ -1181,33 +1181,31 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
   // sampling / velocity-rotation machinery is untouched.
 
   // Phase boundaries as fractions of the whole flight.
-  static const double _leadEndT = 0.15; // glide off the button
-  static const double _spiralEndT = 0.60; // one growing loop
+  static const double _leadEndT = 0.30; // runway roll
+  static const double _spiralEndT = 0.68; // the growing loop
   // exit phase: _spiralEndT → 1.0
 
-  // Lead-in: a slow, slightly sagging glide to the LEFT, like the
-  // plane leaving your hand before it picks up speed. Leftward
-  // because the submit button sits near the viewport's right edge —
-  // the loops need the open space over the form, and the exit needs
-  // the whole diagonal back across the page to be seen growing.
-  static const double _leadDistance = 90.0; // px leftward
-  static const double _leadDip = 9.0; // px sag mid-glide
+  // RUNWAY (round 8): a long rightward take-off roll. Rightward
+  // because Icons.send's nose points right — the round-7 leftward
+  // glide made the glyph flip 180° the instant it detached (owner:
+  // "es flipt einfach instant"). easeInCubic + a sag makes it read
+  // as heavy: barely moving at release, drooping, then gathering
+  // real speed before pulling up into the loop.
+  static const double _runwayLength = 220.0; // px rightward, clamped
+  static const double _leadDip = 12.0; // px sag mid-roll
 
-  // Spiral: enters at the lead-in's end heading left, loops clockwise
-  // on screen (left → up → right → down: a loop-the-loop) with the
-  // radius growing exponentially — a tight entry curl opening into
-  // ONE big loop. Round 7: _spiralTurns 2 → 1 after owner feedback
-  // that the plane "spins 3-4 times" — total nose rotation is now
-  // ~1.3 turns (one clear loop plus the entry curl), not ~2.3.
-  static const double _spiralStartRadius = 15.0;
+  // Spiral: pulls up from the runway's end into a counterclockwise
+  // loop-the-loop (right → up → left → down) whose radius grows
+  // exponentially — the sketch's small circle opening into the big
+  // one within a single 360°+ sweep.
+  static const double _spiralStartRadius = 22.0;
   static const double _spiralEndRadius = 165.0;
   static const double _spiralTurns = 1.0;
 
-  // Exit climb-angle clamps (radians above the horizon). The actual
-  // angle is solved per launch so the exit line points straight at
-  // the viewport's top-right corner — see _solveExitAngle.
-  static const double _minExitAngle = 0.35; // ≈20°
-  static const double _maxExitAngle = 1.30; // ≈75°
+  // Exit climb angle above the horizon. Owner spec (round 8): a
+  // nearly flat 5-10° departure to the right — not the round-7
+  // corner shot that left at ~45°+.
+  static const double _exitClimbAngle = 0.14; // ≈8°
 
   // Scale is a pure exponential in normalized time, so growth is
   // barely-there through the lead-in, gentle through the loops, and
@@ -1229,94 +1227,86 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
     _trajectory = _buildTrajectory();
   }
 
-  /// Climb angle (radians above the horizon) that makes the exit line
-  /// point at the viewport's top-right corner. The exit point sits on
-  /// the spiral's upper-left arc and itself depends on the angle, so
-  /// a short fixed-point iteration solves the pair; it converges in a
-  /// couple of rounds for any on-screen launch position.
-  double _solveExitAngle(Offset center, double rEnd) {
-    final double cornerX = widget.viewportSize.width;
-    double alpha = math.pi / 4;
-    for (int i = 0; i < 3; i++) {
-      final double ex = center.dx - rEnd * math.sin(alpha);
-      final double ey = center.dy - rEnd * math.cos(alpha);
-      alpha = math
-          .atan2(ey, math.max(1.0, cornerX - ex))
-          .clamp(_minExitAngle, _maxExitAngle);
-    }
-    return alpha;
-  }
-
   /// Position on the sketch path at normalized time tn ∈ [0, 1].
   ///
   /// The three phases are C0-continuous by construction (each phase
   /// starts exactly where the previous ended) and close enough to C1
-  /// that the low-pass rotation filter absorbs the boundary.
+  /// that the low-pass rotation filter absorbs the boundaries.
   Offset _pathPosition(double tn, double geometryScale) {
     final Offset origin = widget.origin;
-    final double leadDistance = _leadDistance * geometryScale;
     final double r0 = _spiralStartRadius * geometryScale;
     final double rEnd = _spiralEndRadius * geometryScale;
+    // Runway length, clamped so the loop that follows it still fits
+    // inside the right edge (the spiral extends only ~0.25·rEnd to
+    // the right of its center — see the sweep geometry below).
+    final double runway = (_runwayLength * geometryScale).clamp(
+      40.0 * geometryScale,
+      math.max(40.0 * geometryScale,
+          widget.viewportSize.width - origin.dx - 120.0 * geometryScale),
+    );
 
     // Spiral geometry. Entry at the bottom of the circle heading
-    // left; polar angle φ INCREASES from π/2 so the loop runs
-    // clockwise on screen (left → up → right → down). The exit leaves
-    // from the spiral's upper-left arc, so the growing plane crosses
-    // back OVER the loop on its way to the top-right corner — the
-    // sketch's arrow through the circle.
-    final Offset spiralEntry = origin - Offset(leadDistance, 0);
+    // right; polar angle φ DECREASES from π/2 so the loop runs
+    // counterclockwise on screen (right → up → left → down) — the
+    // natural continuation of the rightward runway pull-up.
+    final Offset spiralEntry = origin + Offset(runway, 0);
     final Offset center = spiralEntry + Offset(0, -r0);
-    final double exitAngle = _solveExitAngle(center, rEnd);
-    // Exit when the tangent (−sin φ, cos φ) points exitAngle above
-    // the horizon toward the right: φ_exit = 3π/2 − exitAngle.
-    final double sweepTotal =
-        math.pi - exitAngle + 2 * math.pi * _spiralTurns;
+    // Exit when the tangent (sin φ, −cos φ) points _exitClimbAngle
+    // above the horizon toward the right: φ_exit = π/2 − angle.
+    const double sweepTotal =
+        _exitClimbAngle + 2 * math.pi * _spiralTurns;
     final double radiusGrowth = math.log(rEnd / r0) / sweepTotal;
 
     if (tn <= _leadEndT) {
-      // LEAD-IN: easeInQuad horizontal (slow release, gathering
-      // speed), one gentle sinusoidal sag returning to launch height.
+      // RUNWAY: easeInCubic — the plane barely creeps at release,
+      // sags under its own weight, then gathers real speed down the
+      // strip. No rotation flip: the glyph's nose already points
+      // along the roll direction.
       final double s = (tn / _leadEndT).clamp(0.0, 1.0);
       return origin +
           Offset(
-            -leadDistance * s * s,
+            runway * s * s * s,
             _leadDip * geometryScale * math.sin(math.pi * s),
           );
     }
 
     if (tn <= _spiralEndT) {
       // SPIRAL: constant angular rate. Linear speed rises with the
-      // radius, so the tiny first loop is leisurely and the big loop
+      // radius, so the tight pull-up is leisurely and the big loop
       // is fast — the plane visibly gains energy.
       final double u =
           ((tn - _leadEndT) / (_spiralEndT - _leadEndT)).clamp(0.0, 1.0);
       final double swept = sweepTotal * u;
-      final double phi = math.pi / 2 + swept;
+      final double phi = math.pi / 2 - swept;
       final double r = r0 * math.exp(radiusGrowth * swept);
       return center + Offset(r * math.cos(phi), r * math.sin(phi));
     }
 
-    // EXIT: straight line along the spiral's final tangent, blended
-    // linear+cubic so it starts at roughly the spiral's end speed and
-    // accelerates as it grows off through the top-right corner.
+    // EXIT: straight line along the spiral's final tangent — a nearly
+    // flat departure to the right. The travel is speed-driven, NOT
+    // distance-driven: it starts at exactly the spiral's end speed
+    // (no visible brake at the hand-off) and triples by the end, so
+    // the fly-off reads identically on any viewport width. The far
+    // end always overshoots every screen edge, and the overlay is
+    // torn down when the clock completes.
     final double w =
         ((tn - _spiralEndT) / (1.0 - _spiralEndT)).clamp(0.0, 1.0);
-    final double phiExit = math.pi / 2 + sweepTotal;
+    final double phiExit = math.pi / 2 - sweepTotal;
     final Offset exitPoint = center +
         Offset(rEnd * math.cos(phiExit), rEnd * math.sin(phiExit));
     final Offset exitDir = Offset(
-      math.cos(exitAngle),
-      -math.sin(exitAngle),
+      math.cos(_exitClimbAngle),
+      -math.sin(_exitClimbAngle),
     );
-    // Through the corner plus enough overshoot that the glyph (at up
-    // to _endScale×, ~96px half-width) is fully gone before removal.
-    final double exitDistance = Offset(
-          widget.viewportSize.width - exitPoint.dx,
-          exitPoint.dy,
-        ).distance +
-        260;
-    final double eased = 0.7 * w + 0.3 * w * w * w;
-    return exitPoint + exitDir * (exitDistance * eased);
+    // Spiral end speed in px per normalized-time unit; the exit
+    // integrates v(w) = v0·(1 + 2w²) → dist = v0·ΔT·(w + ⅔w³)·…
+    // folded into the simple polynomial below.
+    final double spiralEndSpeed =
+        rEnd * sweepTotal / (_spiralEndT - _leadEndT);
+    final double exitWindow = 1.0 - _spiralEndT;
+    final double dist =
+        spiralEndSpeed * exitWindow * (w + 0.667 * w * w * w);
+    return exitPoint + exitDir * dist;
   }
 
   /// Bake the parametric path into evenly spaced frames. Velocity is

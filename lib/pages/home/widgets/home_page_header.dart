@@ -156,14 +156,21 @@ class HomePageHeader extends StatelessWidget {
                               // the user reported.
                               height: size,
                             )
-                                .animate(
-                                  onPlay: (controller) => controller.repeat(reverse: true),
-                                )
+                                // One settling drift instead of the old
+                                // infinite bob (repeat(reverse: true)).
+                                // A permanently repeating animation forces
+                                // a full-canvas repaint + ImageBitmap
+                                // transfer EVERY frame FOREVER — profiled
+                                // at 93% of CPU time and the root cause of
+                                // the sub-1-fps home page on machines
+                                // without GPU-accelerated WebGL. The page
+                                // must be repaint-static when idle.
+                                .animate()
                                 .slideY(
                                   begin: 0.05,
-                                  end: -0.05,
-                                  duration: const Duration(milliseconds: 2500),
-                                  curve: Curves.easeInOut,
+                                  end: 0,
+                                  duration: const Duration(milliseconds: 1600),
+                                  curve: Curves.easeOut,
                                 );
                           },
                         ),

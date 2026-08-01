@@ -8,15 +8,13 @@ jobs:
       # Checkout Repository
       - uses: actions/checkout@v1
 
-      # Install Flutter command. Deliberately pinned to 3.32.8 — the
-      # engine the site has shipped with since May. A 3.44 deploy on
-      # 2026-08-01 made the home page visibly laggy on real hardware,
-      # so builds (CI and local deploys) stay on this version until
-      # a newer engine is perf-verified. font_awesome must stay ^10.x
-      # while on this pin (Dart 3.8 here; FA ^11 needs >=3.9).
+      # Install Flutter command. Kept on current stable — the home
+      # page lag investigated 2026-08-01 predates the 3.44 engine
+      # (owner confirmed), so no reason to stay on the old pin.
+      # font_awesome ^11 requires Dart >=3.9 (Flutter 3.44+).
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.8'
+          flutter-version: '3.44.4'
           channel: 'stable'
 
       # Build Website
