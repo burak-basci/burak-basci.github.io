@@ -1194,12 +1194,17 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
   static const double _runwayLength = 220.0; // px rightward, clamped
   static const double _leadDip = 12.0; // px sag mid-roll
 
-  // Spiral: pulls up from the runway's end into a counterclockwise
+  // Loop: pulls up from the runway's end into a counterclockwise
   // loop-the-loop (right → up → left → down) whose radius grows
-  // exponentially — the sketch's small circle opening into the big
-  // one within a single 360°+ sweep.
+  // exponentially. The loop is BOTTOM-ANCHORED (round 9): its center
+  // rides upward as the radius grows, so every pass returns to the
+  // runway's altitude at the bottom — exactly the owner's sketch,
+  // where the small and the big circle touch at their lowest point.
+  // Round 8's fixed-center spiral let the bottom sag by rEnd−r0
+  // (~130px), which read as the plane falling below the button and
+  // exiting underneath it.
   static const double _spiralStartRadius = 22.0;
-  static const double _spiralEndRadius = 165.0;
+  static const double _spiralEndRadius = 150.0;
   static const double _spiralTurns = 1.0;
 
   // Exit climb angle above the horizon. Owner spec (round 8): a
@@ -1245,12 +1250,15 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
           widget.viewportSize.width - origin.dx - 120.0 * geometryScale),
     );
 
-    // Spiral geometry. Entry at the bottom of the circle heading
+    // Loop geometry. Entry at the bottom of the circle heading
     // right; polar angle φ DECREASES from π/2 so the loop runs
     // counterclockwise on screen (right → up → left → down) — the
-    // natural continuation of the rightward runway pull-up.
+    // natural continuation of the rightward runway pull-up. The
+    // center is recomputed per sample at (entry.x, entry.y − r) so
+    // the circle GROWS UPWARD from a fixed bottom tangent point:
+    // the plane returns to runway altitude every pass and never
+    // sinks below the button.
     final Offset spiralEntry = origin + Offset(runway, 0);
-    final Offset center = spiralEntry + Offset(0, -r0);
     // Exit when the tangent (sin φ, −cos φ) points _exitClimbAngle
     // above the horizon toward the right: φ_exit = π/2 − angle.
     const double sweepTotal =
@@ -1271,14 +1279,16 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
     }
 
     if (tn <= _spiralEndT) {
-      // SPIRAL: constant angular rate. Linear speed rises with the
+      // LOOP: constant angular rate. Linear speed rises with the
       // radius, so the tight pull-up is leisurely and the big loop
-      // is fast — the plane visibly gains energy.
+      // is fast — the plane visibly gains energy. Bottom-anchored:
+      // the center sits r above the entry for the CURRENT radius.
       final double u =
           ((tn - _leadEndT) / (_spiralEndT - _leadEndT)).clamp(0.0, 1.0);
       final double swept = sweepTotal * u;
       final double phi = math.pi / 2 - swept;
       final double r = r0 * math.exp(radiusGrowth * swept);
+      final Offset center = spiralEntry + Offset(0, -r);
       return center + Offset(r * math.cos(phi), r * math.sin(phi));
     }
 
@@ -1291,8 +1301,11 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
     // torn down when the clock completes.
     final double w =
         ((tn - _spiralEndT) / (1.0 - _spiralEndT)).clamp(0.0, 1.0);
-    final double phiExit = math.pi / 2 - sweepTotal;
-    final Offset exitPoint = center +
+    const double phiExit = math.pi / 2 - sweepTotal;
+    // Bottom-anchored center at the final radius: the exit point
+    // lands back at (almost exactly) runway altitude.
+    final Offset exitCenter = spiralEntry + Offset(0, -rEnd);
+    final Offset exitPoint = exitCenter +
         Offset(rEnd * math.cos(phiExit), rEnd * math.sin(phiExit));
     final Offset exitDir = Offset(
       math.cos(_exitClimbAngle),
@@ -1303,7 +1316,7 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
     // folded into the simple polynomial below.
     final double spiralEndSpeed =
         rEnd * sweepTotal / (_spiralEndT - _leadEndT);
-    final double exitWindow = 1.0 - _spiralEndT;
+    const double exitWindow = 1.0 - _spiralEndT;
     final double dist =
         spiralEndSpeed * exitWindow * (w + 0.667 * w * w * w);
     return exitPoint + exitDir * dist;

@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 
 import '../../../../utils/values/values.dart';
 import '../../../utils/adaptive_layout.dart';
+import 'bobbing_hero_image_stub.dart'
+    if (dart.library.html) 'bobbing_hero_image_web.dart';
 import 'home_about_dev.dart';
 import 'home_scroll_down_button.dart';
 
@@ -71,11 +73,12 @@ class HomePageHeader extends StatelessWidget {
                         end: const Offset(1.0, 1.0),
                         curve: Curves.fastOutSlowIn,
                         duration: const Duration(milliseconds: 1000),
-                      )
-                      .blur(
-                        begin: const Offset(2.0, 2.0),
-                        end: const Offset(0.0, 0.0),
                       ),
+                  // (blur intro removed: flutter_animate's BlurEffect
+                  // keeps an ImageFiltered layer around even at sigma 0,
+                  // which forces a ~480px saveLayer on every repaint of
+                  // this surface — measurable raster cost for a barely
+                  // visible 2px fade-in blur.)
                 ),
 
                 /// White Circle
@@ -99,11 +102,8 @@ class HomePageHeader extends StatelessWidget {
                         curve: Curves.fastOutSlowIn,
                         duration: const Duration(milliseconds: 1000),
                         delay: const Duration(milliseconds: 300),
-                      )
-                      .blur(
-                        begin: const Offset(2.0, 2.0),
-                        end: const Offset(0.0, 0.0),
                       ),
+                  // (blur intro removed — see the grey circle above.)
                 ),
 
                 /// X
@@ -144,34 +144,22 @@ class HomePageHeader extends StatelessWidget {
                             } else {
                               size = Get.width * 0.44;
                             }
-                            return Image.asset(
-                              ImagePath.HOME_DUDE,
-                              fit: BoxFit.cover,
+                            // The bob lives in the BROWSER's compositor
+                            // (CSS keyframes on an <img> platform view),
+                            // not in Flutter: a Flutter-side repeat()
+                            // would keep the engine presenting the whole
+                            // canvas every frame forever — profiled at
+                            // 93% of CPU and the cause of the sub-1-fps
+                            // home page on software-WebGL machines. This
+                            // way the illustration keeps floating while
+                            // the Flutter surface stays fully static.
+                            return SizedBox(
                               width: size,
-                              // Explicit height locks the rendered box
-                              // even while the asset is still decoding.
-                              // Without it, the intrinsic height kicks in
-                              // post-decode and nudges layout — a stray
-                              // contributor to the scrollbar-thumb-jump
-                              // the user reported.
                               height: size,
-                            )
-                                // One settling drift instead of the old
-                                // infinite bob (repeat(reverse: true)).
-                                // A permanently repeating animation forces
-                                // a full-canvas repaint + ImageBitmap
-                                // transfer EVERY frame FOREVER — profiled
-                                // at 93% of CPU time and the root cause of
-                                // the sub-1-fps home page on machines
-                                // without GPU-accelerated WebGL. The page
-                                // must be repaint-static when idle.
-                                .animate()
-                                .slideY(
-                                  begin: 0.05,
-                                  end: 0,
-                                  duration: const Duration(milliseconds: 1600),
-                                  curve: Curves.easeOut,
-                                );
+                              child: buildBobbingHeroImage(
+                                assetPath: ImagePath.HOME_DUDE,
+                              ),
+                            );
                           },
                         ),
                       ),
