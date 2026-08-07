@@ -95,6 +95,64 @@ class HomePageState extends State<HomePage>
     if (!_scrollController.hasClients) return;
     final double px = _scrollController.position.pixels;
     if (px >= 0) _lastKnownOffset = px;
+    _refreshTileWindow();
+  }
+
+  // --- Cascade paint window ------------------------------------------
+  // The cascade is a Stack, and a Stack paints *every* child — so all 33
+  // project tiles were rasterised on every frame even though only ~3 can
+  // be on screen. Measured raster cost was dead linear in tile count
+  // (~25 ms/tile at 3200x1800): one frame cost ~800 ms against ~60 ms on
+  // every other route, which is what made hover, scroll and even the
+  // mouse cursor lag on the home page.
+  //
+  // Tiles outside this window render as [Offstage] (via [Visibility] with
+  // `maintainState`), so they are neither laid out nor painted, while
+  // their State — notably [SlideInOnVisible]'s `_hasAnimated` latch — is
+  // preserved, so scrolling back up does not re-play entrance animations.
+  //
+  // Crucially the Stack's total height is fixed by its parent SizedBox,
+  // so collapsing children CANNOT move `maxScrollExtent`. That preserves
+  // the scrollbar-thumb stability won by the ListView →
+  // SingleChildScrollView switch below.
+  int _tileWindowFirst = 0;
+  int _tileWindowLast = 0;
+
+  /// Y offset of the cascade Stack inside the scroll content — the sum of
+  /// every frozen section height that precedes it in the Column.
+  double get _cascadeTop =>
+      _headerH + _topSpacerH + _recentHeadingH + _midSpacerH;
+
+  /// Index range of tiles whose bounds intersect the viewport, padded by
+  /// three quarters of a viewport on each side so a tile is mounted (and
+  /// its slide-in armed) well before it scrolls into view.
+  List<int> _computeTileWindow() {
+    final int n = recentWorks.length;
+    if (!_heightsReady || n == 0) return <int>[0, 0];
+    final double buffer = _viewportHeight * 0.75;
+    final double top = _lastKnownOffset - buffer;
+    final double bottom = _lastKnownOffset + _viewportHeight + buffer;
+    int first = -1;
+    int last = -1;
+    for (int i = 0; i < n; i++) {
+      final double tileTop = _cascadeTop + _subH * i;
+      if (tileTop + _itemH > top && tileTop < bottom) {
+        if (first < 0) first = i;
+        last = i;
+      }
+    }
+    if (first < 0) return <int>[0, 0];
+    return <int>[first, last];
+  }
+
+  void _refreshTileWindow() {
+    final List<int> win = _computeTileWindow();
+    if (win[0] == _tileWindowFirst && win[1] == _tileWindowLast) return;
+    if (!mounted) return;
+    setState(() {
+      _tileWindowFirst = win[0];
+      _tileWindowLast = win[1];
+    });
   }
 
   /// Compute and cache every viewport-derived height in one shot. Called
@@ -135,6 +193,11 @@ class HomePageState extends State<HomePage>
                 : 48.0;
     _recentHeadingH = headingFs * 2.0 * 2.0;
     _heightsReady = true;
+    // Seed the paint window directly (no setState) — this runs from
+    // didChangeDependencies and from inside didChangeMetrics's setState.
+    final List<int> win = _computeTileWindow();
+    _tileWindowFirst = win[0];
+    _tileWindowLast = win[1];
   }
 
   @override
@@ -417,87 +480,95 @@ class HomePageState extends State<HomePage>
                       // idle gap, so a lone tile entering view well
                       // after the previous wave does NOT inherit a
                       // long pending delay.
-                      child: SlideInOnVisible(
-                        uniqueKey: ValueKey<String>('cascade-$i'),
-                        staggerGroup: 'home-cascade',
-                        // Outer Stack wraps a GestureDetector-wrapped tile
-                        // so we can layer a dead-zone absorber over its
-                        // rightmost 8 px (the standard Flutter Scrollbar
-                        // thumb width).
-                        //
-                        // History: we previously wrapped the tile in
-                        // `url_launcher`'s `Link`, which on web renders a
-                        // transparent HTML `<a>` element via a platform
-                        // view on top of its child. Platform-view DOM
-                        // elements sit in a higher stacking layer than any
-                        // Flutter widget (whether painted inside the tile
-                        // OR layered as a sibling in a Flutter Stack), so
-                        // the browser routes the click to the anchor first
-                        // and navigates before any Flutter GestureDetector
-                        // ever fires. That made the absorber unreachable.
-                        //
-                        // Switching to a plain `GestureDetector` that calls
-                        // `PageTransition.goTo` removes the platform-view
-                        // anchor entirely, so the Flutter widget tree owns
-                        // every pointer event and the absorber finally
-                        // wins clicks in its strip.
-                        //
-                        // Trade-offs (accepted): no middle-click
-                        // open-in-new-tab and no "Copy link address" on
-                        // tiles. SEO is unaffected for tiles specifically;
-                        // crawlers still find the project URLs through
-                        // sitemap/route registration.
-                        child: Stack(
-                          children: <Widget>[
-                            GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () {
-                                PageTransition.goTo(context, logical);
-                              },
-                              child: ProjectItemLarge(
-                                projectNumber: (i + 1) > 9
-                                    ? "${i + 1}"
-                                    : "0${i + 1}",
-                                imageUrl: projects[i].coverFor(lang),
-                                hoverImageUrl: projects[i].coverColorUrl,
-                                // Pass the project + lang so the tile
-                                // renders the live Flutter cover
-                                // (static mode) instead of the legacy
-                                // baked .webp.
-                                project: projects[i],
-                                lang: lang,
-                                projectItemheight: itemH,
-                                subheight: subH,
-                                duration: const Duration(milliseconds: 900),
-                                backgroundColor: CustomColors.accentColor2
-                                    .withValues(alpha: 0.35),
-                                title: projects[i].titleFor(lang),
-                                subtitle: projects[i].categoryFor(lang),
-                                containerColor: projects[i].primaryColor,
+                      // Off-screen tiles render as Offstage: not laid
+                      // out, not painted, State preserved. See
+                      // [_computeTileWindow].
+                      child: Visibility(
+                        visible:
+                            i >= _tileWindowFirst && i <= _tileWindowLast,
+                        maintainState: true,
+                        child: SlideInOnVisible(
+                          uniqueKey: ValueKey<String>('cascade-$i'),
+                          staggerGroup: 'home-cascade',
+                          // Outer Stack wraps a GestureDetector-wrapped tile
+                          // so we can layer a dead-zone absorber over its
+                          // rightmost 8 px (the standard Flutter Scrollbar
+                          // thumb width).
+                          //
+                          // History: we previously wrapped the tile in
+                          // `url_launcher`'s `Link`, which on web renders a
+                          // transparent HTML `<a>` element via a platform
+                          // view on top of its child. Platform-view DOM
+                          // elements sit in a higher stacking layer than any
+                          // Flutter widget (whether painted inside the tile
+                          // OR layered as a sibling in a Flutter Stack), so
+                          // the browser routes the click to the anchor first
+                          // and navigates before any Flutter GestureDetector
+                          // ever fires. That made the absorber unreachable.
+                          //
+                          // Switching to a plain `GestureDetector` that calls
+                          // `PageTransition.goTo` removes the platform-view
+                          // anchor entirely, so the Flutter widget tree owns
+                          // every pointer event and the absorber finally
+                          // wins clicks in its strip.
+                          //
+                          // Trade-offs (accepted): no middle-click
+                          // open-in-new-tab and no "Copy link address" on
+                          // tiles. SEO is unaffected for tiles specifically;
+                          // crawlers still find the project URLs through
+                          // sitemap/route registration.
+                          child: Stack(
+                            children: <Widget>[
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
                                 onTap: () {
                                   PageTransition.goTo(context, logical);
                                 },
+                                child: ProjectItemLarge(
+                                  projectNumber: (i + 1) > 9
+                                      ? "${i + 1}"
+                                      : "0${i + 1}",
+                                  imageUrl: projects[i].coverFor(lang),
+                                  hoverImageUrl: projects[i].coverColorUrl,
+                                  // Pass the project + lang so the tile
+                                  // renders the live Flutter cover
+                                  // (static mode) instead of the legacy
+                                  // baked .webp.
+                                  project: projects[i],
+                                  lang: lang,
+                                  projectItemheight: itemH,
+                                  subheight: subH,
+                                  duration: const Duration(milliseconds: 900),
+                                  backgroundColor: CustomColors.accentColor2
+                                      .withValues(alpha: 0.35),
+                                  title: projects[i].titleFor(lang),
+                                  subtitle: projects[i].categoryFor(lang),
+                                  containerColor: projects[i].primaryColor,
+                                  onTap: () {
+                                    PageTransition.goTo(context, logical);
+                                  },
+                                ),
                               ),
-                            ),
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              bottom: 0,
-                              width: 8,
-                              child: MouseRegion(
-                                cursor: SystemMouseCursors.basic,
-                                child: Listener(
-                                  behavior: HitTestBehavior.opaque,
-                                  onPointerDown: (_) {},
-                                  child: GestureDetector(
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: 8,
+                                child: MouseRegion(
+                                  cursor: SystemMouseCursors.basic,
+                                  child: Listener(
                                     behavior: HitTestBehavior.opaque,
-                                    onTap: () {},
-                                    child: const SizedBox.expand(),
+                                    onPointerDown: (_) {},
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () {},
+                                      child: const SizedBox.expand(),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
