@@ -147,11 +147,91 @@
   <link rel="manifest" href="manifest.json">
 
   <script>
-    const serviceWorkerVersion = "1333878139" /* Flutter's service worker is deprecated and will be removed in a future Flutter release. */;
+    const serviceWorkerVersion = "4178047075" /* Flutter's service worker is deprecated and will be removed in a future Flutter release. */;
   </script>
   <script src="flutter.js" defer></script>
+
+  <!--
+    Pre-boot splash. Flutter web paints nothing until main.dart.js and
+    the CanvasKit wasm are downloaded and the engine has booted — measured
+    at ~2.3 s to first contentful paint on a fast connection while
+    DOMContentLoaded fired at 0.4 s, i.e. ~1.9 s of blank white page (and
+    no paint at all inside 20 s on a throttled connection). The app's own
+    intro animation cannot cover that gap because it *is* Flutter.
+
+    This markup is plain HTML/CSS, so it paints on the first frame the
+    browser has. Flutter fires `flutter-first-frame` once its own first
+    frame is up; we fade out then, which hands over straight into the
+    intro animation. System fonts on purpose — the webfonts are part of
+    what we are waiting for.
+  -->
+  <style>
+    #boot-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      transition: opacity 0.35s ease;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    #boot-splash.is-done { opacity: 0; pointer-events: none; }
+    #boot-splash .bs-mark {
+      font-size: 54px;
+      font-weight: 800;
+      letter-spacing: -0.045em;
+      color: #0f0f0f;
+      line-height: 1;
+    }
+    #boot-splash .bs-bar {
+      margin-top: 24px;
+      width: 168px;
+      height: 2px;
+      background: #e8e8e8;
+      overflow: hidden;
+    }
+    #boot-splash .bs-bar > i {
+      display: block;
+      height: 100%;
+      width: 38%;
+      background: #0f0f0f;
+      animation: bs-slide 1.15s ease-in-out infinite;
+    }
+    @keyframes bs-slide {
+      0%   { transform: translateX(-110%); }
+      100% { transform: translateX(370%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #boot-splash .bs-bar > i { animation: none; width: 100%; opacity: 0.35; }
+    }
+  </style>
 </head>
 <body>
+  <div id="boot-splash">
+    <div class="bs-mark">BB</div>
+    <div class="bs-bar"><i></i></div>
+  </div>
+  <script>
+    (function () {
+      var removed = false;
+      function done() {
+        if (removed) return;
+        removed = true;
+        var el = document.getElementById('boot-splash');
+        if (!el) return;
+        el.classList.add('is-done');
+        setTimeout(function () { el.remove(); }, 400);
+      }
+      window.addEventListener('flutter-first-frame', done);
+      // Belt and braces: never let the splash outlive the app if the
+      // event is missed for any reason.
+      setTimeout(done, 20000);
+    })();
+  </script>
+
   <!--
     Crawler-visible content. Search engines read the body before the Flutter
     JS engine takes over the document. Once Flutter mounts, this <header>
