@@ -13,7 +13,7 @@ class CustomColors {
   static const Color white = Color(0xFFFFFFFF);
   static const Color black = Color(0xFF000000);
   static const Color black100 = Color(0xFF303030);
-  static Color textSelectionColor = const Color(0xFF212455).withOpacity(0.5);
+  static Color textSelectionColor = const Color(0xFF212455).withValues(alpha: 0.5);
 
   static const Color grey = Color(0xFFE1E1E1);
   static const Color grey100 = Color(0xFFE8E8E8);

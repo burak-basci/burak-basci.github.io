@@ -75,7 +75,7 @@ class _PillButtonState extends State<_PillButton> {
             children: <Widget>[
               Text(
                 widget.label,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontFamily: StringConst.INTER,
                   fontSize: 13,
@@ -84,7 +84,7 @@ class _PillButtonState extends State<_PillButton> {
                 ),
               ),
               const SizedBox(width: 12),
-              Icon(
+              const Icon(
                 Icons.arrow_forward,
                 color: Colors.white,
                 size: 16,
@@ -659,7 +659,7 @@ class ProjectDetailPageState extends State<ProjectDetailPage>
                 // Anchor the orbit centre to the upper-right region;
                 // radii are kept small so the drift is almost imperceptible.
                 final double cx = c.maxWidth - 140;
-                final double cy = 160;
+                const double cy = 160;
                 const double rx = 42;
                 const double ry = 26;
                 return AnimatedBuilder(

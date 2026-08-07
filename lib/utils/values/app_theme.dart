@@ -5,7 +5,7 @@ import 'values.dart';
 class AppTheme {
   static const _lightFillColor = Colors.black;
 
-  static final Color _lightFocusColor = Colors.black.withOpacity(0.12);
+  static final Color _lightFocusColor = Colors.black.withValues(alpha: 0.12);
 
   static ThemeData lightThemeData = themeData(lightColorScheme, _lightFocusColor);
 
@@ -15,16 +15,16 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: _textTheme.apply(fontSizeDelta: 1.0),
       iconTheme: const IconThemeData(color: CustomColors.white),
-      canvasColor: colorScheme.background,
+      canvasColor: colorScheme.surface,
       appBarTheme: const AppBarTheme(
-        color: CustomColors.primaryColor,
+        backgroundColor: CustomColors.primaryColor,
       ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: CustomColors.black,
         selectionColor: CustomColors.textSelectionColor,
         selectionHandleColor: CustomColors.primaryColor,
       ),
-      scaffoldBackgroundColor: colorScheme.background,
+      scaffoldBackgroundColor: colorScheme.surface,
       highlightColor: Colors.transparent,
       hintColor: colorScheme.primary,
       focusColor: CustomColors.primaryColor,
@@ -35,9 +35,7 @@ class AppTheme {
   static const ColorScheme lightColorScheme = ColorScheme(
     primary: CustomColors.primaryColor,
     secondary: CustomColors.secondaryColor,
-    background: CustomColors.primaryColor,
     surface: CustomColors.primaryColor,
-    onBackground: Colors.white,
     error: _lightFillColor,
     onError: _lightFillColor,
     onPrimary: _lightFillColor,

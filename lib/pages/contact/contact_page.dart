@@ -1577,8 +1577,8 @@ class _StatusBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isSuccess
-            ? color.withOpacity(0.18)
-            : color.withOpacity(0.10),
+            ? color.withValues(alpha: 0.18)
+            : color.withValues(alpha: 0.10),
         border: Border(left: BorderSide(color: color, width: 3)),
       ),
       child: Row(

@@ -1007,7 +1007,7 @@ class _HeroCoverPainter extends CustomPainter {
   void _paintAurora(Canvas canvas, Size size, double t) {
     // 35° from vertical (i.e. 55° from horizontal) — a soft tilt.
     const double angleDeg = 35.0;
-    final double angleRad = angleDeg * math.pi / 180.0;
+    const double angleRad = angleDeg * math.pi / 180.0;
     // Sweep progress: 0..1 maps to the band's center traveling across
     // the perpendicular axis. We squash t to [0,1] over the first 90%
     // of the controller and pin to 1.0 (off-screen-right) for the last
@@ -1927,26 +1927,26 @@ class _IllustrationEntry {
 // First match wins. The `key` value is dispatched to the matching
 // `_paintXxx` method via [_HeroCoverPainter._dispatchIllustration].
 final List<_IllustrationEntry> _illustrationTable = <_IllustrationEntry>[
-  _IllustrationEntry(<String>{'LEGAL', 'EVIDENCE'}, 'stackedStrata'),
-  _IllustrationEntry(
+  const _IllustrationEntry(<String>{'LEGAL', 'EVIDENCE'}, 'stackedStrata'),
+  const _IllustrationEntry(
       <String>{'DOCUMENTS', 'DOCUMENT', 'DOKUMENTE'}, 'foldedPaper'),
-  _IllustrationEntry(
+  const _IllustrationEntry(
       <String>{'ROBOTICS', 'ROBOTIK', 'ROBOTIK-FORSCHUNG'},
       'machinedComponent'),
-  _IllustrationEntry(<String>{'VR', 'HEALTHCARE', 'GESUNDHEIT'}, 'stage'),
-  _IllustrationEntry(
+  const _IllustrationEntry(<String>{'VR', 'HEALTHCARE', 'GESUNDHEIT'}, 'stage'),
+  const _IllustrationEntry(
       <String>{'GAME', 'UNREAL', 'ITCH.IO', 'SPIEL'}, 'gameArc'),
-  _IllustrationEntry(
+  const _IllustrationEntry(
       <String>{'SELF-HOSTED', 'EDGE', 'IOT', 'INFRA', 'PROXMOX'},
       'monumentalBlock'),
-  _IllustrationEntry(<String>{'KUBERNETES', 'CLOUD'}, 'orbitingCircles'),
-  _IllustrationEntry(
+  const _IllustrationEntry(<String>{'KUBERNETES', 'CLOUD'}, 'orbitingCircles'),
+  const _IllustrationEntry(
       <String>{'3D', 'PROPERTY', 'REAL-ESTATE', 'PROPTECH'},
       'buildingSilhouette'),
-  _IllustrationEntry(
+  const _IllustrationEntry(
       <String>{'SEARCH', 'RAG', 'VECTOR', 'SUCHE'}, 'constellation'),
-  _IllustrationEntry(<String>{'VOICE', 'STT', 'TTS'}, 'voiceWave'),
-  _IllustrationEntry(
+  const _IllustrationEntry(<String>{'VOICE', 'STT', 'TTS'}, 'voiceWave'),
+  const _IllustrationEntry(
       <String>{
         'E-COMMERCE',
         'COMMERCE',
@@ -1956,14 +1956,14 @@ final List<_IllustrationEntry> _illustrationTable = <_IllustrationEntry>[
         'UTILITY',
       },
       'packageCube'),
-  _IllustrationEntry(
+  const _IllustrationEntry(
       <String>{'SALES', 'OUTREACH', 'BROWSER', 'SCRAPING', 'VERTRIEB'},
       'sparseNetwork'),
-  _IllustrationEntry(
+  const _IllustrationEntry(
       <String>{'WEB3', 'CHARITY', 'SPENDEN'}, 'orbitalToken'),
-  _IllustrationEntry(<String>{'WEB'}, 'webWindow'),
-  _IllustrationEntry(<String>{'DEVSECOPS'}, 'orbitingCircles'),
-  _IllustrationEntry(
+  const _IllustrationEntry(<String>{'WEB'}, 'webWindow'),
+  const _IllustrationEntry(<String>{'DEVSECOPS'}, 'orbitingCircles'),
+  const _IllustrationEntry(
       <String>{
         'SAAS',
         'AI',
@@ -1978,8 +1978,8 @@ final List<_IllustrationEntry> _illustrationTable = <_IllustrationEntry>[
         'VISION',
       },
       'strataLines'),
-  _IllustrationEntry(<String>{'MOBILE', 'MOBIL'}, 'mobileOutline'),
-  _IllustrationEntry(
+  const _IllustrationEntry(<String>{'MOBILE', 'MOBIL'}, 'mobileOutline'),
+  const _IllustrationEntry(
       <String>{'META', 'PORTFOLIO', 'PERSONAL', 'PERSÖNLICH', 'IN-HOUSE'},
       'diagonalLine'),
 ];

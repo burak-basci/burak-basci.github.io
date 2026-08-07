@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 import '../../../../utils/i18n_strings.dart';
 import '../../../utils/lang.dart';

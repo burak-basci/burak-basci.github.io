@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../utils/adaptive_layout.dart';
-import '../../../utils/functions.dart';
 import '../../../utils/i18n_strings.dart';
 import '../../../utils/intro_redirect.dart';
 import '../../../utils/lang.dart';
@@ -14,8 +13,6 @@ import '../../data/projects.dart';
 import '../../widgets/animations/slide_in_on_visible.dart';
 import '../../widgets/buttons/animated_bubble_button.dart';
 import '../../widgets/project_item/project_item.dart';
-import '../project_detail/project_detail_page.dart';
-import '../../widgets/helper/custom_spacer.dart';
 import '../../widgets/scaffolding/footer/full_footer.dart';
 import '../../widgets/scaffolding/page_wrapper.dart';
 import '../../widgets/text/slide_box_transitioning_text.dart';
@@ -528,8 +525,12 @@ class HomePageState extends State<HomePage>
                                   projectNumber: (i + 1) > 9
                                       ? "${i + 1}"
                                       : "0${i + 1}",
-                                  imageUrl: projects[i].coverFor(lang),
-                                  hoverImageUrl: projects[i].coverColorUrl,
+                                  // Home tiles paint small and angled, so
+                                  // they take the 900px thumb variants; the
+                                  // detail pages keep the full-size covers.
+                                  imageUrl: projects[i].coverThumbFor(lang),
+                                  hoverImageUrl:
+                                      projects[i].coverColorThumbUrl,
                                   // Pass the project + lang so the tile
                                   // renders the live Flutter cover
                                   // (static mode) instead of the legacy

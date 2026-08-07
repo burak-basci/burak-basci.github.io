@@ -47,6 +47,16 @@ class _DeviceMockupState extends State<DeviceMockup> {
   double _scrollT = 0.0;
   final GlobalKey _key = GlobalKey();
 
+  /// Decode width for the screenshot asset. Project screenshots are
+  /// shipped at up to 1844px wide (some are ~1 MB PNGs) but never
+  /// painted wider than [DeviceMockup.maxWidth]; decoding at native
+  /// size wasted several MB of RGBA per mockup, and a detail page
+  /// stacks a handful of them.
+  int get _decodeWidth =>
+      (widget.maxWidth * MediaQuery.devicePixelRatioOf(context))
+          .round()
+          .clamp(1, 4096);
+
   static const double _baseTiltY = 0.04; // resting Y rotation (radians)
   static const double _baseTiltX = 0.02; // resting X rotation (radians)
   static const double _scrollGainX = 0.08; // X rotation gain on scroll
@@ -82,8 +92,8 @@ class _DeviceMockupState extends State<DeviceMockup> {
     final double viewportH = MediaQuery.of(context).size.height;
     // (-1, 1): widgetCentre below the top of the viewport on its
     // way in is negative; once past viewport centre it goes positive.
-    final double t = ((widgetCentreY - viewportH / 2) / (viewportH / 2))
-        .clamp(-1.5, 1.5);
+    final double t =
+        ((widgetCentreY - viewportH / 2) / (viewportH / 2)).clamp(-1.5, 1.5);
     if ((t - _scrollT).abs() > 0.005) {
       setState(() => _scrollT = t);
     }
@@ -164,8 +174,12 @@ class _DeviceMockupState extends State<DeviceMockup> {
           color: const Color(0xFF111111),
           borderRadius: BorderRadius.circular(44),
           boxShadow: const <BoxShadow>[
-            BoxShadow(color: Color(0x33000000), blurRadius: 40, offset: Offset(0, 24)),
-            BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 6)),
+            BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 40,
+                offset: Offset(0, 24)),
+            BoxShadow(
+                color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 6)),
           ],
           border: Border.all(color: const Color(0xFF1A1A1A), width: 3),
         ),
@@ -175,7 +189,8 @@ class _DeviceMockupState extends State<DeviceMockup> {
           child: Stack(
             children: <Widget>[
               Positioned.fill(
-                child: Image.asset(widget.imageAsset, fit: BoxFit.cover),
+                child: Image.asset(widget.imageAsset,
+                    fit: BoxFit.cover, cacheWidth: _decodeWidth),
               ),
               Positioned(
                 top: 8,
@@ -210,13 +225,12 @@ class _DeviceMockupState extends State<DeviceMockup> {
     return LayoutBuilder(
       builder: (context, constraints) {
         const double screenAspect = 16 / 10; // MacBook-ish open clamshell
-        const double baseHRatio = 0.045;      // base height vs width
-        const double overhangRatio = 0.06;    // flare vs width
+        const double baseHRatio = 0.045; // base height vs width
+        const double overhangRatio = 0.06; // flare vs width
         const double totalRatio =
             1 / screenAspect + baseHRatio; // total height / width
         final double w = constraints.hasBoundedHeight
-            ? math.min(constraints.maxWidth,
-                constraints.maxHeight / totalRatio)
+            ? math.min(constraints.maxWidth, constraints.maxHeight / totalRatio)
             : constraints.maxWidth;
         final double screenH = w / screenAspect;
         final double baseH = w * baseHRatio;
@@ -246,8 +260,8 @@ class _DeviceMockupState extends State<DeviceMockup> {
                         blurRadius: 36,
                         offset: Offset(0, 18)),
                   ],
-                  border: Border.all(
-                      color: const Color(0xFF2A2A2D), width: 1.5),
+                  border:
+                      Border.all(color: const Color(0xFF2A2A2D), width: 1.5),
                 ),
                 padding: EdgeInsets.fromLTRB(
                     w * 0.022, w * 0.022, w * 0.022, w * 0.022),
@@ -259,7 +273,7 @@ class _DeviceMockupState extends State<DeviceMockup> {
                         child: Container(
                           color: Colors.black,
                           child: Image.asset(widget.imageAsset,
-                              fit: BoxFit.cover),
+                              cacheWidth: _decodeWidth, fit: BoxFit.cover),
                         ),
                       ),
                     ),
@@ -325,8 +339,7 @@ class _DeviceMockupState extends State<DeviceMockup> {
                           bottomRight: Radius.circular(20),
                         ),
                         border: Border(
-                          top: BorderSide(
-                              color: Color(0xFF5A5D63), width: 1.2),
+                          top: BorderSide(color: Color(0xFF5A5D63), width: 1.2),
                         ),
                       ),
                       child: Center(
@@ -377,8 +390,7 @@ class _DeviceMockupState extends State<DeviceMockup> {
                     blurRadius: 12,
                     offset: Offset(0, 4)),
               ],
-              border: Border.all(
-                  color: const Color(0xFF1F1F22), width: 2),
+              border: Border.all(color: const Color(0xFF1F1F22), width: 2),
             ),
             padding: EdgeInsets.all(bezel),
             child: ClipRRect(
@@ -388,8 +400,8 @@ class _DeviceMockupState extends State<DeviceMockup> {
                   Positioned.fill(
                     child: Container(
                       color: Colors.black,
-                      child:
-                          Image.asset(widget.imageAsset, fit: BoxFit.cover),
+                      child: Image.asset(widget.imageAsset,
+                          fit: BoxFit.cover, cacheWidth: _decodeWidth),
                     ),
                   ),
                   // Camera dot, top centre of the bezel area.
@@ -426,11 +438,9 @@ class _DeviceMockupState extends State<DeviceMockup> {
         const double screenAspect = 16 / 9;
         const double neckHRatio = 0.04;
         const double footHRatio = 0.018;
-        const double totalRatio =
-            1 / screenAspect + neckHRatio + footHRatio;
+        const double totalRatio = 1 / screenAspect + neckHRatio + footHRatio;
         final double w = constraints.hasBoundedHeight
-            ? math.min(constraints.maxWidth,
-                constraints.maxHeight / totalRatio)
+            ? math.min(constraints.maxWidth, constraints.maxHeight / totalRatio)
             : constraints.maxWidth;
         final double screenH = w / screenAspect;
         final double neckH = w * neckHRatio;
@@ -455,14 +465,14 @@ class _DeviceMockupState extends State<DeviceMockup> {
                         blurRadius: 40,
                         offset: Offset(0, 20)),
                   ],
-                  border: Border.all(
-                      color: const Color(0xFF2A2A2E), width: 1.5),
+                  border:
+                      Border.all(color: const Color(0xFF2A2A2E), width: 1.5),
                 ),
                 padding: EdgeInsets.fromLTRB(
-                    w * 0.014,
-                    w * 0.014,
-                    w * 0.014,
-                    w * 0.030, // thicker bottom bezel (chin)
+                  w * 0.014,
+                  w * 0.014,
+                  w * 0.014,
+                  w * 0.030, // thicker bottom bezel (chin)
                 ),
                 child: Stack(
                   children: <Widget>[
@@ -472,7 +482,7 @@ class _DeviceMockupState extends State<DeviceMockup> {
                         child: Container(
                           color: Colors.black,
                           child: Image.asset(widget.imageAsset,
-                              fit: BoxFit.cover),
+                              cacheWidth: _decodeWidth, fit: BoxFit.cover),
                         ),
                       ),
                     ),
@@ -540,7 +550,10 @@ class _DeviceMockupState extends State<DeviceMockup> {
           color: const Color(0xFF0B0F12),
           borderRadius: BorderRadius.circular(12),
           boxShadow: const <BoxShadow>[
-            BoxShadow(color: Color(0x44000000), blurRadius: 40, offset: Offset(0, 22)),
+            BoxShadow(
+                color: Color(0x44000000),
+                blurRadius: 40,
+                offset: Offset(0, 22)),
           ],
           border: Border.all(color: const Color(0xFF1A2329), width: 1),
         ),
@@ -566,6 +579,7 @@ class _DeviceMockupState extends State<DeviceMockup> {
                 widget.imageAsset,
                 fit: BoxFit.cover,
                 width: double.infinity,
+                cacheWidth: _decodeWidth,
               ),
             ),
           ],
@@ -591,11 +605,9 @@ class _DeviceMockupState extends State<DeviceMockup> {
         const double screenAspect = 16 / 9;
         const double footHRatio = 0.022;
         const double gapRatio = 0.012;
-        const double totalRatio =
-            1 / screenAspect + footHRatio + gapRatio;
+        const double totalRatio = 1 / screenAspect + footHRatio + gapRatio;
         final double w = constraints.hasBoundedHeight
-            ? math.min(constraints.maxWidth,
-                constraints.maxHeight / totalRatio)
+            ? math.min(constraints.maxWidth, constraints.maxHeight / totalRatio)
             : constraints.maxWidth;
         final double screenH = w / screenAspect;
         final double footH = w * footHRatio;
@@ -620,14 +632,14 @@ class _DeviceMockupState extends State<DeviceMockup> {
                         blurRadius: 40,
                         offset: Offset(0, 20)),
                   ],
-                  border: Border.all(
-                      color: const Color(0xFF26262B), width: 1.5),
+                  border:
+                      Border.all(color: const Color(0xFF26262B), width: 1.5),
                 ),
                 padding: EdgeInsets.fromLTRB(
-                    w * 0.012,
-                    w * 0.012,
-                    w * 0.012,
-                    w * 0.028, // thicker bottom chin
+                  w * 0.012,
+                  w * 0.012,
+                  w * 0.012,
+                  w * 0.028, // thicker bottom chin
                 ),
                 child: Stack(
                   children: <Widget>[
@@ -637,7 +649,7 @@ class _DeviceMockupState extends State<DeviceMockup> {
                         child: Container(
                           color: Colors.black,
                           child: Image.asset(widget.imageAsset,
-                              fit: BoxFit.cover),
+                              cacheWidth: _decodeWidth, fit: BoxFit.cover),
                         ),
                       ),
                     ),
@@ -690,11 +702,15 @@ class _DeviceMockupState extends State<DeviceMockup> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           boxShadow: const <BoxShadow>[
-            BoxShadow(color: Color(0x33000000), blurRadius: 32, offset: Offset(0, 18)),
+            BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 32,
+                offset: Offset(0, 18)),
           ],
         ),
         clipBehavior: Clip.hardEdge,
-        child: Image.asset(widget.imageAsset, fit: BoxFit.cover),
+        child: Image.asset(widget.imageAsset,
+            fit: BoxFit.cover, cacheWidth: _decodeWidth),
       ),
     );
   }
