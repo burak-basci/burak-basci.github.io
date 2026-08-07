@@ -541,6 +541,9 @@ class HomePageState extends State<HomePage>
                                   // Home tiles paint small and angled, so
                                   // they take the 900px thumb variants; the
                                   // detail pages keep the full-size covers.
+                                  // Static baked cover instead of the
+                                  // live painter — see [useBakedCover].
+                                  useBakedCover: true,
                                   imageUrl: projects[i].coverThumbFor(lang),
                                   hoverImageUrl:
                                       projects[i].coverColorThumbUrl,

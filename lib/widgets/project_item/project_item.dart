@@ -167,9 +167,22 @@ class ProjectItemData {
   static String _thumb(String path) =>
       path.replaceFirst(RegExp(r'\.(webp|jpg|jpeg|png)$'), '-thumb.webp');
 
-  /// Cover for the home cascade — small variant.
-  // ignore: avoid_unused_constructor_parameters
-  String coverThumbFor(AppLang lang) => _thumb(image);
+  /// Cover for the home cascade — small variant, language-aware.
+  ///
+  /// The baked covers have their title and category rendered into the
+  /// image, so German needs the `cover-de` twin (all 33 projects ship
+  /// one, and they genuinely differ). [coverFor] predates this and
+  /// always returned the English asset, which was harmless only because
+  /// nothing painted it.
+  String coverThumbFor(AppLang lang) => _thumb(
+        lang == AppLang.de
+            // Lookahead, not a capture group: Dart's replaceFirst treats
+            // the replacement as a literal, so `\1` would be inserted
+            // verbatim and produce a path that does not exist.
+            ? image.replaceFirst(
+                RegExp(r'cover(?=\.(webp|jpg|jpeg|png)$)'), 'cover-de')
+            : image,
+      );
 
   /// Hover wipe-panel cover for the home cascade — small variant.
   String? get coverColorThumbUrl =>
@@ -276,6 +289,7 @@ class ProjectItemLarge extends StatefulWidget {
     this.hoverImageUrl,
     this.project,
     this.lang,
+    this.useBakedCover = false,
     this.projectItemheight,
     this.subheight,
     this.coloredContainerHeight,
@@ -303,6 +317,20 @@ class ProjectItemLarge extends StatefulWidget {
   /// Active language for the live cover. Required whenever [project]
   /// is non-null; ignored otherwise.
   final AppLang? lang;
+
+  /// Render the pre-baked cover asset instead of running the live
+  /// [AnimatedHeroCover] painter for the tile thumbnail.
+  ///
+  /// The home cascade sets this. Its covers are static there
+  /// (`animated: false`), but a CustomPainter is re-executed on every
+  /// frame the surface repaints — and the cascade repaints wholesale on
+  /// every scroll frame, so ~170 draw ops per tile were being recomputed
+  /// for a picture that never changes. The baked asset is a single
+  /// drawImageRect. Measured: 93 ms -> 77 ms per frame.
+  ///
+  /// [project] and [lang] are still required — the hover text overlay
+  /// uses them — so only the thumbnail source changes.
+  final bool useBakedCover;
 
   /// signifies the position of the project in the list
   final String projectNumber;
@@ -620,7 +648,9 @@ class ProjectItemLargeState extends State<ProjectItemLarge> with SingleTickerPro
                   child: Stack(
                     fit: StackFit.expand,
                     children: <Widget>[
-                      widget.project != null && widget.lang != null
+                      widget.project != null &&
+                              widget.lang != null &&
+                              !widget.useBakedCover
                           ? AnimatedHeroCover(
                               project: widget.project!,
                               lang: widget.lang!,

@@ -138,32 +138,11 @@ flutter:
     - family: Roboto
       fonts:
         - asset: assets/fonts/roboto/Roboto-Regular.ttf
-        - asset: assets/fonts/roboto/Roboto-Bold.ttf
+          weight: 400
         - asset: assets/fonts/roboto/Roboto-Medium.ttf
-    - family: CenturyGothic
-      fonts:
-        - asset: assets/fonts/urw-gothic/URWGothic-Book.otf
-          weight: 400
-        - asset: assets/fonts/urw-gothic/URWGothic-BookOblique.otf
-          weight: 400
-          style: italic
-        - asset: assets/fonts/urw-gothic/URWGothic-Demi.otf
+          weight: 500
+        - asset: assets/fonts/roboto/Roboto-Bold.ttf
           weight: 700
-        - asset: assets/fonts/urw-gothic/URWGothic-DemiOblique.otf
-          weight: 700
-          style: italic
-    - family: Calibri
-      fonts:
-        - asset: assets/fonts/carlito/Carlito-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/carlito/Carlito-Italic.ttf
-          weight: 400
-          style: italic
-        - asset: assets/fonts/carlito/Carlito-Bold.ttf
-          weight: 700
-        - asset: assets/fonts/carlito/Carlito-BoldItalic.ttf
-          weight: 700
-          style: italic
     - family: Inter
       fonts:
         - asset: assets/fonts/inter/Inter-Thin.ttf
