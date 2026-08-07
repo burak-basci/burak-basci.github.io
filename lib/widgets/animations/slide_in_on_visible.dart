@@ -172,10 +172,19 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
   /// fire forward() once and stay at value=1.
   bool _hasAnimated = false;
 
+  /// True once the entrance animation has finished and the child can be
+  /// rendered bare — see [build] for why that matters per frame.
+  bool _settled = false;
+
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration);
+    _controller.addStatusListener((AnimationStatus status) {
+      if (status == AnimationStatus.completed && !_settled && mounted) {
+        setState(() => _settled = true);
+      }
+    });
   }
 
   @override
@@ -186,6 +195,17 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
 
   @override
   Widget build(BuildContext context) {
+    // Once the entrance has played out, both wrappers are dead weight that
+    // every subsequent frame still pays for: VisibilityDetector keeps
+    // computing visibility and scheduling callbacks on each paint, and
+    // flutter_animate's `.animate()` keeps a transform layer alive around
+    // a child that no longer moves. The cascade has one of each per tile
+    // and repaints wholesale on every scroll frame, so this is pure
+    // per-frame overhead for an animation that finished seconds ago.
+    // Dropping both once the controller is at rest returns the plain
+    // child, identical in appearance (slideX has landed at offset 0).
+    if (_settled) return widget.child;
+
     // Use a fractional slide (units = child's own width) so the tile
     // is guaranteed to start fully offstage to the left regardless of
     // viewport size or final tile placement. `slideX(begin: -1.5)`
