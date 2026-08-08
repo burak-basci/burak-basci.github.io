@@ -58,6 +58,38 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
   // the fly-off frame by frame. Deploy builds never set the define,
   // so all of this folds away to the production constants.
   static const bool _kAnimProbe = bool.fromEnvironment('ANIM_PROBE');
+
+  /// How long the celebration fly-off lasts.
+  ///
+  /// Sized so the plane is off the right edge as the clock runs out.
+  /// The previous 3000 ms was tuned against a path that cleared the
+  /// viewport at ~78% — the remaining 660 ms were spent animating an
+  /// invisible plane while the "Danke." reveal, which waits for the
+  /// flight to complete, sat there doing nothing.
+  static const int _kPlaneFlightMs = 2400;
+  // Probe-only flight duration. Stretching the clock (e.g. 30000 for a
+  // 10x slow-motion flight) lets a screenshot loop land on an exact
+  // normalized t with negligible timing error, so every phase of the
+  // path can be inspected frame by frame.
+  static const int _kAnimProbeFlightMs =
+      int.fromEnvironment('ANIM_PROBE_MS', defaultValue: 6000);
+  // Probe-only delay before the auto-submit fires, so the verifier has
+  // time to scroll the submit button to a realistic on-screen position
+  // first (unscrolled, it sits below the fold at 1080p — nothing like
+  // what a visitor who just filled the form is looking at).
+  static const int _kAnimProbeDelayMs =
+      int.fromEnvironment('ANIM_PROBE_DELAY_MS', defaultValue: 2000);
+
+  /// Stretches every choreography beat by the same factor the probe
+  /// stretches the plane clock, so a slow-motion capture shows the
+  /// real relative timing between the fly-off, the form's cascade
+  /// exit and the success-card swap — not a 10x-slow plane over a
+  /// form that vanished in the first instant.
+  static Duration _beat(int ms) => Duration(
+        milliseconds: _kAnimProbe
+            ? (ms * _kAnimProbeFlightMs / _kPlaneFlightMs).round()
+            : ms,
+      );
   static const String _web3formsEndpoint = _kAnimProbe
       ? '/__anim_probe_submit'
       : 'https://api.web3forms.com/submit';
@@ -154,15 +186,18 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
       duration: const Duration(milliseconds: 680),
     );
     // Plane controller is just a clock that drives a lookup into the
-    // pre-baked sketch-path trajectory (see [_PaperPlaneFlyOff]); its
-    // t∈[0,1] samples the recorded frames so motion replays
-    // deterministically every flight. 3000 ms: ~900 ms runway roll,
-    // ~1140 ms for the loop, ~960 ms flat accelerating exit. Under
-    // the probe harness the clock runs at half speed so timed
-    // screenshots can catch every phase of the path.
+    // pre-baked trajectory (see [_PaperPlaneFlyOff]); its t∈[0,1]
+    // samples the recorded frames so motion replays deterministically
+    // every flight. 2400 ms splits roughly 630 ms take-off roll /
+    // 1220 ms loop / 550 ms accelerating exit — the split falls out of
+    // the path's arc length and the speed schedule, not from hand-cut
+    // time slices. Under the probe harness the clock is stretched so
+    // timed screenshots can catch every phase of the path.
     _planeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: _kAnimProbe ? 6000 : 3000),
+      duration: const Duration(
+        milliseconds: _kAnimProbe ? _kAnimProbeFlightMs : _kPlaneFlightMs,
+      ),
     );
     _planeController.addStatusListener((status) {
       // Once the plane has fully exited the viewport, remove the
@@ -181,7 +216,7 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
     if (_kAnimProbe) {
       // Probe builds submit the form on their own so the headless
       // verifier never has to poke text into a canvas-rendered form.
-      Timer(const Duration(seconds: 2), () {
+      Timer(const Duration(milliseconds: _kAnimProbeDelayMs), () {
         if (!mounted) return;
         _nameController.text = 'Anim Probe';
         _emailController.text = 'probe@example.com';
@@ -369,14 +404,14 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
         _formExitTimer?.cancel();
         _planeLaunchTimer?.cancel();
         // t=400: form cascade exit begins.
-        _successCardSwapTimer = Timer(const Duration(milliseconds: 400), () {
+        _successCardSwapTimer = Timer(_beat(400), () {
           if (!mounted) return;
           _formExitController.forward(from: 0);
         });
         // t=300: plane launches (wind-up). Slightly EARLIER than the
         // cascade so the wind-up reads clearly while the button is
         // still solid.
-        _planeLaunchTimer = Timer(const Duration(milliseconds: 300), () {
+        _planeLaunchTimer = Timer(_beat(300), () {
           if (!mounted) return;
           // Resolve the button-icon's global position right before
           // launch — positions are stable here (the button hasn't
@@ -406,7 +441,7 @@ class ContactPageState extends State<ContactPage> with TickerProviderStateMixin 
         // the success card STRUCTURALLY — but do NOT trigger the
         // letter reveal. That waits until the plane controller's
         // status listener fires on completion.
-        _formExitTimer = Timer(const Duration(milliseconds: 1080), () {
+        _formExitTimer = Timer(_beat(1080), () {
           if (!mounted) return;
           setState(() {
             _showSuccessCard = true;
@@ -1094,52 +1129,51 @@ class _LetterByLetterReveal extends StatelessWidget {
   }
 }
 
-/// The celebration paper-plane fly-off.
+/// One sample of the pre-computed paper-plane trajectory.
 ///
-/// Renders inside an [OverlayEntry] above the entire app so it can
-/// fly past every ancestor clip (Scrollbar, SingleChildScrollView,
-/// PageWrapper) and exit the viewport's right edge cleanly. The
-/// widget paints into a [Positioned.fill] [IgnorePointer] inside the
-/// overlay and re-positions a small icon glyph each frame off
-/// [controller]'s value.
-///
-/// SKETCH-PATH CHOREOGRAPHY — round 6. Rounds 4/5 (Bezier stitching,
-/// then a gravity+thrust physics simulation) never produced the shape
-/// the user actually wanted, so they drew it: a short glide off the
-/// button, a tight loop that spirals outward into one big loop, then
-/// a straight tangential exit toward the upper right, with the plane
-/// growing exponentially the whole way out. The trajectory is now an
-/// explicit parametric curve of that drawing — lead-in glide →
-/// exponential spiral (one loop-the-loop) → linear exit — baked
-/// into frames once at launch (see [_buildTrajectory]).
-///
-/// ROTATION: tracks the velocity vector recorded per frame
-/// (rotation = atan2(vy, vx), low-pass filtered). The spiral gives
-/// the nose its two full barrel rolls "for free" — no scripted
-/// rotation override needed.
-///
-/// VISIBILITY: the plane icon is rendered black-on-the-button at
-/// rest, but a white halo (a slightly enlarged white instance of
-/// the same glyph drawn behind the black instance) keeps it
-/// visible against the black button. The halo also acts as a soft
-/// glow over light page areas during flight.
-/// One sample of the pre-computed paper-plane trajectory: position,
-/// velocity (for rotation tracking), and scale at a given simulation
-/// time. Velocity is recorded alongside position so the rotation each
-/// frame can be computed without finite-difference noise.
+/// Rotation is stored, not derived. It comes from the path's analytic
+/// tangent and is UNWRAPPED — it winds past -2pi through the loop
+/// rather than jumping at the +pi/-pi seam — so the flight replays
+/// identically at any frame rate and the nose can never lag, snap or
+/// spin the wrong way round.
 class _PlaneFrame {
   const _PlaneFrame({
     required this.t,
     required this.pos,
-    required this.vel,
+    required this.rotation,
     required this.scale,
   });
-  final double t; // seconds since launch
+  final double t; // normalized flight time
   final Offset pos; // viewport-global position
-  final Offset vel; // px/s, used for rotation = atan2(vy, vx)
+  final double rotation; // radians, unwrapped, 0 = nose right
   final double scale;
 }
 
+/// The celebration paper-plane fly-off.
+///
+/// Renders inside an [OverlayEntry] above the entire app so it can fly
+/// past every ancestor clip (Scrollbar, SingleChildScrollView,
+/// PageWrapper) and exit the viewport's right edge cleanly. The widget
+/// paints into a [Positioned.fill] [IgnorePointer] inside the overlay
+/// and re-positions a small icon glyph each frame off [controller]'s
+/// value.
+///
+/// CHOREOGRAPHY — the shape is the one the owner drew: a rightward
+/// take-off roll off the button, a counterclockwise loop-the-loop that
+/// grows as it turns, then a nearly flat exit to the right, the plane
+/// growing the whole way out. It is baked into frames once at launch
+/// (see [_buildTrajectory]), which is also where the shape is fitted
+/// to the room the viewport actually has beside and above the button.
+///
+/// ROTATION comes from the path's own analytic tangent, baked and
+/// unwrapped — not from differencing positions and filtering the
+/// result. The loop therefore turns the nose exactly once, in step
+/// with the flight, at any frame rate.
+///
+/// VISIBILITY: nothing is painted in a fixed colour. The glyph is a
+/// [ClipPath] over a [BackdropFilter] that inverts whatever is behind
+/// it, so it reads white over the black submit button and black over
+/// the page — see [_InvertingPaperPlane].
 class _PaperPlaneFlyOff extends StatefulWidget {
   const _PaperPlaneFlyOff({
     required this.controller,
@@ -1169,59 +1203,70 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
   // visitor just clicked.
   static const double _glyphSize = Sizes.ICON_SIZE_16;
 
-  // -------------------- Sketch-path constants ------------------------
-  // Round 6. The user drew the exact trajectory they want: a short
-  // glide off the button, a tight loop that spirals OUTWARD into one
-  // big loop (~2 full turns), then a tangential straight exit toward
-  // the upper right, growing the whole way. The physics simulation of
-  // round 5 could not produce a loop (gravity + thrust arcs, no
-  // sustained centripetal turn), so the trajectory is now an explicit
-  // parametric curve: lead-in glide → exponential spiral → linear
-  // exit. Positions are still pre-baked into frames so the existing
-  // sampling / velocity-rotation machinery is untouched.
+  // ------------------- Flight path (round 10) ------------------------
+  //
+  // The shape is the owner's sketch, unchanged: a rightward take-off
+  // roll, a counterclockwise loop-the-loop that grows as it turns and
+  // is BOTTOM-ANCHORED so every pass comes back to the runway's
+  // altitude, then a nearly flat departure to the right, growing the
+  // whole way.
+  //
+  // What changed is how the shape is turned into motion. Rounds 6-9
+  // gave each phase its own time slice and its own easing, which made
+  // the joins lie:
+  //
+  //   * the roll's sideways travel started at easeInCubic (derivative
+  //     zero) while a 12 px sag started at full speed, so the FIRST
+  //     thing the plane did was fall — straight down, at 90 deg nose
+  //     down, snapping there from the button icon's 0 deg the instant
+  //     it detached;
+  //   * the roll ended at 734 px/s and the loop began at 124 px/s, a
+  //     6x slam-on-the-brakes inside one frame;
+  //   * rotation was recovered from finite-difference velocity and run
+  //     through a stateful low-pass filter applied per BUILD, so the
+  //     nose lagged its own flight path by an amount that depended on
+  //     the frame rate.
+  //
+  // Now there is one curve and one clock. The path is measured in arc
+  // length and swept by a single smooth speed schedule, so speed is
+  // continuous across every join by construction; rotation is the
+  // path's analytic tangent, baked and unwrapped, so it never lags and
+  // never snaps. The plane leaves the level runway pointing exactly
+  // where the button's icon pointed: 0 deg, dead level, moving right.
 
-  // Phase boundaries as fractions of the whole flight.
-  static const double _leadEndT = 0.30; // runway roll
-  static const double _spiralEndT = 0.68; // the growing loop
-  // exit phase: _spiralEndT → 1.0
+  // Take-off roll: dead level. Any vertical component here is what
+  // read as "it falls down at the start", and a level roll also means
+  // the launch heading is exactly the button icon's heading.
+  static const double _runwayLength = 200.0; // px, clamped to fit
 
-  // RUNWAY (round 8): a long rightward take-off roll. Rightward
-  // because Icons.send's nose points right — the round-7 leftward
-  // glide made the glyph flip 180° the instant it detached (owner:
-  // "es flipt einfach instant"). easeInCubic + a sag makes it read
-  // as heavy: barely moving at release, drooping, then gathering
-  // real speed before pulling up into the loop.
-  static const double _runwayLength = 220.0; // px rightward, clamped
-  static const double _leadDip = 12.0; // px sag mid-roll
+  // The loop's radius grows from entry to exit; the centre rides
+  // upward with it so the bottom tangent point stays on the runway
+  // line and the plane never sinks below the button.
+  static const double _loopEntryRadius = 74.0;
+  static const double _loopExitRadius = 176.0;
 
-  // Loop: pulls up from the runway's end into a counterclockwise
-  // loop-the-loop (right → up → left → down) whose radius grows
-  // exponentially. The loop is BOTTOM-ANCHORED (round 9): its center
-  // rides upward as the radius grows, so every pass returns to the
-  // runway's altitude at the bottom — exactly the owner's sketch,
-  // where the small and the big circle touch at their lowest point.
-  // Round 8's fixed-center spiral let the bottom sag by rEnd−r0
-  // (~130px), which read as the plane falling below the button and
-  // exiting underneath it.
-  static const double _spiralStartRadius = 22.0;
-  static const double _spiralEndRadius = 150.0;
-  static const double _spiralTurns = 1.0;
+  // Departure angle above the horizon — the owner's "nearly flat"
+  // exit to the right, and the amount of sweep past a full turn.
+  static const double _exitClimbAngle = 0.14; // ~8 deg
+  static const double _loopSweep = 2 * math.pi + _exitClimbAngle;
 
-  // Exit climb angle above the horizon. Owner spec (round 8): a
-  // nearly flat 5-10° departure to the right — not the round-7
-  // corner shot that left at ~45°+.
-  static const double _exitClimbAngle = 0.14; // ≈8°
+  // One global speed schedule: v(t) = v0 * e^(ct), the simplest curve
+  // that is smooth, strictly increasing and has no seams to mismatch.
+  // The ratio is end speed over launch speed; it also sets how the
+  // flight time divides between roll, loop and exit (~26/51/23 %).
+  static const double _speedRatio = 5.0;
 
-  // Scale is a pure exponential in normalized time, so growth is
-  // barely-there through the lead-in, gentle through the loops, and
-  // explosive on the exit — "exponentially larger towards the end".
-  // 12× of the 16px glyph ≈ 192px as it leaves the viewport.
+  // Growth: 12x of the 16 px glyph as it leaves the viewport.
   static const double _endScale = 12.0;
   static const double _scaleSharpness = 2.2;
 
-  // Pre-baked frame rate. 240 samples/flight keeps the finite-
-  // difference velocities (used for nose rotation) smooth.
+  // Samples per flight. The table is indexed by normalized time and
+  // interpolated, so this only has to be fine enough that linear
+  // interpolation of a smooth curve is invisible.
   static const int _frameCount = 240;
+
+  // Arc-length resolution of the loop's lookup table.
+  static const int _loopSamples = 512;
 
   /// Pre-computed trajectory frames. Built once in [initState].
   late final List<_PlaneFrame> _trajectory;
@@ -1232,135 +1277,195 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
     _trajectory = _buildTrajectory();
   }
 
-  /// Position on the sketch path at normalized time tn ∈ [0, 1].
+  /// The loop, in coordinates local to its entry point (which is the
+  /// end of the runway), at unit geometry scale.
   ///
-  /// The three phases are C0-continuous by construction (each phase
-  /// starts exactly where the previous ended) and close enough to C1
-  /// that the low-pass rotation filter absorbs the boundaries.
-  Offset _pathPosition(double tn, double geometryScale) {
-    final Offset origin = widget.origin;
-    final double r0 = _spiralStartRadius * geometryScale;
-    final double rEnd = _spiralEndRadius * geometryScale;
-    // Runway length, clamped so the loop that follows it still fits
-    // inside the right edge (the spiral extends only ~0.25·rEnd to
-    // the right of its center — see the sweep geometry below).
-    final double runway = (_runwayLength * geometryScale).clamp(
-      40.0 * geometryScale,
-      math.max(40.0 * geometryScale,
-          widget.viewportSize.width - origin.dx - 120.0 * geometryScale),
-    );
-
-    // Loop geometry. Entry at the bottom of the circle heading
-    // right; polar angle φ DECREASES from π/2 so the loop runs
-    // counterclockwise on screen (right → up → left → down) — the
-    // natural continuation of the rightward runway pull-up. The
-    // center is recomputed per sample at (entry.x, entry.y − r) so
-    // the circle GROWS UPWARD from a fixed bottom tangent point:
-    // the plane returns to runway altitude every pass and never
-    // sinks below the button.
-    final Offset spiralEntry = origin + Offset(runway, 0);
-    // Exit when the tangent (sin φ, −cos φ) points _exitClimbAngle
-    // above the horizon toward the right: φ_exit = π/2 − angle.
-    const double sweepTotal =
-        _exitClimbAngle + 2 * math.pi * _spiralTurns;
-    final double radiusGrowth = math.log(rEnd / r0) / sweepTotal;
-
-    if (tn <= _leadEndT) {
-      // RUNWAY: easeInCubic — the plane barely creeps at release,
-      // sags under its own weight, then gathers real speed down the
-      // strip. No rotation flip: the glyph's nose already points
-      // along the roll direction.
-      final double s = (tn / _leadEndT).clamp(0.0, 1.0);
-      return origin +
-          Offset(
-            runway * s * s * s,
-            _leadDip * geometryScale * math.sin(math.pi * s),
-          );
-    }
-
-    if (tn <= _spiralEndT) {
-      // LOOP: constant angular rate. Linear speed rises with the
-      // radius, so the tight pull-up is leisurely and the big loop
-      // is fast — the plane visibly gains energy. Bottom-anchored:
-      // the center sits r above the entry for the CURRENT radius.
-      final double u =
-          ((tn - _leadEndT) / (_spiralEndT - _leadEndT)).clamp(0.0, 1.0);
-      final double swept = sweepTotal * u;
-      final double phi = math.pi / 2 - swept;
-      final double r = r0 * math.exp(radiusGrowth * swept);
-      final Offset center = spiralEntry + Offset(0, -r);
-      return center + Offset(r * math.cos(phi), r * math.sin(phi));
-    }
-
-    // EXIT: straight line along the spiral's final tangent — a nearly
-    // flat departure to the right. The travel is speed-driven, NOT
-    // distance-driven: it starts at exactly the spiral's end speed
-    // (no visible brake at the hand-off) and triples by the end, so
-    // the fly-off reads identically on any viewport width. The far
-    // end always overshoots every screen edge, and the overlay is
-    // torn down when the clock completes.
-    final double w =
-        ((tn - _spiralEndT) / (1.0 - _spiralEndT)).clamp(0.0, 1.0);
-    const double phiExit = math.pi / 2 - sweepTotal;
-    // Bottom-anchored center at the final radius: the exit point
-    // lands back at (almost exactly) runway altitude.
-    final Offset exitCenter = spiralEntry + Offset(0, -rEnd);
-    final Offset exitPoint = exitCenter +
-        Offset(rEnd * math.cos(phiExit), rEnd * math.sin(phiExit));
-    final Offset exitDir = Offset(
-      math.cos(_exitClimbAngle),
-      -math.sin(_exitClimbAngle),
-    );
-    // Spiral end speed in px per normalized-time unit; the exit
-    // integrates v(w) = v0·(1 + 2w²) → dist = v0·ΔT·(w + ⅔w³)·…
-    // folded into the simple polynomial below.
-    final double spiralEndSpeed =
-        rEnd * sweepTotal / (_spiralEndT - _leadEndT);
-    const double exitWindow = 1.0 - _spiralEndT;
-    final double dist =
-        spiralEndSpeed * exitWindow * (w + 0.667 * w * w * w);
-    return exitPoint + exitDir * dist;
+  /// Bottom-anchored growing circle: at swept angle theta the radius
+  /// is r = r0*e^(k*theta) and the centre sits r directly above the
+  /// entry, so the curve leaves the entry horizontally and returns to
+  /// the entry's altitude at every full turn.
+  static Offset _loopPoint(double theta, double k) {
+    final double r = _loopEntryRadius * math.exp(k * theta);
+    return Offset(r * math.sin(theta), -r * (1 - math.cos(theta)));
   }
 
-  /// Bake the parametric path into evenly spaced frames. Velocity is
-  /// central-differenced so the nose-rotation lookup stays smooth.
+  /// Tangent of [_loopPoint] with respect to theta.
+  static Offset _loopTangent(double theta, double k) {
+    final double r = _loopEntryRadius * math.exp(k * theta);
+    return Offset(
+      r * (k * math.sin(theta) + math.cos(theta)),
+      -r * (k * (1 - math.cos(theta)) + math.sin(theta)),
+    );
+  }
+
+  /// Heading of the loop's tangent, unwrapped so it winds continuously
+  /// from 0 down through -2pi instead of jumping at the atan2 seam.
+  /// Without this the plane would spin a full turn backwards the
+  /// moment it passed the top of the loop.
+  static double _loopHeading(double theta, double k) {
+    final Offset t = _loopTangent(theta, k);
+    final double principal = math.atan2(t.dy, t.dx);
+    // The true heading tracks -theta closely; snap the principal value
+    // onto that branch.
+    final double turns = ((principal + theta) / (2 * math.pi)).roundToDouble();
+    return principal - 2 * math.pi * turns;
+  }
+
   List<_PlaneFrame> _buildTrajectory() {
-    // On narrow (phone) viewports the full-size spiral would swing
-    // past the right edge; shrink the geometry, never the scale-up.
-    final double geometryScale =
-        widget.viewportSize.width < 700 ? 0.55 : 1.0;
+    final Offset origin = widget.origin;
+    final Size viewport = widget.viewportSize;
+    final double k =
+        math.log(_loopExitRadius / _loopEntryRadius) / _loopSweep;
+
+    // --- fit the shape to the space that actually exists ------------
+    // The loop is the centrepiece, so the available room is spent on it
+    // FIRST and the take-off roll gets whatever is left. On a phone the
+    // submit button is right-aligned with ~30 px of page beside it: a
+    // roll that insists on its full 200 px pushes the plane straight
+    // off the edge and the loop happens where nobody can see it, which
+    // is what both this round's first attempt and the shipping build
+    // did there.
+    double loopMaxX = 0.0;
+    double loopMaxRise = 0.0;
+    for (int i = 0; i <= _loopSamples; i++) {
+      final Offset p = _loopPoint(_loopSweep * i / _loopSamples, k);
+      if (p.dx > loopMaxX) loopMaxX = p.dx;
+      if (-p.dy > loopMaxRise) loopMaxRise = -p.dy;
+    }
+    const double glyphRoom = 24.0;
+    const double headerRoom = 90.0;
+    final double roomRight =
+        math.max(0.0, viewport.width - origin.dx - glyphRoom);
+    final double roomUp = math.max(0.0, origin.dy - headerRoom);
+    // A small, absolute overshoot budget — enough that the widest part
+    // of the arc may graze an edge rather than collapsing the loop to a
+    // dot, but no more. Sized as a fraction of the viewport it is far
+    // too generous where it matters: on a 420 px phone an 8% budget let
+    // the climb carry the plane wholly past the right edge, and it
+    // stayed there for 600 ms of a 2400 ms flight.
+    const double slackX = 12.0;
+    const double slackY = 20.0;
+    final double geometryScale = math
+        .min(
+          1.0,
+          math.min((roomUp + slackY) / loopMaxRise,
+              (roomRight + slackX) / loopMaxX),
+        )
+        .clamp(0.28, 1.0);
+
+    // Whatever right-hand room the loop did not claim becomes runway.
+    final double runway = math.min(_runwayLength * geometryScale,
+        math.max(0.0, roomRight - loopMaxX * geometryScale));
+
+    // The plane grows with its own choreography: a 12x glyph swooping
+    // out of a loop a third that size reads as two unrelated things.
+    final double endScale = 1.0 + (_endScale - 1.0) * geometryScale;
+
+    // --- arc length along the loop ----------------------------------
+    final List<double> loopArc = List<double>.filled(_loopSamples + 1, 0.0);
+    for (int i = 1; i <= _loopSamples; i++) {
+      final double a = _loopSweep * (i - 1) / _loopSamples;
+      final double b = _loopSweep * i / _loopSamples;
+      // trapezoid on |dP/dtheta|
+      loopArc[i] = loopArc[i - 1] +
+          0.5 *
+              (_loopTangent(a, k).distance + _loopTangent(b, k).distance) *
+              (b - a) *
+              geometryScale;
+    }
+    final double loopLength = loopArc[_loopSamples];
+
+    // --- the straight exit ------------------------------------------
+    final Offset loopEndLocal = _loopPoint(_loopSweep, k) * geometryScale;
+    final Offset exitPoint = origin + Offset(runway, 0) + loopEndLocal;
+    final Offset exitDir =
+        Offset(math.cos(_exitClimbAngle), -math.sin(_exitClimbAngle));
+    // Run until the whole glyph — at full growth — is past the right
+    // edge, so the flight ends as the plane leaves rather than some
+    // way after it (the old path cleared the edge at ~78% of the clock
+    // and spent the remaining 660 ms invisible, holding up the
+    // "Danke." reveal that waits on it).
+    final double clearance = _glyphSize * endScale;
+    final double exitLength = math.max(
+      120.0,
+      (viewport.width + clearance - exitPoint.dx) / exitDir.dx,
+    );
+
+    final double total = runway + loopLength + exitLength;
+
+    // --- one speed schedule over the whole path ---------------------
+    // Working in normalized time: v(tn) = v0*e^(c*tn) with
+    // v0 = total*c/(ratio-1) so the integral over [0,1] is exactly the
+    // path length. Distance, not time, decides where each phase falls,
+    // which is why the joins cannot disagree about speed.
+    final double c = math.log(_speedRatio);
+    final double v0 = total * c / (_speedRatio - 1);
+
+    final double exitHeading = _loopHeading(_loopSweep, k);
+
     final List<_PlaneFrame> frames = <_PlaneFrame>[];
-    const double dt = 1.0 / _frameCount;
     for (int i = 0; i <= _frameCount; i++) {
       final double tn = i / _frameCount;
-      final Offset before =
-          _pathPosition((tn - dt).clamp(0.0, 1.0), geometryScale);
-      final Offset after =
-          _pathPosition((tn + dt).clamp(0.0, 1.0), geometryScale);
+      final double s = v0 * (math.exp(c * tn) - 1) / c;
+
+      Offset pos;
+      double rotation;
+      if (s <= runway) {
+        pos = origin + Offset(s, 0);
+        rotation = 0.0;
+      } else if (s <= runway + loopLength) {
+        final double theta = _thetaAtArc(s - runway, loopArc);
+        pos = origin + Offset(runway, 0) + _loopPoint(theta, k) * geometryScale;
+        rotation = _loopHeading(theta, k);
+      } else {
+        pos = exitPoint + exitDir * (s - runway - loopLength);
+        rotation = exitHeading;
+      }
+
       frames.add(_PlaneFrame(
         t: tn,
-        pos: _pathPosition(tn, geometryScale),
-        vel: (after - before) / (2 * dt),
-        scale: _sampleScale(tn),
+        pos: pos,
+        rotation: rotation,
+        scale: _sampleScale(tn, endScale),
       ));
     }
     return frames;
   }
 
+  /// Invert the loop's arc-length table: distance along the loop to
+  /// swept angle.
+  double _thetaAtArc(double arc, List<double> table) {
+    if (arc <= 0) return 0.0;
+    if (arc >= table.last) return _loopSweep;
+    int lo = 0;
+    int hi = table.length - 1;
+    while (lo < hi) {
+      final int mid = (lo + hi) >> 1;
+      if (table[mid] < arc) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    final int i = math.max(1, lo);
+    final double a = table[i - 1];
+    final double b = table[i];
+    final double f = b == a ? 0.0 : (arc - a) / (b - a);
+    return _loopSweep * (i - 1 + f) / _loopSamples;
+  }
+
   /// Exponential scale schedule over normalized time:
-  /// e^(ln(_endScale) · tn^_scaleSharpness). Equals 1 at launch and
-  /// _endScale at the last frame; the sharpness exponent keeps growth
-  /// subtle through the loops and explosive on the exit.
-  double _sampleScale(double tn) {
+  /// e^(ln(endScale) · tn^_scaleSharpness). Equals 1 at launch and
+  /// [endScale] at the last frame; the sharpness exponent keeps growth
+  /// subtle through the roll and the loop and explosive on the exit.
+  double _sampleScale(double tn, double endScale) {
     return math.exp(
-      math.log(_endScale) *
-          math.pow(tn.clamp(0.0, 1.0), _scaleSharpness),
+      math.log(endScale) * math.pow(tn.clamp(0.0, 1.0), _scaleSharpness),
     );
   }
 
-  /// Sample the trajectory at fractional index. Linearly interpolates
-  /// position, velocity, and scale between the bracketing recorded
-  /// frames so the lookup is smooth at any controller t.
+  /// Sample the trajectory at fractional index, interpolating position,
+  /// rotation and scale between the bracketing baked frames.
   _PlaneFrame _sampleTrajectory(double controllerT) {
     final double clamped = controllerT.clamp(0.0, 1.0);
     final double idx = clamped * (_trajectory.length - 1);
@@ -1375,62 +1480,19 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
         a.pos.dx + (b.pos.dx - a.pos.dx) * f,
         a.pos.dy + (b.pos.dy - a.pos.dy) * f,
       ),
-      vel: Offset(
-        a.vel.dx + (b.vel.dx - a.vel.dx) * f,
-        a.vel.dy + (b.vel.dy - a.vel.dy) * f,
-      ),
+      // Both endpoints come off the same unwrapped branch, so a plain
+      // lerp is correct here — no shortest-arc handling needed.
+      rotation: a.rotation + (b.rotation - a.rotation) * f,
       scale: a.scale + (b.scale - a.scale) * f,
     );
   }
 
-  // -------------------- Rotation helpers -------------------- //
-  // The Material `Icons.send` glyph natively points horizontally to
-  // the right at rotation=0 (atan2(vy, vx)==0 → nose along +x). No
-  // neutral-angle offset is required; the velocity-derived atan2
-  // angle directly aligns the nose with the flight direction.
-  //
-  // History: an earlier version added +π/4 here, assuming the glyph
-  // pointed up-right by default; visual testing on a live page showed
-  // the plane consistently sat 45° clockwise of its actual flight
-  // direction, so the offset was removed.
-  static const double _iconNeutralAngle = 0.0;
-
-  // Rotation smoothing time constant. Small enough that real direction
-  // changes read instantly, large enough that any tiny stray velocity
-  // wobble near zero-crossings is filtered. Raised to 0.45 for the
-  // spiral path: at ~7.5 rad/s through the loops a heavier filter made
-  // the nose visibly trail its own flight direction.
-  static const double _rotationLerpAlpha = 0.45;
-  double? _smoothedRotation;
-
-
-  /// Compute the desired rotation for a velocity vector and apply a
-  /// small low-pass filter to suppress tiny stray wobbles near zero-
-  /// velocity moments. Returns the smoothed rotation in radians.
-  double _rotationForVelocity(Offset vel) {
-    final double vMag = vel.distance;
-    // Very low velocity → keep previous smoothed rotation (no jitter
-    // when launching from rest in the first few simulation steps).
-    final double target = vMag < 1.0
-        ? (_smoothedRotation ?? _iconNeutralAngle)
-        : math.atan2(vel.dy, vel.dx) + _iconNeutralAngle;
-
-    // Angular lerp: shortest-path interpolation so a wrap from +π →
-    // −π doesn't spin the plane through a full revolution.
-    if (_smoothedRotation == null) {
-      _smoothedRotation = target;
-      return target;
-    }
-    double delta = target - _smoothedRotation!;
-    while (delta > math.pi) {
-      delta -= 2 * math.pi;
-    }
-    while (delta < -math.pi) {
-      delta += 2 * math.pi;
-    }
-    _smoothedRotation = _smoothedRotation! + delta * _rotationLerpAlpha;
-    return _smoothedRotation!;
-  }
+  // The Material `Icons.send` glyph points horizontally right at
+  // rotation 0, which is why a level runway means the plane lifts off
+  // at exactly the angle the button's own icon was drawn at. An
+  // earlier round added +pi/4 here on the assumption that the glyph
+  // pointed up-right; it does not, and the plane sat 45 deg clockwise
+  // of its flight direction until that was removed.
 
   @override
   Widget build(BuildContext context) {
@@ -1441,20 +1503,15 @@ class _PaperPlaneFlyOffState extends State<_PaperPlaneFlyOff> {
           builder: (context, _) {
             final double t = widget.controller.value.clamp(0.0, 1.0);
 
-            // Sample the pre-computed physics trajectory at the
-            // controller's clock. Position, velocity, and scale all
-            // come from the simulation — no per-build curve math.
+            // Everything the frame needs was baked from the path
+            // itself — position, the analytic tangent as an unwrapped
+            // rotation, and the scale. Nothing here is stateful, so
+            // the same controller value always draws the same frame
+            // regardless of frame rate or how many builds ran before.
             final _PlaneFrame frame = _sampleTrajectory(t);
             final Offset pos = frame.pos;
             final double scale = frame.scale;
-
-            // Rotation: derived directly from the velocity vector
-            // recorded by the simulation. atan2(vy, vx) gives the
-            // direction the plane is flying; +π/4 corrects for
-            // Icons.send's natural up-right orientation. Smoothed
-            // with a low-pass filter to suppress any micro-jitter
-            // at very low speeds (e.g. very first frames at rest).
-            final double rotation = _rotationForVelocity(frame.vel);
+            final double rotation = frame.rotation;
 
             // Opacity: hold opaque through the whole flight. Fade
             // out gently in the last 3% so off-screen frames don't
