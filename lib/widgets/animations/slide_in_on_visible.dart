@@ -61,20 +61,26 @@ class EntranceReveal extends InheritedWidget {
 /// Nothing photographic is on screen while the row is moving; the artwork
 /// develops once the row has come to rest.
 ///
+/// The cue comes from one of two places — see [armed]. The home cascade
+/// hands it down from the scroll arithmetic it already runs; anything else
+/// detects its own arrival with a `VisibilityDetector`.
+///
 /// Fast-scroll responsiveness: the visibility threshold is intentionally
 /// very low (1%), the cascade queue is capped + velocity-aware (see
 /// [_CascadeStagger]), and — because none of that helps if the cue itself
-/// is late — the entrance is *seeded* from how many pixels of the child
-/// are already on screen when the cue lands. A tile that a flick has
-/// carried well into the viewport starts near the end of its timeline
-/// instead of at opacity 0, so the visitor is never left looking at blank
-/// page waiting for an animation to begin. See
+/// is late — the entrance is *seeded* from how much of the child is
+/// already on screen when the cue lands. A tile that a flick has carried
+/// well into the viewport starts near the end of its timeline instead of
+/// at opacity 0, so the visitor is never left looking at blank page
+/// waiting for an animation to begin. See
 /// [SlideInOnVisible._catchUpCeiling], and `main.dart` for the detector's
-/// update interval, which is the other half of that fix.
+/// update interval, which matters for everything still on that path.
 class SlideInOnVisible extends StatefulWidget {
   const SlideInOnVisible({
     required this.uniqueKey,
     required this.child,
+    this.armed,
+    this.onScreenFraction = 0.0,
     this.visibilityThreshold = 0.01,
     this.beginOffset = 96.0,
     this.duration = const Duration(milliseconds: 960),
@@ -85,15 +91,46 @@ class SlideInOnVisible extends StatefulWidget {
   });
 
   /// Globally unique key for the inner `VisibilityDetector`. Must NOT be
-  /// reused across instances or detection events will collide.
+  /// reused across instances or detection events will collide. Unused in
+  /// the parent-cued mode, which builds no detector — see [armed].
   final Key uniqueKey;
 
   final Widget child;
 
+  /// The cue, when the owner already knows where this child is.
+  ///
+  /// Pass `null` (the default) to have the child detect its own arrival
+  /// with a `VisibilityDetector`. That is the right call for one-off
+  /// elements whose position nothing else tracks.
+  ///
+  /// Pass a bool — flipped false → true the moment the child reaches the
+  /// viewport — and no detector is built at all. The home cascade does
+  /// this: it is a Stack of fixed-height rows over frozen viewport
+  /// metrics, so `home_page` already computes every row's Y from the
+  /// scroll offset on each scroll event to decide which ones to paint.
+  /// Handing that answer down is both cheaper and *earlier* than asking a
+  /// detector to rediscover it: `visibility_detector` is driven by paint
+  /// and batches its callbacks at
+  /// `VisibilityDetectorController.updateInterval`, so its cue always
+  /// lands a frame or more after the scroll that caused it, where the
+  /// parent's arithmetic lands in the same frame.
+  ///
+  /// Whoever owns this flag must latch it: [SlideInOnVisible] ignores it
+  /// going false again, exactly as it ignores a child leaving and
+  /// re-entering the viewport.
+  final bool? armed;
+
+  /// How much of the child is on screen at the moment [armed] flips, as a
+  /// fraction of the viewport height — the parent's measure of how late
+  /// the cue is. Ignored when [armed] is null (the detector measures it
+  /// itself). See [_latenessDeadZone].
+  final double onScreenFraction;
+
   /// Fraction of the child that has to be in the viewport before the
-  /// entrance animation triggers. 0.01 (1%) gives a "just peeked into
-  /// view" feel which matters for fast-scroll users — a higher threshold
-  /// lets tiles scroll past before they ever start animating.
+  /// entrance animation triggers, in the self-detecting mode. 0.01 (1%)
+  /// gives a "just peeked into view" feel which matters for fast-scroll
+  /// users — a higher threshold lets elements scroll past before they ever
+  /// start animating. Unused when [armed] is non-null.
   final double visibilityThreshold;
 
   /// How far left of its final position the child starts, in logical
@@ -317,6 +354,23 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
         setState(() => _settled = true);
       }
     });
+    // Already on screen when this widget was first built — e.g. the
+    // visitor landed deep in the page, or the cascade was rebuilt around
+    // an armed row after a viewport resize.
+    if (widget.armed ?? false) {
+      _arm(widget.onScreenFraction);
+    }
+  }
+
+  @override
+  void didUpdateWidget(SlideInOnVisible oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Parent-cued path: the owner told us the child has reached the
+    // viewport. Nothing is measured here — [SlideInOnVisible.onScreenFraction]
+    // came from the same arithmetic the parent already runs.
+    if (widget.armed ?? false) {
+      _arm(widget.onScreenFraction);
+    }
   }
 
   @override
@@ -327,6 +381,53 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
     (_coverReveal as CurvedAnimation).dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Start the entrance. [onScreenFraction] is how much of the child is
+  /// already on screen, as a fraction of the viewport — the measure of how
+  /// late the cue is. Idempotent: the first call latches [_hasAnimated] and
+  /// every later one is ignored, so re-entering the viewport never replays
+  /// the entrance.
+  void _arm(double onScreenFraction) {
+    if (_hasAnimated) return;
+    _hasAnimated = true;
+    // How far past its cue this child already is. A flick can carry a tile
+    // most of a screen between two scroll events, and the paint window
+    // mounts tiles a little before they arrive — so the cue can easily
+    // describe a child that is not "just peeking in" but already sitting
+    // in the middle of the viewport. Starting such a child at opacity 0 is
+    // what produced the "scroll fast, stare at white" report.
+    final double lateness = ((onScreenFraction -
+                SlideInOnVisible._latenessDeadZone) /
+            SlideInOnVisible._latenessSpan)
+        .clamp(0.0, 1.0);
+    _catchUp = lateness * SlideInOnVisible._catchUpCeiling;
+    // Queue-based stagger with cap + fast-scroll flush. Children sharing a
+    // `staggerGroup` and arming inside the same idle window claim
+    // sequential slots, capped at [staggerCap] so a long list doesn't tail
+    // out for seconds. If [_CascadeStagger] detects consecutive claims
+    // arriving within its fast-scroll window it returns slot 0 for the rest
+    // of the burst — necessary so flick-scrolling past the cascade still
+    // shows tiles entering view rather than tiles waiting out a delay after
+    // the user has already scrolled past them. A child that is already on
+    // screen skips the wave outright.
+    //
+    // The `mounted` guard inside the delayed callback makes the schedule
+    // safe if the user navigates away (e.g. into a project detail) before
+    // the delay elapses — the controller would otherwise be disposed.
+    int slot = 0;
+    if (widget.staggerGroup != null &&
+        lateness <= SlideInOnVisible._staggerSkipAbove) {
+      final int raw = _CascadeStagger.claim(widget.staggerGroup!);
+      slot = raw > widget.staggerCap ? widget.staggerCap : raw;
+    }
+    if (slot == 0) {
+      if (mounted) _controller.forward(from: _catchUp);
+    } else {
+      Future<void>.delayed(widget.staggerStep * slot, () {
+        if (mounted) _controller.forward(from: _catchUp);
+      });
+    }
   }
 
   @override
@@ -343,10 +444,37 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
     // pops when [EntranceReveal] disappears with them.
     if (_settled) return widget.child;
 
-    // Captured here rather than read inside the callback: the closure is
-    // rebuilt with the widget, so it always sees the current viewport, and
-    // the MediaQuery dependency is registered during build where it
-    // belongs.
+    // The subtree is built once and handed to the builder untouched, so an
+    // entrance frame only re-evaluates the transform and the opacity. The
+    // inner RepaintBoundary keeps the moving tile off the parent's paint
+    // list: the rasteriser re-composites a cached layer at the new offset
+    // instead of repainting the artwork for every frame of every entrance.
+    final Widget animated = AnimatedBuilder(
+      animation: _controller,
+      child: RepaintBoundary(
+        child: EntranceReveal(
+          reveal: _coverReveal,
+          child: widget.child,
+        ),
+      ),
+      builder: (BuildContext context, Widget? child) {
+        return Opacity(
+          opacity: _fade.value,
+          child: Transform.translate(
+            offset: Offset(_travel.value, 0),
+            child: child,
+          ),
+        );
+      },
+    );
+
+    // Parent-cued: no detector in the tree at all. See [armed].
+    if (widget.armed != null) return animated;
+
+    // Self-detecting fallback. Captured here rather than read inside the
+    // callback: the closure is rebuilt with the widget, so it always sees
+    // the current viewport, and the MediaQuery dependency is registered
+    // during build where it belongs.
     final double viewportHeight = MediaQuery.sizeOf(context).height;
 
     return VisibilityDetector(
@@ -354,79 +482,10 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
       onVisibilityChanged: (VisibilityInfo info) {
         if (_hasAnimated) return;
         if (info.visibleFraction >= widget.visibilityThreshold) {
-          _hasAnimated = true;
-          // How far past its cue this child already is. The detector
-          // batches callbacks, the paint window mounts tiles a little
-          // before they arrive, and a flick can carry a tile most of a
-          // screen in one frame — so the first callback can easily
-          // describe a child that is not "just peeking in" but already
-          // sitting in the middle of the viewport. Starting such a child
-          // at opacity 0 is what produced the "scroll fast, stare at
-          // white" report.
-          //
-          // Measured in pixels of the child that are on screen, against
-          // the viewport: a tile is half a viewport tall, so its *own*
-          // visible fraction says nothing useful about how late we are.
-          final double onScreen = info.visibleBounds.height;
-          final double lateness = ((onScreen -
-                      viewportHeight * SlideInOnVisible._latenessDeadZone) /
-                  (viewportHeight * SlideInOnVisible._latenessSpan))
-              .clamp(0.0, 1.0);
-          _catchUp = lateness * SlideInOnVisible._catchUpCeiling;
-          // Queue-based stagger with cap + fast-scroll flush. Tiles
-          // sharing a `staggerGroup` and crossing the visibility
-          // threshold inside the same idle window claim sequential
-          // slots, capped at [staggerCap] so a long list doesn't tail
-          // out for seconds. If [_CascadeStagger] detects consecutive
-          // claims arriving within its fast-scroll window it returns
-          // slot 0 for the rest of the burst — necessary so flick-
-          // scrolling past the cascade still shows tiles entering view
-          // (rather than tiles waiting out a stagger delay after the
-          // user has already scrolled past them).
-          //
-          // The `mounted` guard inside the delayed callback makes the
-          // schedule safe if the user navigates away (e.g. into a
-          // project detail) before the delay elapses — the controller
-          // would otherwise be disposed.
-          int slot = 0;
-          if (widget.staggerGroup != null &&
-              lateness <= SlideInOnVisible._staggerSkipAbove) {
-            final int raw = _CascadeStagger.claim(widget.staggerGroup!);
-            slot = raw > widget.staggerCap ? widget.staggerCap : raw;
-          }
-          if (slot == 0) {
-            if (mounted) _controller.forward(from: _catchUp);
-          } else {
-            Future<void>.delayed(widget.staggerStep * slot, () {
-              if (mounted) _controller.forward(from: _catchUp);
-            });
-          }
+          _arm(info.visibleBounds.height / viewportHeight);
         }
       },
-      // The subtree is built once and handed to the builder untouched, so
-      // an entrance frame only re-evaluates the transform and the opacity.
-      // The inner RepaintBoundary keeps the moving tile off the parent's
-      // paint list: the rasteriser re-composites a cached layer at the new
-      // offset instead of repainting the artwork for every frame of every
-      // entrance.
-      child: AnimatedBuilder(
-        animation: _controller,
-        child: RepaintBoundary(
-          child: EntranceReveal(
-            reveal: _coverReveal,
-            child: widget.child,
-          ),
-        ),
-        builder: (BuildContext context, Widget? child) {
-          return Opacity(
-            opacity: _fade.value,
-            child: Transform.translate(
-              offset: Offset(_travel.value, 0),
-              child: child,
-            ),
-          );
-        },
-      ),
+      child: animated,
     );
   }
 }

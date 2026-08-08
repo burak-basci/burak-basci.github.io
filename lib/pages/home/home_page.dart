@@ -115,6 +115,23 @@ class HomePageState extends State<HomePage>
   int _tileWindowFirst = 0;
   int _tileWindowLast = 0;
 
+  // --- Entrance cue ----------------------------------------------------
+  // Highest tile index that has reached the viewport, and therefore had
+  // its entrance armed. Monotonic: a tile scrolled back out of view stays
+  // armed, matching [SlideInOnVisible]'s own play-once latch.
+  //
+  // The cascade used to leave this to each tile's own VisibilityDetector.
+  // But the detector is driven by paint and batches its callbacks at
+  // `VisibilityDetectorController.updateInterval`, so the cue always
+  // arrived a frame or more after the scroll that earned it — long enough,
+  // at the package's 500 ms default, to watch blank page during a flick.
+  // Meanwhile this widget already computes every tile's Y from the frozen
+  // section heights on every scroll event, to decide what to paint. The
+  // cue is that same arithmetic, one comparison further: it lands in the
+  // scroll event itself, costs nothing measurable, and is exact rather
+  // than sampled.
+  int _armedThrough = -1;
+
   /// Y offset of the cascade Stack inside the scroll content — the sum of
   /// every frozen section height that precedes it in the Column.
   double get _cascadeTop =>
@@ -147,13 +164,46 @@ class HomePageState extends State<HomePage>
     return <int>[first, last];
   }
 
+  /// Highest tile index whose top edge has crossed the bottom of the
+  /// viewport — i.e. the last one whose entrance should have started.
+  /// Never walks backwards, and never rescans tiles it has already armed.
+  int _computeArmedThrough() {
+    if (!_heightsReady) return _armedThrough;
+    final int n = recentWorks.length;
+    final double bottom = _lastKnownOffset + _viewportHeight;
+    int armed = _armedThrough;
+    for (int i = _armedThrough + 1; i < n; i++) {
+      if (_cascadeTop + _subH * i >= bottom) break;
+      armed = i;
+    }
+    return armed;
+  }
+
+  /// How much of tile [i] is on screen, as a fraction of the viewport.
+  /// Handed to the tile when it arms so a cue that arrives mid-flick — one
+  /// scroll event can carry a tile most of a screen — starts the entrance
+  /// part-way in rather than at opacity 0.
+  double _onScreenFraction(int i) {
+    if (!_heightsReady) return 0.0;
+    final double top = _cascadeTop + _subH * i;
+    final double visible =
+        (_lastKnownOffset + _viewportHeight - top).clamp(0.0, _itemH);
+    return visible / _viewportHeight;
+  }
+
   void _refreshTileWindow() {
     final List<int> win = _computeTileWindow();
-    if (win[0] == _tileWindowFirst && win[1] == _tileWindowLast) return;
+    final int armed = _computeArmedThrough();
+    if (win[0] == _tileWindowFirst &&
+        win[1] == _tileWindowLast &&
+        armed == _armedThrough) {
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _tileWindowFirst = win[0];
       _tileWindowLast = win[1];
+      _armedThrough = armed;
     });
   }
 
@@ -195,11 +245,15 @@ class HomePageState extends State<HomePage>
                 : 48.0;
     _recentHeadingH = headingFs * 2.0 * 2.0;
     _heightsReady = true;
-    // Seed the paint window directly (no setState) — this runs from
-    // didChangeDependencies and from inside didChangeMetrics's setState.
+    // Seed the paint window and the entrance cue directly (no setState) —
+    // this runs from didChangeDependencies and from inside
+    // didChangeMetrics's setState. A resize moves every tile, so the cue
+    // is re-evaluated against the new geometry here; it can only ever
+    // arm more tiles, never un-arm one.
     final List<int> win = _computeTileWindow();
     _tileWindowFirst = win[0];
     _tileWindowLast = win[1];
+    _armedThrough = _computeArmedThrough();
   }
 
   @override
@@ -470,11 +524,9 @@ class HomePageState extends State<HomePage>
                       // SlideInOnVisible lets each tile animate in — a
                       // 96 px eased travel plus a fade, with the cover
                       // artwork held back until the row has landed — the
-                      // first time it crosses 1% visibility in the
-                      // viewport, instead of all 33 tiles snapping into
-                      // place at the moment the cascade enters view. The unique
-                      // `ValueKey` per index is required by
-                      // VisibilityDetector. The shared `staggerGroup`
+                      // first time it reaches the viewport, instead of all
+                      // 33 tiles snapping into place at the moment the
+                      // cascade enters view. The shared `staggerGroup`
                       // coordinates a queue-based wave: tiles that all
                       // cross the threshold in the same frame fan out
                       // via sequential slot claims (slot 0 fires
@@ -500,6 +552,11 @@ class HomePageState extends State<HomePage>
                         child: RepaintBoundary(
                           child: SlideInOnVisible(
                           uniqueKey: ValueKey<String>('cascade-$i'),
+                          // Cued from this widget's own scroll arithmetic
+                          // rather than by a per-tile VisibilityDetector —
+                          // see [_armedThrough].
+                          armed: i <= _armedThrough,
+                          onScreenFraction: _onScreenFraction(i),
                           staggerGroup: 'home-cascade',
                           // Outer Stack wraps a GestureDetector-wrapped tile
                           // so we can layer a dead-zone absorber over its
