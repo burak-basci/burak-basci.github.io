@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:get/get.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import 'firebase_options.dart';
 import 'pages/home/home_page.dart';
@@ -19,6 +20,17 @@ import 'utils/values/values.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // visibility_detector batches its callbacks and fires them at most once
+  // per `updateInterval` — which defaults to 500 ms. Every scroll-triggered
+  // entrance on the site is armed by a VisibilityDetector, so on a fast
+  // scroll a project tile could already be half a screen inside the
+  // viewport before it was even told it had appeared, and the visitor
+  // watched empty page in the meantime. 50 ms is still coarse enough to
+  // batch a flick's worth of frames together but lands inside the same
+  // beat the tile actually arrives in.
+  VisibilityDetectorController.instance.updateInterval =
+      const Duration(milliseconds: 50);
 
   // Path-style URLs (no '#') so each project page is its own indexable URL
   // in search engines. Google ignores hash fragments — without this, every

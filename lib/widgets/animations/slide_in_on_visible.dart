@@ -49,8 +49,8 @@ class EntranceReveal extends InheritedWidget {
 /// every entrance flung a full-width band, its title and its cover artwork
 /// across ~2400 px of screen in 900 ms. It read as chaos rather than
 /// arrival. The travel is now an absolute [beginOffset] in logical pixels,
-/// eased in *and* out, with the opacity carrying the entrance instead of
-/// the distance.
+/// eased out, with the opacity carrying the entrance instead of the
+/// distance.
 ///
 /// The entrance runs in two phases off a single controller so they cannot
 /// drift apart:
@@ -62,9 +62,15 @@ class EntranceReveal extends InheritedWidget {
 /// develops once the row has come to rest.
 ///
 /// Fast-scroll responsiveness: the visibility threshold is intentionally
-/// very low (1%) and the cascade queue is capped + velocity-aware so a tile
-/// that's scrolled past in a single wheel flick still visibly enters as the
-/// user passes it. See [_CascadeStagger] for the queue flush logic.
+/// very low (1%), the cascade queue is capped + velocity-aware (see
+/// [_CascadeStagger]), and — because none of that helps if the cue itself
+/// is late — the entrance is *seeded* from how many pixels of the child
+/// are already on screen when the cue lands. A tile that a flick has
+/// carried well into the viewport starts near the end of its timeline
+/// instead of at opacity 0, so the visitor is never left looking at blank
+/// page waiting for an animation to begin. See
+/// [SlideInOnVisible._catchUpCeiling], and `main.dart` for the detector's
+/// update interval, which is the other half of that fix.
 class SlideInOnVisible extends StatefulWidget {
   const SlideInOnVisible({
     required this.uniqueKey,
@@ -74,7 +80,7 @@ class SlideInOnVisible extends StatefulWidget {
     this.duration = const Duration(milliseconds: 960),
     this.staggerGroup,
     this.staggerStep = const Duration(milliseconds: 80),
-    this.staggerCap = 5,
+    this.staggerCap = 3,
     super.key,
   });
 
@@ -121,7 +127,9 @@ class SlideInOnVisible extends StatefulWidget {
   /// Maximum slot index that contributes additional delay. Slots beyond
   /// this cap all fire at `staggerStep × staggerCap`, so a very long list
   /// of co-visible tiles doesn't tail out for seconds. With staggerStep=80
-  /// ms and staggerCap=5 the tail caps at 400 ms.
+  /// ms and staggerCap=3 the tail caps at 240 ms — deliberately short,
+  /// because head delay is exactly what reads as blank page on a fast
+  /// scroll.
   final int staggerCap;
 
   /// Point in the timeline where the row has finished travelling and the
@@ -133,6 +141,34 @@ class SlideInOnVisible extends StatefulWidget {
   /// [_travelEnd]: the element should look settled slightly before it
   /// stops, otherwise the last few pixels of travel read as a stutter.
   static const double _fadeEnd = 0.42;
+
+  /// Lateness is measured in logical pixels of the child that are already
+  /// on screen when its cue lands, NOT as a fraction of the child — a
+  /// cascade tile is nearly half a viewport tall, so "14% of it is
+  /// visible" describes a tile that has only just crept past the bottom
+  /// edge and is perfectly on time.
+  ///
+  /// Everything up to this much of the viewport counts as on time: a
+  /// child is expected to be caught the moment it appears, and it appears
+  /// edge-first.
+  static const double _latenessDeadZone = 0.15;
+
+  /// Viewport fraction beyond the dead zone over which lateness ramps to
+  /// full. Half a viewport of the child already showing means the cue was
+  /// badly late and the entrance should mostly be skipped.
+  static const double _latenessSpan = 0.5;
+
+  /// Furthest into the timeline a late entrance may be seeded. 0.5 is past
+  /// [_fadeEnd] and ~93% of the travel, so a badly late tile appears at
+  /// once, essentially in place — the visitor is already looking at that
+  /// part of the page and an animation there would be a distraction, not
+  /// an entrance. The cover reveal still plays out from there.
+  static const double _catchUpCeiling = 0.5;
+
+  /// Lateness above which the cascade stagger is skipped entirely. A wave
+  /// is a nicety for tiles arriving at the edge of the viewport; for one
+  /// that is already on screen it is just more waiting.
+  static const double _staggerSkipAbove = 0.15;
 
   @override
   State<SlideInOnVisible> createState() => _SlideInOnVisibleState();
@@ -163,9 +199,12 @@ class _CascadeStagger {
 
   /// If two consecutive claims arrive within this window, treat the
   /// scroll as fast (multiple tiles passing the threshold in quick
-  /// succession). 100 ms comfortably covers tiles arriving in adjacent
-  /// frames at 60 fps while still excluding slow deliberate scrolling.
-  static const Duration _fastScrollWindow = Duration(milliseconds: 100);
+  /// succession). 160 ms covers a wheel flick — whose notches land
+  /// 120-150 ms apart — while still excluding slow deliberate scrolling.
+  /// At the old 100 ms an ordinary fast wheel scroll fell just outside
+  /// the window, so nothing ever flushed and every tile sat out its full
+  /// stagger delay.
+  static const Duration _fastScrollWindow = Duration(milliseconds: 160);
 
   /// Number of within-window claims after which the queue flips into
   /// "flush immediately" mode for the rest of the burst.
@@ -212,9 +251,10 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
   late final AnimationController _controller;
 
   /// Row travel, in logical pixels, from [SlideInOnVisible.beginOffset]
-  /// to 0. Eased in and out — the element accelerates away from its
-  /// starting point and decelerates into its slot, so neither end of the
-  /// movement snaps.
+  /// to 0. Eased out only: the element is already moving when it appears
+  /// and decelerates into its slot. An ease-in on the front made the
+  /// first third of the entrance nearly static, which on a fast scroll
+  /// reads as the page being slow to fill rather than as an arrival.
   late final Animation<double> _travel;
 
   /// Row opacity. Front-loaded (see [SlideInOnVisible._fadeEnd]) so the
@@ -236,6 +276,12 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
   /// rendered bare — see [build] for why that matters per frame.
   bool _settled = false;
 
+  /// Timeline position the entrance starts from, seeded when the
+  /// visibility cue arrives late (see [SlideInOnVisible._catchUpCeiling]).
+  /// 0 for a tile caught at the edge of the viewport, which is the case
+  /// the animation was designed around.
+  double _catchUp = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -246,7 +292,7 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
         curve: const Interval(
           0.0,
           SlideInOnVisible._travelEnd,
-          curve: Curves.easeInOutCubic,
+          curve: Curves.easeOutCubic,
         ),
       ),
     );
@@ -297,12 +343,36 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
     // pops when [EntranceReveal] disappears with them.
     if (_settled) return widget.child;
 
+    // Captured here rather than read inside the callback: the closure is
+    // rebuilt with the widget, so it always sees the current viewport, and
+    // the MediaQuery dependency is registered during build where it
+    // belongs.
+    final double viewportHeight = MediaQuery.sizeOf(context).height;
+
     return VisibilityDetector(
       key: widget.uniqueKey,
       onVisibilityChanged: (VisibilityInfo info) {
         if (_hasAnimated) return;
         if (info.visibleFraction >= widget.visibilityThreshold) {
           _hasAnimated = true;
+          // How far past its cue this child already is. The detector
+          // batches callbacks, the paint window mounts tiles a little
+          // before they arrive, and a flick can carry a tile most of a
+          // screen in one frame — so the first callback can easily
+          // describe a child that is not "just peeking in" but already
+          // sitting in the middle of the viewport. Starting such a child
+          // at opacity 0 is what produced the "scroll fast, stare at
+          // white" report.
+          //
+          // Measured in pixels of the child that are on screen, against
+          // the viewport: a tile is half a viewport tall, so its *own*
+          // visible fraction says nothing useful about how late we are.
+          final double onScreen = info.visibleBounds.height;
+          final double lateness = ((onScreen -
+                      viewportHeight * SlideInOnVisible._latenessDeadZone) /
+                  (viewportHeight * SlideInOnVisible._latenessSpan))
+              .clamp(0.0, 1.0);
+          _catchUp = lateness * SlideInOnVisible._catchUpCeiling;
           // Queue-based stagger with cap + fast-scroll flush. Tiles
           // sharing a `staggerGroup` and crossing the visibility
           // threshold inside the same idle window claim sequential
@@ -319,15 +389,16 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
           // project detail) before the delay elapses — the controller
           // would otherwise be disposed.
           int slot = 0;
-          if (widget.staggerGroup != null) {
+          if (widget.staggerGroup != null &&
+              lateness <= SlideInOnVisible._staggerSkipAbove) {
             final int raw = _CascadeStagger.claim(widget.staggerGroup!);
             slot = raw > widget.staggerCap ? widget.staggerCap : raw;
           }
           if (slot == 0) {
-            if (mounted) _controller.forward();
+            if (mounted) _controller.forward(from: _catchUp);
           } else {
             Future<void>.delayed(widget.staggerStep * slot, () {
-              if (mounted) _controller.forward();
+              if (mounted) _controller.forward(from: _catchUp);
             });
           }
         }
