@@ -467,11 +467,12 @@ class HomePageState extends State<HomePage>
                   cascade.add(
                     Container(
                       margin: EdgeInsets.only(top: topMargin),
-                      // SlideInOnVisible lets each tile animate in
-                      // (fade + slide from the left, 60 px) the first
-                      // time it crosses 15% visibility in the viewport,
-                      // instead of all 33 tiles snapping into place at
-                      // the moment the cascade enters view. The unique
+                      // SlideInOnVisible lets each tile animate in — a
+                      // 96 px eased travel plus a fade, with the cover
+                      // artwork held back until the row has landed — the
+                      // first time it crosses 1% visibility in the
+                      // viewport, instead of all 33 tiles snapping into
+                      // place at the moment the cascade enters view. The unique
                       // `ValueKey` per index is required by
                       // VisibilityDetector. The shared `staggerGroup`
                       // coordinates a queue-based wave: tiles that all

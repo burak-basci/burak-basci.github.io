@@ -1,41 +1,77 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-/// Wraps [child] so the first time the smallest sliver of it scrolls
-/// into the viewport the child slides in from fully offstage on the
-/// left and then stays at its final state. Used to make the home page
-/// project cascade tiles appear as the visitor scrolls instead of all
-/// snapping into place at the moment the cascade enters view.
+/// Exposes the tail end of a [SlideInOnVisible] entrance to the subtree
+/// underneath it, so a heavy element — the project cover on a cascade
+/// tile — can hold itself back until the row it belongs to has landed.
+///
+/// The animation handed down runs 0 → 1 *after* the travel is over (see
+/// [SlideInOnVisible._travelEnd]), which is why a widget that reads it can
+/// simply hand it to a [FadeTransition]: it stays at 0 for the whole
+/// movement and only then fades up.
+///
+/// Outside an entrance (project detail pages, or a tile whose entrance has
+/// already finished and been torn down) [maybeOf] returns null and callers
+/// fall back to [kAlwaysCompleteAnimation] — the cover is simply visible.
+class EntranceReveal extends InheritedWidget {
+  const EntranceReveal({
+    required this.reveal,
+    required super.child,
+    super.key,
+  });
+
+  final Animation<double> reveal;
+
+  static Animation<double>? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<EntranceReveal>()?.reveal;
+
+  @override
+  bool updateShouldNotify(EntranceReveal oldWidget) =>
+      oldWidget.reveal != reveal;
+}
+
+/// Wraps [child] so the first time the smallest sliver of it scrolls into
+/// the viewport it fades up while sliding a short distance to the right,
+/// then stays at its final state. Used to make the home page project
+/// cascade tiles arrive as the visitor scrolls instead of all snapping
+/// into place at the moment the cascade enters view.
 ///
 /// Each instance needs a unique [uniqueKey] — `VisibilityDetector`
 /// internally requires globally unique keys across the tree.
 ///
-/// The entrance fires exactly once per instance: a `_hasAnimated` guard
-/// in the State swallows every subsequent visibility event after the
-/// first qualifying one, so scrolling tiles back into view does NOT
-/// replay the slide. There is no fade — only a translate — because the
-/// tiles should feel like they are physically sliding in from behind
-/// the left edge, not materialising mid-screen.
+/// The entrance fires exactly once per instance: a `_hasAnimated` guard in
+/// the State swallows every subsequent visibility event after the first
+/// qualifying one, so scrolling tiles back into view does NOT replay it.
 ///
-/// The slide uses `flutter_animate`'s fractional [slideX] (offset in
-/// units of the widget's own width) rather than an absolute pixel
-/// offset, so the tile is guaranteed to start entirely offstage to
-/// the left regardless of viewport width or final tile placement —
-/// no part of the tile peeks into view before the animation begins.
+/// **The movement is deliberately small.** An earlier version slid the
+/// tile in from a fractional offset (`slideX(begin: -1.5)`, i.e. 1.5× the
+/// child's own width) — and a cascade tile is as wide as the viewport, so
+/// every entrance flung a full-width band, its title and its cover artwork
+/// across ~2400 px of screen in 900 ms. It read as chaos rather than
+/// arrival. The travel is now an absolute [beginOffset] in logical pixels,
+/// eased in *and* out, with the opacity carrying the entrance instead of
+/// the distance.
+///
+/// The entrance runs in two phases off a single controller so they cannot
+/// drift apart:
+///
+///   0 → [_travelEnd]   the row travels [beginOffset] → 0 and fades 0 → 1
+///   [_travelEnd] → 1   the cover fades up, via [EntranceReveal]
+///
+/// Nothing photographic is on screen while the row is moving; the artwork
+/// develops once the row has come to rest.
 ///
 /// Fast-scroll responsiveness: the visibility threshold is intentionally
-/// very low (1%) and the cascade queue is capped + velocity-aware so a
-/// tile that's scrolled past in a single wheel flick still visibly
-/// enters as the user passes it. See [_CascadeStagger] for the queue
-/// flush logic.
+/// very low (1%) and the cascade queue is capped + velocity-aware so a tile
+/// that's scrolled past in a single wheel flick still visibly enters as the
+/// user passes it. See [_CascadeStagger] for the queue flush logic.
 class SlideInOnVisible extends StatefulWidget {
   const SlideInOnVisible({
     required this.uniqueKey,
     required this.child,
     this.visibilityThreshold = 0.01,
-    this.slideBeginX = -1.5,
-    this.duration = const Duration(milliseconds: 900),
+    this.beginOffset = 96.0,
+    this.duration = const Duration(milliseconds: 960),
     this.staggerGroup,
     this.staggerStep = const Duration(milliseconds: 80),
     this.staggerCap = 5,
@@ -50,43 +86,53 @@ class SlideInOnVisible extends StatefulWidget {
 
   /// Fraction of the child that has to be in the viewport before the
   /// entrance animation triggers. 0.01 (1%) gives a "just peeked into
-  /// view" feel which matters for fast-scroll users — a higher
-  /// threshold lets tiles scroll past before they ever start animating.
+  /// view" feel which matters for fast-scroll users — a higher threshold
+  /// lets tiles scroll past before they ever start animating.
   final double visibilityThreshold;
 
-  /// Starting horizontal offset for the slide, expressed in multiples
-  /// of the child's own width. Negative values start offstage to the
-  /// left. The default `-1.5` puts the child 1.5× its width past the
-  /// left edge of its own layout slot, guaranteeing it is fully off
-  /// the visible canvas at animation start even for tiles whose final
-  /// position is well to the right of the viewport's left edge.
-  final double slideBeginX;
+  /// How far left of its final position the child starts, in logical
+  /// pixels. Small on purpose: the fade is what announces the element, the
+  /// travel only gives it a direction. 96 px is roughly a third of the
+  /// cascade's left indent at desktop width — enough to read as movement,
+  /// short enough that nothing is ever seen flying.
+  final double beginOffset;
 
+  /// Full length of the entrance, travel *and* cover reveal (see
+  /// [_travelEnd] for the split).
   final Duration duration;
 
   /// Optional cascade identifier. Tiles that share the same non-null
-  /// [staggerGroup] coordinate via a shared ticket counter so that a
-  /// batch of tiles which all cross the visibility threshold in the
-  /// same frame fan out into a wave (tile N+1 starts `staggerStep`
-  /// after tile N) instead of firing in lockstep. The counter resets
-  /// after a short idle period, so a re-scroll into a fresh region
-  /// (or a lone tile entering view well after the previous wave)
-  /// starts again from zero delay.
+  /// [staggerGroup] coordinate via a shared ticket counter so that a batch
+  /// of tiles which all cross the visibility threshold in the same frame
+  /// fan out into a wave (tile N+1 starts `staggerStep` after tile N)
+  /// instead of firing in lockstep. The counter resets after a short idle
+  /// period, so a re-scroll into a fresh region (or a lone tile entering
+  /// view well after the previous wave) starts again from zero delay.
   ///
-  /// `null` disables staggering entirely (forward() fires immediately
-  /// on first qualifying visibility).
+  /// `null` disables staggering entirely (forward() fires immediately on
+  /// first qualifying visibility).
   final String? staggerGroup;
 
   /// Per-step delay used to space neighbouring tile entrances inside a
-  /// cascade group. 80 ms feels like a deliberate wave but keeps even
-  /// the last tile in a 6-tile group under half a second of head delay.
+  /// cascade group. 80 ms feels like a deliberate wave but keeps even the
+  /// last tile in a 6-tile group under half a second of head delay.
   final Duration staggerStep;
 
   /// Maximum slot index that contributes additional delay. Slots beyond
-  /// this cap all fire at `staggerStep × staggerCap`, so a very long
-  /// list of co-visible tiles doesn't tail out for seconds. With
-  /// staggerStep=80ms and staggerCap=5 the tail caps at 400ms.
+  /// this cap all fire at `staggerStep × staggerCap`, so a very long list
+  /// of co-visible tiles doesn't tail out for seconds. With staggerStep=80
+  /// ms and staggerCap=5 the tail caps at 400 ms.
   final int staggerCap;
+
+  /// Point in the timeline where the row has finished travelling and the
+  /// cover reveal takes over. At the default 960 ms duration that is a
+  /// 576 ms arrival followed by a 384 ms reveal.
+  static const double _travelEnd = 0.6;
+
+  /// Point where the row is fully opaque. Deliberately earlier than
+  /// [_travelEnd]: the element should look settled slightly before it
+  /// stops, otherwise the last few pixels of travel read as a stutter.
+  static const double _fadeEnd = 0.42;
 
   @override
   State<SlideInOnVisible> createState() => _SlideInOnVisibleState();
@@ -165,10 +211,24 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
+  /// Row travel, in logical pixels, from [SlideInOnVisible.beginOffset]
+  /// to 0. Eased in and out — the element accelerates away from its
+  /// starting point and decelerates into its slot, so neither end of the
+  /// movement snaps.
+  late final Animation<double> _travel;
+
+  /// Row opacity. Front-loaded (see [SlideInOnVisible._fadeEnd]) so the
+  /// element is fully present for the last stretch of its travel.
+  late final Animation<double> _fade;
+
+  /// Cover reveal, handed to the subtree through [EntranceReveal]. Pinned
+  /// at 0 until the travel is over.
+  late final Animation<double> _coverReveal;
+
   /// Latched true the first time the child crosses the visibility
   /// threshold. Every subsequent `onVisibilityChanged` callback bails
   /// out immediately so re-entering the viewport does NOT re-play the
-  /// slide. This matches the rest of the site's text animations, which
+  /// entrance. This matches the rest of the site's text animations, which
   /// fire forward() once and stay at value=1.
   bool _hasAnimated = false;
 
@@ -180,6 +240,32 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration);
+    _travel = Tween<double>(begin: -widget.beginOffset, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(
+          0.0,
+          SlideInOnVisible._travelEnd,
+          curve: Curves.easeInOutCubic,
+        ),
+      ),
+    );
+    _fade = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(
+        0.0,
+        SlideInOnVisible._fadeEnd,
+        curve: Curves.easeOut,
+      ),
+    );
+    _coverReveal = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(
+        SlideInOnVisible._travelEnd,
+        1.0,
+        curve: Curves.easeOut,
+      ),
+    );
     _controller.addStatusListener((AnimationStatus status) {
       if (status == AnimationStatus.completed && !_settled && mounted) {
         setState(() => _settled = true);
@@ -189,29 +275,28 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
 
   @override
   void dispose() {
+    // CurvedAnimation holds a listener on its parent; Flutter asserts on
+    // undisposed instances.
+    (_fade as CurvedAnimation).dispose();
+    (_coverReveal as CurvedAnimation).dispose();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Once the entrance has played out, both wrappers are dead weight that
+    // Once the entrance has played out, the wrappers are dead weight that
     // every subsequent frame still pays for: VisibilityDetector keeps
-    // computing visibility and scheduling callbacks on each paint, and
-    // flutter_animate's `.animate()` keeps a transform layer alive around
-    // a child that no longer moves. The cascade has one of each per tile
-    // and repaints wholesale on every scroll frame, so this is pure
-    // per-frame overhead for an animation that finished seconds ago.
-    // Dropping both once the controller is at rest returns the plain
-    // child, identical in appearance (slideX has landed at offset 0).
+    // computing visibility and scheduling callbacks on each paint, and the
+    // transform / opacity layers stay alive around a child that no longer
+    // moves. The cascade has one of each per tile and repaints wholesale
+    // on every scroll frame, so this is pure per-frame overhead for an
+    // animation that finished seconds ago. Dropping them returns the plain
+    // child, identical in appearance — travel has landed at 0, opacity at
+    // 1, and the cover reveal completed *before* this fires, so nothing
+    // pops when [EntranceReveal] disappears with them.
     if (_settled) return widget.child;
 
-    // Use a fractional slide (units = child's own width) so the tile
-    // is guaranteed to start fully offstage to the left regardless of
-    // viewport size or final tile placement. `slideX(begin: -1.5)`
-    // puts the child 1.5× its own width past its layout slot — even
-    // tiles whose final left edge is several hundred pixels from the
-    // viewport's left edge are completely out of view at t=0.
     return VisibilityDetector(
       key: widget.uniqueKey,
       onVisibilityChanged: (VisibilityInfo info) {
@@ -247,14 +332,30 @@ class _SlideInOnVisibleState extends State<SlideInOnVisible>
           }
         }
       },
-      child: widget.child
-          .animate(controller: _controller, autoPlay: false)
-          .slideX(
-            begin: widget.slideBeginX,
-            end: 0,
-            duration: widget.duration,
-            curve: Curves.easeOutCubic,
+      // The subtree is built once and handed to the builder untouched, so
+      // an entrance frame only re-evaluates the transform and the opacity.
+      // The inner RepaintBoundary keeps the moving tile off the parent's
+      // paint list: the rasteriser re-composites a cached layer at the new
+      // offset instead of repainting the artwork for every frame of every
+      // entrance.
+      child: AnimatedBuilder(
+        animation: _controller,
+        child: RepaintBoundary(
+          child: EntranceReveal(
+            reveal: _coverReveal,
+            child: widget.child,
           ),
+        ),
+        builder: (BuildContext context, Widget? child) {
+          return Opacity(
+            opacity: _fade.value,
+            child: Transform.translate(
+              offset: Offset(_travel.value, 0),
+              child: child,
+            ),
+          );
+        },
+      ),
     );
   }
 }

@@ -7,6 +7,7 @@ import '../../utils/i18n_strings.dart';
 import '../../utils/lang.dart';
 import '../../utils/values/values.dart';
 import '../../utils/values/spaces.dart';
+import '../animations/slide_in_on_visible.dart';
 import '../buttons/animated_bubble_button.dart';
 
 /// One architectural / system illustration shown in the `/04 TECHNICAL`
@@ -482,6 +483,14 @@ class ProjectItemLargeState extends State<ProjectItemLarge> with SingleTickerPro
       targetWidthOfButton,
       medium: targetWidthOfButtonMd,
     );
+    // Cover artwork reveal. On the home cascade the tile is inside a
+    // [SlideInOnVisible] entrance, which hands down an animation that
+    // stays at 0 for the whole travel and only then fades up — so the
+    // covers are never seen moving, they develop once the row has landed.
+    // Anywhere else (and once the entrance has torn itself down) there is
+    // no [EntranceReveal] above us and the artwork is simply present.
+    final Animation<double> coverReveal =
+        EntranceReveal.maybeOf(context) ?? kAlwaysCompleteAnimation;
     TextTheme textTheme = Theme.of(context).textTheme;
     // textStyle for button for viewing project
     TextStyle? buttonStyle = textTheme.bodyLarge?.copyWith(
@@ -584,108 +593,118 @@ class ProjectItemLargeState extends State<ProjectItemLarge> with SingleTickerPro
             Positioned(
               top: positionOfColoredContainer,
               right: assignWidth(context, 0.1),
-              child: AnimatedContainer(
-                width: _isHovering ? containerWidth : 0,
-                color: widget.containerColor,
-                duration: const Duration(milliseconds: 450),
-                height: containerHeight,
-                curve: Curves.fastOutSlowIn,
-                clipBehavior: Clip.hardEdge,
-                // The behind / wipe-in panel always uses the static
-                // AI-generated `cover-color.webp` (passed in via
-                // [hoverImageUrl]) — that asset is the cinematic
-                // "photographic" cover. The angled-above thumbnail
-                // below renders the live painted [AnimatedHeroCover];
-                // showing two visually distinct treatments at the same
-                // time is intentional. If a project has no AI cover,
-                // we fall back to nothing (panel stays solid colour).
-                child: widget.hoverImageUrl == null
-                    ? null
-                    : OverflowBox(
-                        maxWidth: containerWidth,
-                        maxHeight: containerHeight,
-                        alignment: Alignment.centerRight,
-                        child: SizedBox(
-                          width: containerWidth,
-                          height: containerHeight,
-                          child: Image.asset(
-                            widget.hoverImageUrl!,
-                            fit: BoxFit.cover,
-                            // Decode at the size we actually paint rather
-                            // than the asset's native 1600x900. Every
-                            // full-res cover costs ~5.8 MB of RGBA in the
-                            // image cache and the cascade holds a dozen at
-                            // once, which blows past the 100 MB default and
-                            // makes it thrash (decode -> evict -> decode).
-                            // Scaling by DPR keeps it pixel-exact on HiDPI.
-                            cacheWidth: (containerWidth *
-                                    MediaQuery.devicePixelRatioOf(context))
-                                .round()
-                                .clamp(1, 4096),
-                          ),
-                        ),
-                      ),
-              ),
-            ),
-            Positioned(
-              right: 0,
-              child: Transform(
-                origin: Offset(animation.value, 0),
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.0095)
-                  ..rotateY(0.075),
-                // The main slide-in thumbnail also uses the live cover
-                // when a [project] is supplied — non-ticking so the
-                // entire cascade is just N static custom-painted
-                // canvases instead of N animation controllers. On
-                // hover a compact text overlay (category, title,
-                // subtitle, accent rule) fades in over the painted
-                // cover so the foreground tile mirrors the treatment
-                // the visitor will see on the detail page hero.
-                child: SizedBox(
-                  width: imageWidth,
+              // Held back by the entrance too: a tile that slides under a
+              // resting cursor would otherwise wipe its hover cover open
+              // mid-travel, which is exactly the flying artwork the
+              // entrance is designed to avoid.
+              child: FadeTransition(
+                opacity: coverReveal,
+                child: AnimatedContainer(
+                  width: _isHovering ? containerWidth : 0,
+                  color: widget.containerColor,
+                  duration: const Duration(milliseconds: 450),
                   height: containerHeight,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: <Widget>[
-                      widget.project != null &&
-                              widget.lang != null &&
-                              !widget.useBakedCover
-                          ? AnimatedHeroCover(
-                              project: widget.project!,
-                              lang: widget.lang!,
-                              animated: false,
-                            )
-                          : Image.asset(
-                              widget.imageUrl,
-                              width: imageWidth,
-                              height: containerHeight,
+                  curve: Curves.fastOutSlowIn,
+                  clipBehavior: Clip.hardEdge,
+                  // The behind / wipe-in panel always uses the static
+                  // AI-generated `cover-color.webp` (passed in via
+                  // [hoverImageUrl]) — that asset is the cinematic
+                  // "photographic" cover. The angled-above thumbnail
+                  // below renders the live painted [AnimatedHeroCover];
+                  // showing two visually distinct treatments at the same
+                  // time is intentional. If a project has no AI cover,
+                  // we fall back to nothing (panel stays solid colour).
+                  child: widget.hoverImageUrl == null
+                      ? null
+                      : OverflowBox(
+                          maxWidth: containerWidth,
+                          maxHeight: containerHeight,
+                          alignment: Alignment.centerRight,
+                          child: SizedBox(
+                            width: containerWidth,
+                            height: containerHeight,
+                            child: Image.asset(
+                              widget.hoverImageUrl!,
                               fit: BoxFit.cover,
-                              // See the cacheWidth note on the hover panel
-                              // above — same 1600x900 covers, same cache.
-                              cacheWidth: (imageWidth *
+                              // Decode at the size we actually paint rather
+                              // than the asset's native 1600x900. Every
+                              // full-res cover costs ~5.8 MB of RGBA in the
+                              // image cache and the cascade holds a dozen at
+                              // once, which blows past the 100 MB default and
+                              // makes it thrash (decode -> evict -> decode).
+                              // Scaling by DPR keeps it pixel-exact on HiDPI.
+                              cacheWidth: (containerWidth *
                                       MediaQuery.devicePixelRatioOf(context))
                                   .round()
                                   .clamp(1, 4096),
                             ),
-                      if (widget.project != null && widget.lang != null)
-                        Positioned(
-                          left: 20,
-                          right: 20,
-                          bottom: 20,
-                          child: IgnorePointer(
-                            child: AnimatedOpacity(
-                              opacity: _isHovering ? 1.0 : 0.0,
-                              duration: const Duration(milliseconds: 400),
-                              curve: Curves.easeOutCubic,
-                              child: _HoverHeroOverlay(
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 0,
+              child: FadeTransition(
+                opacity: coverReveal,
+                child: Transform(
+                  origin: Offset(animation.value, 0),
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.0095)
+                    ..rotateY(0.075),
+                  // The main slide-in thumbnail also uses the live cover
+                  // when a [project] is supplied — non-ticking so the
+                  // entire cascade is just N static custom-painted
+                  // canvases instead of N animation controllers. On
+                  // hover a compact text overlay (category, title,
+                  // subtitle, accent rule) fades in over the painted
+                  // cover so the foreground tile mirrors the treatment
+                  // the visitor will see on the detail page hero.
+                  child: SizedBox(
+                    width: imageWidth,
+                    height: containerHeight,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: <Widget>[
+                        widget.project != null &&
+                                widget.lang != null &&
+                                !widget.useBakedCover
+                            ? AnimatedHeroCover(
                                 project: widget.project!,
                                 lang: widget.lang!,
+                                animated: false,
+                              )
+                            : Image.asset(
+                                widget.imageUrl,
+                                width: imageWidth,
+                                height: containerHeight,
+                                fit: BoxFit.cover,
+                                // See the cacheWidth note on the hover panel
+                                // above — same 1600x900 covers, same cache.
+                                cacheWidth: (imageWidth *
+                                        MediaQuery.devicePixelRatioOf(context))
+                                    .round()
+                                    .clamp(1, 4096),
+                              ),
+                        if (widget.project != null && widget.lang != null)
+                          Positioned(
+                            left: 20,
+                            right: 20,
+                            bottom: 20,
+                            child: IgnorePointer(
+                              child: AnimatedOpacity(
+                                opacity: _isHovering ? 1.0 : 0.0,
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeOutCubic,
+                                child: _HoverHeroOverlay(
+                                  project: widget.project!,
+                                  lang: widget.lang!,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
