@@ -13,28 +13,28 @@ import '../../widgets/scaffolding/header/default_page_header.dart';
 import '../../widgets/scaffolding/page_wrapper.dart';
 import '../../widgets/text/slide_box_transitioning_text.dart';
 
-class PrivacyPolicyPage extends StatefulWidget {
-  static const String privacyPolicyPageRoute = StringConst.PRIVACY_POLICY_PAGE;
-  const PrivacyPolicyPage({
+class ImpressumPage extends StatefulWidget {
+  static const String impressumPageRoute = StringConst.IMPRESSUM_PAGE;
+  const ImpressumPage({
     super.key,
   });
 
   @override
-  PrivacyPolicyPageState createState() => PrivacyPolicyPageState();
+  ImpressumPageState createState() => ImpressumPageState();
 }
 
-class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProviderStateMixin {
+class ImpressumPageState extends State<ImpressumPage> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
 
   late AnimationController _controller;
-  late List<AnimationController> _privacyPolicyControllers;
+  late List<AnimationController> _sectionControllers;
   late AnimationController _footerController;
 
   @override
   void initState() {
     _controller = AnimationController(vsync: this);
 
-    _privacyPolicyControllers = List.generate(Data.privacyPolicyData.length, (index) {
+    _sectionControllers = List.generate(Data.impressumData.length, (index) {
       return AnimationController(vsync: this);
     });
 
@@ -46,7 +46,7 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
   @override
   void dispose() {
     _controller.dispose();
-    for (AnimationController controller in _privacyPolicyControllers) {
+    for (AnimationController controller in _sectionControllers) {
       controller.dispose();
     }
     _footerController.dispose();
@@ -56,14 +56,14 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
   @override
   Widget build(BuildContext context) {
     return PageWrapper(
-      selectedRoute: PrivacyPolicyPage.privacyPolicyPageRoute,
-      selectedPageName: StringConst.PRIVACY_POLICY,
+      selectedRoute: ImpressumPage.impressumPageRoute,
+      selectedPageName: StringConst.IMPRESSUM,
       navigationBarAnimationController: _controller,
       onLoadingAnimationDone: () {
         _controller.forward();
       },
       // SingleChildScrollView keeps maxScrollExtent stable across the
-      // long privacy text — same reason as the other content pages.
+      // legal text — same reason as the other content pages.
       child: SingleChildScrollView(
         controller: _scrollController,
         physics: const BouncingScrollPhysics(
@@ -76,7 +76,7 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
           children: <Widget>[
           DefaultPageHeader(
             scrollController: _scrollController,
-            headingText: Tr.of('footer.privacy_policy'),
+            headingText: Tr.of('footer.imprint'),
             headingTextController: _controller,
           ),
           LayoutBuilder(builder: (context, constraints) {
@@ -99,8 +99,8 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  ...buildPrivacyPolicySection(
-                    data: Data.privacyPolicyData,
+                  ...buildImpressumSection(
+                    data: Data.impressumData,
                     width: contentAreaWidth,
                   ),
                   const CustomSpacer(heightFactor: 0.1),
@@ -125,7 +125,7 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
     );
   }
 
-  List<Widget> buildPrivacyPolicySection({
+  List<Widget> buildImpressumSection({
     required List<PrivacyPolicyData> data,
     required double width,
   }) {
@@ -147,10 +147,10 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
           : const SizedBox();
       items.add(
         VisibilityDetector(
-          key: Key('privacy-policy-section-$index'),
+          key: Key('impressum-section-$index'),
           onVisibilityChanged: (visibilityInfo) {
             if (visibilityInfo.visibleFraction > 0.25) {
-              _privacyPolicyControllers[index].forward();
+              _sectionControllers[index].forward();
             }
           },
           child: Column(
@@ -158,7 +158,7 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
             children: <Widget>[
               data[index].title != null
                   ? AnimatedSlideBoxTransitionText(
-                      controller: _privacyPolicyControllers[index],
+                      controller: _sectionControllers[index],
                       text: data[index].title!,
                       width: width,
                       textStyle: defaultTitleStyle,
@@ -166,7 +166,7 @@ class PrivacyPolicyPageState extends State<PrivacyPolicyPage> with TickerProvide
                   : const SizedBox(),
               data[index].title != null ? const SpaceH12() : const SizedBox(),
               SelfPositioningText(
-                controller: _privacyPolicyControllers[index],
+                controller: _sectionControllers[index],
                 text: data[index].content,
                 width: width,
                 delay: const Duration(milliseconds: 800),

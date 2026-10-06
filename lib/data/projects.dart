@@ -8,84 +8,7 @@ const String _d = 'assets/images/projects';
 /// list; the per-entry `screenshots` + `decisions` + `learnings` lists drive
 /// the detail page.
 final List<ProjectItemData> recentWorks = <ProjectItemData>[
-  // 01 ----------------------------------------------------------------------
-  ProjectItemData(title: 'Volkswagen AI Patent Search',
-    subtitle: 'Hybrid semantic search engine — VW Infotainment',
-    category: 'AI / SEARCH',
-    platform: 'Web · Internal',
-    primaryColor: const Color(0xFF1E3A8A),
-    image: '$_d/patent-search/cover.webp',
-    coverUrl: '$_d/patent-search/cover.webp',
-    coverColorUrl: '$_d/patent-search/cover-color.webp',
-    technologyUsed:
-        'Flutter Web · Django · ElasticSearch · Vector Embeddings · Django Canvas (PDF/image gen) · Kubernetes · UML/SysML',
-    portfolioDescription:
-        'Production AI patent-search tool I built end-to-end at Volkswagen '
-        'Infotainment, scaled across three departments and 50+ internal '
-        'engineers. Hybrid retrieval over a tuned ElasticSearch index '
-        'combines BM25 keyword scoring with dense vector embeddings; an '
-        'A/B-tested ranking layer lifted precision by 25% and cut '
-        'researcher time-to-discovery by 40%. A small Django service '
-        '("Django Canvas") renders branded export PDFs and result-page '
-        'images on demand. Deployed onto VW\'s internal Kubernetes '
-        'clusters so the patent corpus never crossed the corporate '
-        'boundary. The full landscape was modelled in Enterprise '
-        'Architect (UML/SysML), mapping 100% of infra-to-code '
-        'dependencies for the DevSecOps handover.',
-    isPublic: false,
-    isLive: true,
-    mockupType: 'laptop',
-    screenshots: <String>[],
-    decisions: <String>[
-      'Picked **hybrid BM25 + dense-vector retrieval** instead of pure semantic search — pure embeddings consistently missed the exact-term matches that legal teams actually search for (Patent IDs, claim numbers, named entities), and that gap was a non-starter for the audience.',
-      'Ran every ranking-weight change through an **A/B-test against a fixed query bank** rather than shipping by feel — only three configurations cleared the bar; the rest looked good in demos and lost on real searches.',
-      'Embedded **PDF + image rendering inside the same Django backend** ("Django Canvas") rather than calling a third-party export service, because every export contained patent text under NDA and could not leave the boundary.',
-      'Modelled the full system in **Enterprise Architect (UML/SysML) before writing code** — the upfront diagram surfaced a missing security boundary that would have failed the security audit if discovered later.',
-      'Deployed onto **VW\'s internal Kubernetes clusters** instead of any external host — the patent corpus contained pre-publication IP, so every byte of indexing, search and rendering had to stay inside the corporate boundary; an on-cluster deployment was the only configuration the security review accepted.',
-    ],
-    learnings: <String>[
-      'Cognitive-load audits with patent counsel showed the real bottleneck was *reading dozens of false positives*, not query latency — I rebalanced the roadmap toward ranking quality, away from response-time wins that wouldn\'t have moved the needle.',
-      'Treating the infra-to-code dependency graph as a first-class deliverable — not a side-effect — survived three team rotations as the operational contract.',
-    ],
-    translations: const <String, ProjectTranslation>{
-      'de': ProjectTranslation(
-        title: 'Volkswagen KI-Patentsuche',
-        subtitle: 'Hybride semantische Suchmaschine — VW Infotainment',
-        category: 'KI / SUCHE',
-        platform: 'Web · Intern',
-        technologyUsed:
-            'Flutter Web · Django · ElasticSearch · Vector Embeddings · Django Canvas (PDF-/Bild-Generierung) · Kubernetes · UML/SysML',
-        portfolioDescription:
-            'Produktives KI-Patentsuchwerkzeug, das ich bei Volkswagen '
-            'Infotainment end-to-end gebaut und über drei Abteilungen mit '
-            '50+ internen Engineers ausgerollt habe. Hybride Retrieval '
-            'über einen abgestimmten ElasticSearch-Index kombiniert '
-            'BM25-Keyword-Scoring mit dichten Vektor-Embeddings; eine '
-            'A/B-getestete Ranking-Schicht hob die Präzision um 25 % und '
-            'senkte die Time-to-Discovery der Researcher um 40 %. Ein '
-            'kleiner Django-Service ("Django Canvas") rendert auf Abruf '
-            'gebrandete Export-PDFs und Ergebnisseiten-Bilder. '
-            'Deployed auf die internen Kubernetes-Cluster von VW, damit '
-            'der Patent-Korpus die Unternehmensgrenze nie überquert. Die '
-            'gesamte Landschaft wurde in Enterprise Architect (UML/SysML) '
-            'modelliert und 100 % der Infrastructure-to-Code-Abhängigkeiten '
-            'für die DevSecOps-Übergabe abgebildet.',
-        decisions: <String>[
-          '**Hybrides BM25- + Dense-Vector-Retrieval** statt rein semantischer Suche gewählt — reine Embeddings verfehlten konsequent die Exact-Term-Matches, die Rechtsteams tatsächlich suchen (Patent-IDs, Anspruchsnummern, Named Entities); diese Lücke war für das Zielpublikum ein K.-o.-Kriterium.',
-          'Jede Änderung an Ranking-Gewichten durch einen **A/B-Test gegen eine feste Query-Bank** laufen lassen statt nach Bauchgefühl auszuliefern — nur drei Konfigurationen kamen über die Schwelle; der Rest sah in Demos gut aus und verlor bei echten Suchen.',
-          '**PDF- + Bild-Rendering ins selbe Django-Backend eingebettet** ("Django Canvas") statt einen externen Export-Dienst aufzurufen, denn jeder Export enthielt NDA-geschützten Patenttext und durfte die Grenze nicht verlassen.',
-          'Das gesamte System in **Enterprise Architect (UML/SysML) modelliert, bevor Code geschrieben wurde** — das Vorab-Diagramm legte eine fehlende Security-Boundary offen, die das Security-Audit später hätte scheitern lassen.',
-          'Auf die **internen Kubernetes-Cluster von VW** deployed statt auf einen externen Host — der Patent-Korpus enthielt unveröffentlichte IP, also musste jedes Byte Indexing, Suche und Rendering innerhalb der Unternehmensgrenze bleiben; ein On-Cluster-Deployment war die einzige Konfiguration, die das Security-Review akzeptierte.',
-        ],
-        learnings: <String>[
-          'Cognitive-Load-Audits mit Patentanwälten zeigten, dass der eigentliche Engpass das *Durchlesen dutzender False Positives* war, nicht die Query-Latenz — ich habe die Roadmap zugunsten der Ranking-Qualität umgeschichtet, weg von Response-Time-Wins, die nichts bewegt hätten.',
-          'Den Infrastructure-to-Code-Abhängigkeitsgraphen als First-Class-Deliverable zu behandeln — nicht als Nebenprodukt — überlebte drei Team-Rotationen als operativer Vertrag.',
-        ],
-      ),
-    },
-  ),
-
-  // 02 ----------------------------------------------------------------------
+  // 01 --------------------------------------------------------------------------
   ProjectItemData(title: 'Hetzner k3s Infrastructure',
     subtitle: 'GitOps Kubernetes platform — agency internal tools + client web hosting',
     category: 'DEVSECOPS / CLOUD',
@@ -162,7 +85,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 03 ----------------------------------------------------------------------
+  // 02 --------------------------------------------------------------------------
   ProjectItemData(title: 'Sovereign Real-Estate Infrastructure',
     subtitle: 'Self-hosted Linux platform for a 700-unit property manager — 15+ SaaS licenses replaced',
     category: 'DEVSECOPS / SELF-HOSTED',
@@ -238,7 +161,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 04 ----------------------------------------------------------------------
+  // 03 --------------------------------------------------------------------------
   ProjectItemData(title: 'PostPilot — Social-Media Automation',
     subtitle: 'AI-driven multi-platform content SaaS for SMBs',
     category: 'SAAS / AI',
@@ -310,144 +233,200 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 05 ----------------------------------------------------------------------
-  ProjectItemData(title: 'Coldmailing Lead Platform',
-    subtitle: 'CRM-lite outreach platform — segment, status, follow-up, opt-out',
-    category: 'SAAS / SALES',
-    primaryColor: const Color(0xFF0369A1),
-    image: '$_d/coldmailing/cover.webp',
-    coverUrl: '$_d/coldmailing/cover.webp',
-    coverColorUrl: '$_d/coldmailing/cover-color.webp',
-    platform: 'Web · Self-hosted',
+  // 04 --------------------------------------------------------------------------
+  ProjectItemData(title: 'Sovereign Smart Home',
+    subtitle: 'Edge-only Proxmox + HAOS + MQTT stack',
+    category: 'EDGE / SELF-HOSTED',
+    platform: 'Proxmox · HAOS',
+    primaryColor: const Color(0xFF18BCF2),
+    image: '$_d/home-assistant/cover.webp',
+    coverUrl: '$_d/home-assistant/cover.webp',
+    coverColorUrl: '$_d/home-assistant/cover-color.webp',
     technologyUsed:
-        'Python · Flask · NocoDB · PostgreSQL · Email API · Podman Compose',
+        'Proxmox VE · OpenWRT · openSUSE · Home Assistant OS · MQTT · InfluxDB · Grafana',
     portfolioDescription:
-        'A containerised outreach platform built around the parts of '
-        'cold outreach that actually matter — segments, campaign status, '
-        'follow-up cadences and opt-out plumbing — not blast volume. A '
-        'small Flask app drives the campaign engine; NocoDB acts as the '
-        'business UI so operators can edit lists, sequences and offers '
-        'without a developer; Podman Compose keeps the whole stack '
-        'portable for SMBs that want their own data. The point of the '
-        'system is to turn a CSV-and-Outlook workflow into a measurable '
-        'pipeline with deliverability monitoring and rule-of-law '
-        'opt-out tracking.',
+        'A self-hosted edge hub that keeps every physical-world signal '
+        'inside the LAN — no cloud middleman, no telemetry leak. '
+        'Proxmox virtualises Home Assistant OS, an MQTT broker, '
+        'InfluxDB and Grafana in lightweight VMs; OpenWRT handles '
+        'segmented VLANs for IoT vs. trusted devices; openSUSE runs '
+        'background workloads. Forty-plus room-level automations tie '
+        'climate, lighting, presence and security together through '
+        'sensor-fusion rules.',
     isPublic: false,
     isLive: false,
     mockupType: 'laptop',
     screenshots: <String>[],
     decisions: <String>[
-      'Built the back office on **NocoDB instead of a custom admin panel** — operators get sortable views, filters and inline edits for free; a hand-rolled CRUD admin would have eaten the whole MVP timeline and still been worse to use.',
-      'Picked **Flask over Django** because the surface is small (a few campaign endpoints, a queue worker, a few webhooks) — Django\'s ORM and admin would have been dead weight for an app this thin.',
-      'Modelled outreach as **campaigns + sequences + opt-out events**, not "send a mail" — the unit that matters is the lead\'s lifecycle, not the individual message; treating each send as a stateless action is exactly how outbound goes wrong.',
-      'Made **opt-out a first-class write path with its own audit table** — German cold-outreach law is unforgiving, and "we lost the unsubscribe in a queue retry" is not a defence anyone wants to mount.',
+      'Virtualised every component on **Proxmox in lightweight VMs** instead of running them on one bare-metal install, because a single bad upgrade on the smart-home host shouldn\'t take the broker and the database down with it. Isolation is the whole point.',
+      'Put **OpenWRT in front for segmented VLANs** — every camera, light and presence sensor sits behind its own network policy. Retrofitting that segmentation after a CVE is much more expensive than starting with it.',
+      'Wrote **room-owned automations** rather than chained-trigger global scenes — each room\'s rules compose with the next without inheriting global side-effects, and a misbehaving rule blast-radius stays in that room.',
+      'Refused **every cloud middleman** — privacy was the entire reason for the project; trading it for convenience would have defeated the point.',
     ],
     learnings: <String>[
-      'Outbound rarely fails at sending; it fails at segment, status, follow-up and reporting. The platform that wins is the one that turns a CSV-plus-Outlook habit into a visible pipeline.',
-      'Deliverability is mostly an IP-warmup and authentication problem, not a template-quality problem — moving SPF / DKIM / DMARC discipline up the priority list paid back faster than any prompt tuning.',
+      'Energy monitoring across 12+ devices in Grafana found two always-on appliances eating ~€200/year between them — the dashboard paid for the hardware in under a year.',
+      'IoT segmentation on its own VLAN from day one is dramatically cheaper than adding it after a smart bulb gets a CVE.',
     ],
     translations: const <String, ProjectTranslation>{
       'de': ProjectTranslation(
-        title: 'Coldmailing Lead-Plattform',
-        subtitle: 'CRM-Lite Outreach-Plattform — Segment, Status, Follow-up, Opt-out',
-        category: 'SAAS / VERTRIEB',
-        platform: 'Web · Self-hosted',
+        title: 'Souveränes Smart Home',
+        subtitle: 'Edge-only Proxmox + HAOS + MQTT Stack',
+        category: 'EDGE / SELF-HOSTED',
+        platform: 'Proxmox · HAOS',
         technologyUsed:
-            'Python · Flask · NocoDB · PostgreSQL · Email-API · Podman Compose',
+            'Proxmox VE · OpenWRT · openSUSE · Home Assistant OS · MQTT · InfluxDB · Grafana',
         portfolioDescription:
-            'Eine containerisierte Outreach-Plattform, gebaut um die '
-            'Teile von Cold Outreach, die wirklich zählen — Segmente, '
-            'Kampagnen-Status, Follow-up-Kadenzen und Opt-out-Plumbing — '
-            'nicht um Versand-Volumen. Eine kleine Flask-App treibt die '
-            'Kampagnen-Engine; NocoDB dient als Business-UI, sodass '
-            'Operatoren Listen, Sequenzen und Angebote ohne Entwickler '
-            'bearbeiten können; Podman Compose hält den ganzen Stack '
-            'portabel für KMUs, die ihre eigenen Daten wollen. Der Sinn '
-            'des Systems ist, einen CSV-und-Outlook-Workflow in eine '
-            'messbare Pipeline mit Deliverability-Monitoring und '
-            'rechtskonformem Opt-out-Tracking zu verwandeln.',
+            'Ein selbst gehosteter Edge-Hub, der jedes physische Signal '
+            'im LAN behält — kein Cloud-Mittelsmann, kein Telemetrie-'
+            'Leck. Proxmox virtualisiert Home Assistant OS, einen '
+            'MQTT-Broker, InfluxDB und Grafana in leichtgewichtigen VMs; '
+            'OpenWRT übernimmt segmentierte VLANs für IoT vs. '
+            'vertrauenswürdige Geräte; openSUSE betreibt Hintergrund-'
+            'Workloads. Über 40 raumweise Automationen verbinden Klima, '
+            'Licht, Anwesenheit und Sicherheit über Sensor-Fusion-Regeln.',
         decisions: <String>[
-          'Das Back-Office auf **NocoDB statt einem Custom-Admin-Panel** gebaut — Operatoren bekommen sortierbare Views, Filter und Inline-Edits gratis; ein selbstgebautes CRUD-Admin hätte das ganze MVP-Budget gefressen und wäre trotzdem schlechter zu bedienen gewesen.',
-          '**Flask gegenüber Django** gewählt, weil die Surface klein ist (ein paar Kampagnen-Endpunkte, ein Queue-Worker, ein paar Webhooks) — Djangos ORM und Admin wären für eine so schlanke App totes Gewicht gewesen.',
-          'Outreach als **Kampagnen + Sequenzen + Opt-out-Events** modelliert, nicht als "send a mail" — die Einheit, die zählt, ist der Lifecycle des Leads, nicht die einzelne Nachricht; jeden Versand als zustandslose Aktion zu behandeln, ist genau, wie Outbound schiefläuft.',
-          '**Opt-out zu einem First-Class-Write-Path mit eigener Audit-Tabelle** gemacht — deutsches Recht im Cold Outreach ist unerbittlich, und "wir haben das Unsubscribe in einem Queue-Retry verloren" ist keine Verteidigung, die irgendjemand vortragen möchte.',
+          'Jede Komponente in **leichtgewichtigen VMs auf Proxmox** virtualisiert statt sie auf einer Bare-Metal-Installation zu betreiben, denn ein schlechtes Upgrade auf dem Smart-Home-Host soll nicht den Broker und die Datenbank mitreißen. Isolation ist der ganze Punkt.',
+          '**OpenWRT für segmentierte VLANs** vorgelagert — jede Kamera, Lampe und jeder Anwesenheitssensor sitzt hinter seiner eigenen Netzwerk-Policy. Diese Segmentierung nach einem CVE nachzurüsten ist viel teurer, als sie von Anfang an mitzudenken.',
+          '**Raum-eigene Automationen** geschrieben statt verkettete globale Szenen — die Regeln eines Raumes komponieren mit dem nächsten, ohne globale Nebenwirkungen zu erben, und der Blast-Radius einer fehlerhaften Regel bleibt in diesem Raum.',
+          '**Jeden Cloud-Mittelsmann** abgelehnt — Privatsphäre war der gesamte Grund für das Projekt; sie gegen Komfort einzutauschen hätte den Zweck zunichtegemacht.',
         ],
         learnings: <String>[
-          'Outbound scheitert selten am Versand; es scheitert an Segment, Status, Follow-up und Reporting. Die Plattform, die gewinnt, ist die, die eine CSV-plus-Outlook-Routine in eine sichtbare Pipeline verwandelt.',
-          'Deliverability ist meist ein IP-Warmup- und Authentifizierungs-Problem, kein Template-Qualitäts-Problem — die SPF-/DKIM-/DMARC-Disziplin in der Priorität nach oben zu schieben zahlte sich schneller aus als jedes Prompt-Tuning.',
+          'Energie-Monitoring über 12+ Geräte in Grafana fand zwei dauerhaft eingeschaltete Geräte, die zusammen rund 200 €/Jahr fraßen — das Dashboard hatte die Hardware in unter einem Jahr abbezahlt.',
+          'IoT-Segmentierung von Tag eins an auf einem eigenen VLAN ist dramatisch billiger, als sie nach einem CVE an einer Smart-Glühbirne nachzurüsten.',
         ],
       ),
     },
   ),
 
-  // 06 ----------------------------------------------------------------------
-  ProjectItemData(title: 'LuminaRep — Clinic Review SaaS',
-    subtitle: 'AI social-proof platform for medical-aesthetics practices',
-    category: 'SAAS / AI',
-    platform: 'Web',
-    primaryColor: const Color(0xFF047857),
-    image: '$_d/luminarep/cover.webp',
-    coverUrl: '$_d/luminarep/cover.webp',
-    coverColorUrl: '$_d/luminarep/cover-color.webp',
-    technologyUsed:
-        'Next.js 15 · TypeScript · PostgreSQL · NextAuth · Google Gemini · Stripe · Tailwind · Docker Compose',
+  // 05 --------------------------------------------------------------------------
+  ProjectItemData(title: 'NestNode — Smart-Home Concept',
+    subtitle: 'Archived mobile concept rolled into Sovereign Smart Home',
+    category: 'IOT / MOBILE',
+    platform: 'iOS · Android',
+    primaryColor: const Color(0xFF0891B2),
+    image: '$_d/nestnode/cover.webp',
+    coverUrl: '$_d/nestnode/cover.webp',
+    coverColorUrl: '$_d/nestnode/cover-color.webp',
+    technologyUsed: 'Flutter · MQTT · Home Assistant',
     portfolioDescription:
-        'LuminaRep is a premium SaaS for medical-aesthetics and '
-        'cosmetic-surgery clinics. It auto-extracts each clinic\'s '
-        '5-star Google reviews and turns every one into three Instagram '
-        'captions, a TikTok script and Midjourney/DALL-E image prompts '
-        'in the practice\'s tone of voice. Email-and-password auth via '
-        'NextAuth, Stripe metered subscriptions with a 7-day trial, '
-        'and a luxury dark-mode UI in emerald + gold. Fully '
-        'containerised — a clinic that wants self-hosting can run the '
-        'whole platform on its own server.',
+        'A mobile concept for a self-hosted Home Assistant deployment: '
+        'lights, climate, energy and security in a tactile, '
+        'fast-responding UI that talks MQTT directly from the device '
+        'rather than through a cloud bridge. Archived at concept '
+        'stage — the design language was rolled into the Sovereign '
+        'Smart Home stack.',
+    isPublic: false,
+    isLive: false,
+    mockupType: 'phone',
+    screenshots: <String>[],
+    decisions: <String>[
+      'Archived as **concept-stage** — only a Word doc, logos and a moodboard exist; no codebase. The Home Assistant Edge stack absorbed the design language, so building a separate app would have been duplicate effort.',
+    ],
+    learnings: <String>[
+      'Some projects are most useful as design exercises — the gesture-first nav and tactile energy view were rolled into the Sovereign Smart Home UX instead of shipped standalone.',
+    ],
+    translations: const <String, ProjectTranslation>{
+      'de': ProjectTranslation(
+        title: 'NestNode — Smart-Home-Konzept',
+        subtitle: 'Archiviertes Mobile-Konzept, ins Souveräne Smart Home eingeflossen',
+        category: 'IOT / MOBIL',
+        platform: 'iOS · Android',
+        technologyUsed: 'Flutter · MQTT · Home Assistant',
+        portfolioDescription:
+            'Ein Mobile-Konzept für ein selbst gehostetes Home-Assistant-'
+            'Deployment: Licht, Klima, Energie und Sicherheit in einem '
+            'taktilen, schnell reagierenden UI, das MQTT direkt vom Gerät '
+            'spricht statt über eine Cloud-Bridge. Im Konzeptstatus '
+            'archiviert — die Design-Sprache wurde in den Souveränen-'
+            'Smart-Home-Stack überführt.',
+        decisions: <String>[
+          'Im **Konzeptstadium** archiviert — nur ein Word-Dokument, Logos und ein Moodboard existieren; keine Codebasis. Der Home-Assistant-Edge-Stack absorbierte die Design-Sprache, sodass eine separate App doppelte Arbeit gewesen wäre.',
+        ],
+        learnings: <String>[
+          'Manche Projekte sind als Design-Übungen am wertvollsten — die gestenorientierte Navigation und die taktile Energie-Sicht wurden in die UX des Souveränen Smart Home überführt statt als Standalone ausgeliefert.',
+        ],
+      ),
+    },
+  ),
+
+  // 06 --------------------------------------------------------------------------
+  ProjectItemData(title: 'Volkswagen AI Patent Search',
+    subtitle: 'Hybrid semantic search engine — VW Infotainment',
+    category: 'AI / SEARCH',
+    platform: 'Web · Internal',
+    primaryColor: const Color(0xFF1E3A8A),
+    image: '$_d/patent-search/cover.webp',
+    coverUrl: '$_d/patent-search/cover.webp',
+    coverColorUrl: '$_d/patent-search/cover-color.webp',
+    technologyUsed:
+        'Flutter Web · Django · ElasticSearch · Vector Embeddings · Django Canvas (PDF/image gen) · Kubernetes · UML/SysML',
+    portfolioDescription:
+        'Production AI patent-search tool I built end-to-end at Volkswagen '
+        'Infotainment, scaled across three departments and 50+ internal '
+        'engineers. Hybrid retrieval over a tuned ElasticSearch index '
+        'combines BM25 keyword scoring with dense vector embeddings; an '
+        'A/B-tested ranking layer lifted precision by 25% and cut '
+        'researcher time-to-discovery by 40%. A small Django service '
+        '("Django Canvas") renders branded export PDFs and result-page '
+        'images on demand. Deployed onto VW\'s internal Kubernetes '
+        'clusters so the patent corpus never crossed the corporate '
+        'boundary. The full landscape was modelled in Enterprise '
+        'Architect (UML/SysML), mapping 100% of infra-to-code '
+        'dependencies for the DevSecOps handover.',
     isPublic: false,
     isLive: true,
     mockupType: 'laptop',
     screenshots: <String>[],
     decisions: <String>[
-      'Picked **Gemini for the content-generation pass** over GPT-4 and Claude — in side-by-side testing on real clinic reviews, Gemini consistently produced the most clinic-friendly tone with the fewest hallucinated medical claims (which would have been a regulatory risk).',
-      'Chose **NextAuth for email + password** instead of a third-party identity provider — clinics are GDPR-sensitive and a small attack surface I fully control beat outsourcing to a vendor I\'d have to audit anyway.',
-      'Designed the **5-star-only review-extraction funnel** rather than letting clinics cherry-pick — auto-extraction removes the cognitive load that kills retention, and the constraint is a feature ("we only ever amplify your real wins").',
-      'Bundled the whole stack into **Docker Compose with a production deploy guide** — clinics can keep patient-adjacent data on premises if they need to, without me having to support a second deployment path.',
+      'Picked **hybrid BM25 + dense-vector retrieval** instead of pure semantic search — pure embeddings consistently missed the exact-term matches that legal teams actually search for (Patent IDs, claim numbers, named entities), and that gap was a non-starter for the audience.',
+      'Ran every ranking-weight change through an **A/B-test against a fixed query bank** rather than shipping by feel — only three configurations cleared the bar; the rest looked good in demos and lost on real searches.',
+      'Embedded **PDF + image rendering inside the same Django backend** ("Django Canvas") rather than calling a third-party export service, because every export contained patent text under NDA and could not leave the boundary.',
+      'Modelled the full system in **Enterprise Architect (UML/SysML) before writing code** — the upfront diagram surfaced a missing security boundary that would have failed the security audit if discovered later.',
+      'Deployed onto **VW\'s internal Kubernetes clusters** instead of any external host — the patent corpus contained pre-publication IP, so every byte of indexing, search and rendering had to stay inside the corporate boundary; an on-cluster deployment was the only configuration the security review accepted.',
     ],
     learnings: <String>[
-      'A luxury dark-mode UI (emerald + gold) actually mattered more to clinic owners than the underlying tech — design investment paid back faster than feature work in early sales conversations.',
+      'Cognitive-load audits with patent counsel showed the real bottleneck was *reading dozens of false positives*, not query latency — I rebalanced the roadmap toward ranking quality, away from response-time wins that wouldn\'t have moved the needle.',
+      'Treating the infra-to-code dependency graph as a first-class deliverable — not a side-effect — survived three team rotations as the operational contract.',
     ],
     translations: const <String, ProjectTranslation>{
       'de': ProjectTranslation(
-        title: 'LuminaRep — Klinik-Bewertungs-SaaS',
-        subtitle: 'KI-Social-Proof-Plattform für medizinisch-ästhetische Praxen',
-        category: 'SAAS / KI',
-        platform: 'Web',
+        title: 'Volkswagen KI-Patentsuche',
+        subtitle: 'Hybride semantische Suchmaschine — VW Infotainment',
+        category: 'KI / SUCHE',
+        platform: 'Web · Intern',
         technologyUsed:
-            'Next.js 15 · TypeScript · PostgreSQL · NextAuth · Google Gemini · Stripe · Tailwind · Docker Compose',
+            'Flutter Web · Django · ElasticSearch · Vector Embeddings · Django Canvas (PDF-/Bild-Generierung) · Kubernetes · UML/SysML',
         portfolioDescription:
-            'LuminaRep ist eine Premium-SaaS für Kliniken im Bereich '
-            'medizinische Ästhetik und Schönheitschirurgie. Sie '
-            'extrahiert automatisch die 5-Sterne-Google-Bewertungen '
-            'jeder Klinik und macht aus jeder davon drei Instagram-'
-            'Captions, ein TikTok-Skript und Midjourney-/DALL-E-Bild-'
-            'Prompts im Tonfall der Praxis. E-Mail-Passwort-Auth via '
-            'NextAuth, Stripe-Metered-Subscriptions mit 7-Tage-Trial '
-            'und ein luxuriöses Dark-Mode-UI in Smaragd + Gold. '
-            'Vollständig containerisiert — eine Klinik, die Self-Hosting '
-            'will, kann die ganze Plattform auf ihrem eigenen Server '
-            'betreiben.',
+            'Produktives KI-Patentsuchwerkzeug, das ich bei Volkswagen '
+            'Infotainment end-to-end gebaut und über drei Abteilungen mit '
+            '50+ internen Engineers ausgerollt habe. Hybride Retrieval '
+            'über einen abgestimmten ElasticSearch-Index kombiniert '
+            'BM25-Keyword-Scoring mit dichten Vektor-Embeddings; eine '
+            'A/B-getestete Ranking-Schicht hob die Präzision um 25 % und '
+            'senkte die Time-to-Discovery der Researcher um 40 %. Ein '
+            'kleiner Django-Service ("Django Canvas") rendert auf Abruf '
+            'gebrandete Export-PDFs und Ergebnisseiten-Bilder. '
+            'Deployed auf die internen Kubernetes-Cluster von VW, damit '
+            'der Patent-Korpus die Unternehmensgrenze nie überquert. Die '
+            'gesamte Landschaft wurde in Enterprise Architect (UML/SysML) '
+            'modelliert und 100 % der Infrastructure-to-Code-Abhängigkeiten '
+            'für die DevSecOps-Übergabe abgebildet.',
         decisions: <String>[
-          '**Gemini für den Content-Generation-Pass** gegenüber GPT-4 und Claude gewählt — im direkten Vergleich auf echten Klinik-Bewertungen produzierte Gemini konsistent den klinikfreundlichsten Tonfall mit den wenigsten halluzinierten medizinischen Aussagen (was ein regulatorisches Risiko gewesen wäre).',
-          '**NextAuth für E-Mail + Passwort** statt eines Third-Party-Identity-Providers gewählt — Kliniken sind DSGVO-sensibel, und eine kleine Angriffsfläche, die ich voll kontrolliere, schlug das Outsourcen an einen Vendor, den ich ohnehin hätte auditieren müssen.',
-          'Den **Funnel auf reine 5-Sterne-Extraktion** ausgelegt, statt Kliniken Rosinen picken zu lassen — die Auto-Extraktion nimmt die kognitive Last raus, die Retention killt, und die Einschränkung ist ein Feature ("wir verstärken immer nur eure echten Wins").',
-          'Den ganzen Stack in **Docker Compose mit Production-Deploy-Guide** gebündelt — Kliniken können patientennahe Daten on-premise halten, ohne dass ich einen zweiten Deployment-Pfad supporten muss.',
+          '**Hybrides BM25- + Dense-Vector-Retrieval** statt rein semantischer Suche gewählt — reine Embeddings verfehlten konsequent die Exact-Term-Matches, die Rechtsteams tatsächlich suchen (Patent-IDs, Anspruchsnummern, Named Entities); diese Lücke war für das Zielpublikum ein K.-o.-Kriterium.',
+          'Jede Änderung an Ranking-Gewichten durch einen **A/B-Test gegen eine feste Query-Bank** laufen lassen statt nach Bauchgefühl auszuliefern — nur drei Konfigurationen kamen über die Schwelle; der Rest sah in Demos gut aus und verlor bei echten Suchen.',
+          '**PDF- + Bild-Rendering ins selbe Django-Backend eingebettet** ("Django Canvas") statt einen externen Export-Dienst aufzurufen, denn jeder Export enthielt NDA-geschützten Patenttext und durfte die Grenze nicht verlassen.',
+          'Das gesamte System in **Enterprise Architect (UML/SysML) modelliert, bevor Code geschrieben wurde** — das Vorab-Diagramm legte eine fehlende Security-Boundary offen, die das Security-Audit später hätte scheitern lassen.',
+          'Auf die **internen Kubernetes-Cluster von VW** deployed statt auf einen externen Host — der Patent-Korpus enthielt unveröffentlichte IP, also musste jedes Byte Indexing, Suche und Rendering innerhalb der Unternehmensgrenze bleiben; ein On-Cluster-Deployment war die einzige Konfiguration, die das Security-Review akzeptierte.',
         ],
         learnings: <String>[
-          'Ein luxuriöses Dark-Mode-UI (Smaragd + Gold) war für Klinikinhaber tatsächlich wichtiger als die zugrundeliegende Technik — das Design-Investment zahlte sich in frühen Sales-Gesprächen schneller aus als Feature-Arbeit.',
+          'Cognitive-Load-Audits mit Patentanwälten zeigten, dass der eigentliche Engpass das *Durchlesen dutzender False Positives* war, nicht die Query-Latenz — ich habe die Roadmap zugunsten der Ranking-Qualität umgeschichtet, weg von Response-Time-Wins, die nichts bewegt hätten.',
+          'Den Infrastructure-to-Code-Abhängigkeitsgraphen als First-Class-Deliverable zu behandeln — nicht als Nebenprodukt — überlebte drei Team-Rotationen als operativer Vertrag.',
         ],
       ),
     },
   ),
 
-  // 07 ----------------------------------------------------------------------
+  // 07 --------------------------------------------------------------------------
   ProjectItemData(title: 'LLM Mail Triage — Intent Engine',
     subtitle: 'Pluggable-provider email classification + drafting service',
     category: 'AI / AUTOMATION',
@@ -518,7 +497,144 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 08 ----------------------------------------------------------------------
+  // 08 --------------------------------------------------------------------------
+  ProjectItemData(title: 'Coldmailing Lead Platform',
+    subtitle: 'CRM-lite outreach platform — segment, status, follow-up, opt-out',
+    category: 'SAAS / SALES',
+    primaryColor: const Color(0xFF0369A1),
+    image: '$_d/coldmailing/cover.webp',
+    coverUrl: '$_d/coldmailing/cover.webp',
+    coverColorUrl: '$_d/coldmailing/cover-color.webp',
+    platform: 'Web · Self-hosted',
+    technologyUsed:
+        'Python · Flask · NocoDB · PostgreSQL · Email API · Podman Compose',
+    portfolioDescription:
+        'A containerised outreach platform built around the parts of '
+        'cold outreach that actually matter — segments, campaign status, '
+        'follow-up cadences and opt-out plumbing — not blast volume. A '
+        'small Flask app drives the campaign engine; NocoDB acts as the '
+        'business UI so operators can edit lists, sequences and offers '
+        'without a developer; Podman Compose keeps the whole stack '
+        'portable for SMBs that want their own data. The point of the '
+        'system is to turn a CSV-and-Outlook workflow into a measurable '
+        'pipeline with deliverability monitoring and rule-of-law '
+        'opt-out tracking.',
+    isPublic: false,
+    isLive: false,
+    mockupType: 'laptop',
+    screenshots: <String>[],
+    decisions: <String>[
+      'Built the back office on **NocoDB instead of a custom admin panel** — operators get sortable views, filters and inline edits for free; a hand-rolled CRUD admin would have eaten the whole MVP timeline and still been worse to use.',
+      'Picked **Flask over Django** because the surface is small (a few campaign endpoints, a queue worker, a few webhooks) — Django\'s ORM and admin would have been dead weight for an app this thin.',
+      'Modelled outreach as **campaigns + sequences + opt-out events**, not "send a mail" — the unit that matters is the lead\'s lifecycle, not the individual message; treating each send as a stateless action is exactly how outbound goes wrong.',
+      'Made **opt-out a first-class write path with its own audit table** — German cold-outreach law is unforgiving, and "we lost the unsubscribe in a queue retry" is not a defence anyone wants to mount.',
+    ],
+    learnings: <String>[
+      'Outbound rarely fails at sending; it fails at segment, status, follow-up and reporting. The platform that wins is the one that turns a CSV-plus-Outlook habit into a visible pipeline.',
+      'Deliverability is mostly an IP-warmup and authentication problem, not a template-quality problem — moving SPF / DKIM / DMARC discipline up the priority list paid back faster than any prompt tuning.',
+    ],
+    translations: const <String, ProjectTranslation>{
+      'de': ProjectTranslation(
+        title: 'Coldmailing Lead-Plattform',
+        subtitle: 'CRM-Lite Outreach-Plattform — Segment, Status, Follow-up, Opt-out',
+        category: 'SAAS / VERTRIEB',
+        platform: 'Web · Self-hosted',
+        technologyUsed:
+            'Python · Flask · NocoDB · PostgreSQL · Email-API · Podman Compose',
+        portfolioDescription:
+            'Eine containerisierte Outreach-Plattform, gebaut um die '
+            'Teile von Cold Outreach, die wirklich zählen — Segmente, '
+            'Kampagnen-Status, Follow-up-Kadenzen und Opt-out-Plumbing — '
+            'nicht um Versand-Volumen. Eine kleine Flask-App treibt die '
+            'Kampagnen-Engine; NocoDB dient als Business-UI, sodass '
+            'Operatoren Listen, Sequenzen und Angebote ohne Entwickler '
+            'bearbeiten können; Podman Compose hält den ganzen Stack '
+            'portabel für KMUs, die ihre eigenen Daten wollen. Der Sinn '
+            'des Systems ist, einen CSV-und-Outlook-Workflow in eine '
+            'messbare Pipeline mit Deliverability-Monitoring und '
+            'rechtskonformem Opt-out-Tracking zu verwandeln.',
+        decisions: <String>[
+          'Das Back-Office auf **NocoDB statt einem Custom-Admin-Panel** gebaut — Operatoren bekommen sortierbare Views, Filter und Inline-Edits gratis; ein selbstgebautes CRUD-Admin hätte das ganze MVP-Budget gefressen und wäre trotzdem schlechter zu bedienen gewesen.',
+          '**Flask gegenüber Django** gewählt, weil die Surface klein ist (ein paar Kampagnen-Endpunkte, ein Queue-Worker, ein paar Webhooks) — Djangos ORM und Admin wären für eine so schlanke App totes Gewicht gewesen.',
+          'Outreach als **Kampagnen + Sequenzen + Opt-out-Events** modelliert, nicht als "send a mail" — die Einheit, die zählt, ist der Lifecycle des Leads, nicht die einzelne Nachricht; jeden Versand als zustandslose Aktion zu behandeln, ist genau, wie Outbound schiefläuft.',
+          '**Opt-out zu einem First-Class-Write-Path mit eigener Audit-Tabelle** gemacht — deutsches Recht im Cold Outreach ist unerbittlich, und "wir haben das Unsubscribe in einem Queue-Retry verloren" ist keine Verteidigung, die irgendjemand vortragen möchte.',
+        ],
+        learnings: <String>[
+          'Outbound scheitert selten am Versand; es scheitert an Segment, Status, Follow-up und Reporting. Die Plattform, die gewinnt, ist die, die eine CSV-plus-Outlook-Routine in eine sichtbare Pipeline verwandelt.',
+          'Deliverability ist meist ein IP-Warmup- und Authentifizierungs-Problem, kein Template-Qualitäts-Problem — die SPF-/DKIM-/DMARC-Disziplin in der Priorität nach oben zu schieben zahlte sich schneller aus als jedes Prompt-Tuning.',
+        ],
+      ),
+    },
+  ),
+
+  // 09 --------------------------------------------------------------------------
+  ProjectItemData(title: 'LuminaRep — Clinic Review SaaS',
+    subtitle: 'AI social-proof platform for medical-aesthetics practices',
+    category: 'SAAS / AI',
+    platform: 'Web',
+    primaryColor: const Color(0xFF047857),
+    image: '$_d/luminarep/cover.webp',
+    coverUrl: '$_d/luminarep/cover.webp',
+    coverColorUrl: '$_d/luminarep/cover-color.webp',
+    technologyUsed:
+        'Next.js 15 · TypeScript · PostgreSQL · NextAuth · Google Gemini · Stripe · Tailwind · Docker Compose',
+    portfolioDescription:
+        'LuminaRep is a premium SaaS for medical-aesthetics and '
+        'cosmetic-surgery clinics. It auto-extracts each clinic\'s '
+        '5-star Google reviews and turns every one into three Instagram '
+        'captions, a TikTok script and Midjourney/DALL-E image prompts '
+        'in the practice\'s tone of voice. Email-and-password auth via '
+        'NextAuth, Stripe metered subscriptions with a 7-day trial, '
+        'and a luxury dark-mode UI in emerald + gold. Fully '
+        'containerised — a clinic that wants self-hosting can run the '
+        'whole platform on its own server.',
+    isPublic: false,
+    isLive: true,
+    mockupType: 'laptop',
+    screenshots: <String>[],
+    decisions: <String>[
+      'Picked **Gemini for the content-generation pass** over GPT-4 and Claude — in side-by-side testing on real clinic reviews, Gemini consistently produced the most clinic-friendly tone with the fewest hallucinated medical claims (which would have been a regulatory risk).',
+      'Chose **NextAuth for email + password** instead of a third-party identity provider — clinics are GDPR-sensitive and a small attack surface I fully control beat outsourcing to a vendor I\'d have to audit anyway.',
+      'Designed the **5-star-only review-extraction funnel** rather than letting clinics cherry-pick — auto-extraction removes the cognitive load that kills retention, and the constraint is a feature ("we only ever amplify your real wins").',
+      'Bundled the whole stack into **Docker Compose with a production deploy guide** — clinics can keep patient-adjacent data on premises if they need to, without me having to support a second deployment path.',
+    ],
+    learnings: <String>[
+      'A luxury dark-mode UI (emerald + gold) actually mattered more to clinic owners than the underlying tech — design investment paid back faster than feature work in early sales conversations.',
+    ],
+    translations: const <String, ProjectTranslation>{
+      'de': ProjectTranslation(
+        title: 'LuminaRep — Klinik-Bewertungs-SaaS',
+        subtitle: 'KI-Social-Proof-Plattform für medizinisch-ästhetische Praxen',
+        category: 'SAAS / KI',
+        platform: 'Web',
+        technologyUsed:
+            'Next.js 15 · TypeScript · PostgreSQL · NextAuth · Google Gemini · Stripe · Tailwind · Docker Compose',
+        portfolioDescription:
+            'LuminaRep ist eine Premium-SaaS für Kliniken im Bereich '
+            'medizinische Ästhetik und Schönheitschirurgie. Sie '
+            'extrahiert automatisch die 5-Sterne-Google-Bewertungen '
+            'jeder Klinik und macht aus jeder davon drei Instagram-'
+            'Captions, ein TikTok-Skript und Midjourney-/DALL-E-Bild-'
+            'Prompts im Tonfall der Praxis. E-Mail-Passwort-Auth via '
+            'NextAuth, Stripe-Metered-Subscriptions mit 7-Tage-Trial '
+            'und ein luxuriöses Dark-Mode-UI in Smaragd + Gold. '
+            'Vollständig containerisiert — eine Klinik, die Self-Hosting '
+            'will, kann die ganze Plattform auf ihrem eigenen Server '
+            'betreiben.',
+        decisions: <String>[
+          '**Gemini für den Content-Generation-Pass** gegenüber GPT-4 und Claude gewählt — im direkten Vergleich auf echten Klinik-Bewertungen produzierte Gemini konsistent den klinikfreundlichsten Tonfall mit den wenigsten halluzinierten medizinischen Aussagen (was ein regulatorisches Risiko gewesen wäre).',
+          '**NextAuth für E-Mail + Passwort** statt eines Third-Party-Identity-Providers gewählt — Kliniken sind DSGVO-sensibel, und eine kleine Angriffsfläche, die ich voll kontrolliere, schlug das Outsourcen an einen Vendor, den ich ohnehin hätte auditieren müssen.',
+          'Den **Funnel auf reine 5-Sterne-Extraktion** ausgelegt, statt Kliniken Rosinen picken zu lassen — die Auto-Extraktion nimmt die kognitive Last raus, die Retention killt, und die Einschränkung ist ein Feature ("wir verstärken immer nur eure echten Wins").',
+          'Den ganzen Stack in **Docker Compose mit Production-Deploy-Guide** gebündelt — Kliniken können patientennahe Daten on-premise halten, ohne dass ich einen zweiten Deployment-Pfad supporten muss.',
+        ],
+        learnings: <String>[
+          'Ein luxuriöses Dark-Mode-UI (Smaragd + Gold) war für Klinikinhaber tatsächlich wichtiger als die zugrundeliegende Technik — das Design-Investment zahlte sich in frühen Sales-Gesprächen schneller aus als Feature-Arbeit.',
+        ],
+      ),
+    },
+  ),
+
+  // 10 --------------------------------------------------------------------------
   ProjectItemData(title: 'Utopia Community',
     subtitle: 'Environmental Web3 platform — Technical Lead',
     category: 'WEB3 / CHARITY',
@@ -583,7 +699,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 09 ----------------------------------------------------------------------
+  // 11 --------------------------------------------------------------------------
   ProjectItemData(title: 'Night-Drive Object Detection',
     subtitle: 'TU Dortmund Institute of Robotics — thesis + paper + Unreal C++ plugin',
     category: 'ML / ROBOTICS RESEARCH',
@@ -668,7 +784,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 10 ----------------------------------------------------------------------
+  // 12 --------------------------------------------------------------------------
   ProjectItemData(title: 'VR Anxiety Trainer',
     subtitle: '1st place — TU Dortmund Startup Weekend 2023',
     category: 'VR / HEALTHCARE',
@@ -732,150 +848,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 11 ----------------------------------------------------------------------
-  ProjectItemData(title: 'Durak — Cross-Platform Card Game',
-    subtitle: 'Six-platform Flutter card game — iOS · Android · Web · Desktop',
-    category: 'GAME / MOBILE',
-    platform: 'iOS · Android · Web · Desktop',
-    primaryColor: const Color(0xFFDC2626),
-    image: '$_d/durak/cover.webp',
-    coverUrl: '$_d/durak/cover.webp',
-    coverColorUrl: '$_d/durak/cover-color.webp',
-    technologyUsed:
-        'Flutter · Dart · GetX · WebSockets · PostgreSQL · Playwright E2E',
-    portfolioDescription:
-        'A polished Flutter implementation of the classic Russian Durak '
-        'card game, shipped to six platforms (Android, iOS, Web, '
-        'Windows, macOS, Linux) from a single codebase. Three AI '
-        'difficulty levels run fully offline; the move generator scores '
-        'every legal attack/defend pair against a heuristic that mirrors '
-        'how strong human players think about trump leverage and '
-        'hand-reduction. Custom rendering pushes 60 FPS on commodity '
-        'hardware, GetX drives a reactive state graph, 31 unit tests + '
-        'Playwright E2E protect the core rules, and the socket layer is '
-        'staged for online multiplayer. The OPEN LIVE button below jumps '
-        'straight to the running build.',
-    isPublic: false,
-    isLive: true,
-    webUrl: 'https://durak.burakbasci.de',
-    mockupType: 'phone',
-    screenshots: <String>[
-      '$_d/durak/shot-01.webp',
-      '$_d/durak/shot-02.webp',
-    ],
-    decisions: <String>[
-      'Extracted a **`GameRules` interface + `GameRegistry`** in Phase 13 so the engine could ship Hearts, Spades, Belote, Preferans and Uno without forking the game logic — previously every new variant was a copy-paste, which was bound to drift.',
-      'Adopted **Playwright E2E (32 tests) + server API tests (10) + exhaustive rule unit tests (57)** only after a 15-bug spike around the card-flip z-index — total >100 tests now block every release. Skipping E2E once cost a full week of regressions.',
-      'Used **WebSockets + Elo-based matchmaking with guest-token persistence** so people can play without registering. Required registration on a cards app destroys retention; the cost of supporting guests is rounding error.',
-      'Picked **GetX over Bloc/Riverpod** for state — at the time it had the lowest boilerplate-per-feature for a small team, and the reactive bindings fit a turn-based game cleanly.',
-    ],
-    learnings: <String>[
-      'A rolling-update deadlock bit us with required pod-anti-affinity + maxSurge>0 on the deployment; fix was `maxUnavailable: 1, maxSurge: 0` so a new pod can\'t starve a still-needed old one.',
-      'Localising in four languages (EN/RU/TR/DE) roughly doubled organic downloads in the test markets at the cost of one engineering week — best ROI of the year.',
-    ],
-    translations: const <String, ProjectTranslation>{
-      'de': ProjectTranslation(
-        title: 'Durak — Plattformübergreifendes Kartenspiel',
-        subtitle: 'Sechs-Plattform Flutter Kartenspiel — iOS · Android · Web · Desktop',
-        category: 'SPIEL / MOBIL',
-        platform: 'iOS · Android · Web · Desktop',
-        technologyUsed:
-            'Flutter · Dart · GetX · WebSockets · PostgreSQL · Playwright E2E',
-        portfolioDescription:
-            'Eine polierte Flutter-Implementierung des klassischen '
-            'russischen Kartenspiels Durak, ausgeliefert auf sechs '
-            'Plattformen (Android, iOS, Web, Windows, macOS, Linux) aus '
-            'einer einzigen Codebasis. Drei KI-Schwierigkeitsstufen '
-            'laufen vollständig offline; der Move-Generator bewertet '
-            'jedes legale Angriffs-/Verteidigungs-Paar gegen eine '
-            'Heuristik, die widerspiegelt, wie starke menschliche '
-            'Spieler über Trumpf-Hebel und Handkartenreduktion '
-            'nachdenken. Custom-Rendering schiebt 60 FPS auf '
-            'Commodity-Hardware, GetX treibt einen reaktiven State-'
-            'Graphen, 31 Unit-Tests + Playwright-E2E schützen die '
-            'Kernregeln, und der Socket-Layer ist für Online-Multiplayer '
-            'vorbereitet. Der OPEN-LIVE-Button unten springt direkt in '
-            'den laufenden Build.',
-        decisions: <String>[
-          'In Phase 13 ein **`GameRules`-Interface + `GameRegistry`** extrahiert, damit die Engine Hearts, Spades, Belote, Preferans und Uno ausliefern kann, ohne die Spiellogik zu forken — vorher war jede neue Variante ein Copy-Paste, das zwangsläufig auseinanderdriften musste.',
-          '**Playwright-E2E (32 Tests) + Server-API-Tests (10) + erschöpfende Regel-Unit-Tests (57)** erst nach einem 15-Bug-Spike rund um den Card-Flip-z-Index eingeführt — insgesamt >100 Tests blockieren jetzt jeden Release. Einmal auf E2E zu verzichten kostete eine ganze Woche Regressionen.',
-          '**WebSockets + Elo-basiertes Matchmaking mit Guest-Token-Persistenz** verwendet, damit Leute ohne Registrierung spielen können. Eine Pflicht-Registrierung in einer Karten-App zerstört Retention; die Kosten, Gäste zu unterstützen, sind Rundungsfehler.',
-          '**GetX gegenüber Bloc/Riverpod** für State gewählt — zu der Zeit hatte es den niedrigsten Boilerplate-pro-Feature für ein kleines Team, und die reaktiven Bindings passten sauber zu einem rundenbasierten Spiel.',
-        ],
-        learnings: <String>[
-          'Ein Rolling-Update-Deadlock biss uns mit erforderter Pod-Anti-Affinity + maxSurge>0 am Deployment; Fix war `maxUnavailable: 1, maxSurge: 0`, damit ein neuer Pod keinen noch benötigten alten aushungern kann.',
-          'Lokalisierung in vier Sprachen (EN/RU/TR/DE) verdoppelte die organischen Downloads in den Testmärkten ungefähr, zum Preis einer Engineering-Woche — bester ROI des Jahres.',
-        ],
-      ),
-    },
-  ),
-
-  // 12 ----------------------------------------------------------------------
-  ProjectItemData(title: 'Sovereign Smart Home',
-    subtitle: 'Edge-only Proxmox + HAOS + MQTT stack',
-    category: 'EDGE / SELF-HOSTED',
-    platform: 'Proxmox · HAOS',
-    primaryColor: const Color(0xFF18BCF2),
-    image: '$_d/home-assistant/cover.webp',
-    coverUrl: '$_d/home-assistant/cover.webp',
-    coverColorUrl: '$_d/home-assistant/cover-color.webp',
-    technologyUsed:
-        'Proxmox VE · OpenWRT · openSUSE · Home Assistant OS · MQTT · InfluxDB · Grafana',
-    portfolioDescription:
-        'A self-hosted edge hub that keeps every physical-world signal '
-        'inside the LAN — no cloud middleman, no telemetry leak. '
-        'Proxmox virtualises Home Assistant OS, an MQTT broker, '
-        'InfluxDB and Grafana in lightweight VMs; OpenWRT handles '
-        'segmented VLANs for IoT vs. trusted devices; openSUSE runs '
-        'background workloads. Forty-plus room-level automations tie '
-        'climate, lighting, presence and security together through '
-        'sensor-fusion rules.',
-    isPublic: false,
-    isLive: false,
-    mockupType: 'laptop',
-    screenshots: <String>[],
-    decisions: <String>[
-      'Virtualised every component on **Proxmox in lightweight VMs** instead of running them on one bare-metal install, because a single bad upgrade on the smart-home host shouldn\'t take the broker and the database down with it. Isolation is the whole point.',
-      'Put **OpenWRT in front for segmented VLANs** — every camera, light and presence sensor sits behind its own network policy. Retrofitting that segmentation after a CVE is much more expensive than starting with it.',
-      'Wrote **room-owned automations** rather than chained-trigger global scenes — each room\'s rules compose with the next without inheriting global side-effects, and a misbehaving rule blast-radius stays in that room.',
-      'Refused **every cloud middleman** — privacy was the entire reason for the project; trading it for convenience would have defeated the point.',
-    ],
-    learnings: <String>[
-      'Energy monitoring across 12+ devices in Grafana found two always-on appliances eating ~€200/year between them — the dashboard paid for the hardware in under a year.',
-      'IoT segmentation on its own VLAN from day one is dramatically cheaper than adding it after a smart bulb gets a CVE.',
-    ],
-    translations: const <String, ProjectTranslation>{
-      'de': ProjectTranslation(
-        title: 'Souveränes Smart Home',
-        subtitle: 'Edge-only Proxmox + HAOS + MQTT Stack',
-        category: 'EDGE / SELF-HOSTED',
-        platform: 'Proxmox · HAOS',
-        technologyUsed:
-            'Proxmox VE · OpenWRT · openSUSE · Home Assistant OS · MQTT · InfluxDB · Grafana',
-        portfolioDescription:
-            'Ein selbst gehosteter Edge-Hub, der jedes physische Signal '
-            'im LAN behält — kein Cloud-Mittelsmann, kein Telemetrie-'
-            'Leck. Proxmox virtualisiert Home Assistant OS, einen '
-            'MQTT-Broker, InfluxDB und Grafana in leichtgewichtigen VMs; '
-            'OpenWRT übernimmt segmentierte VLANs für IoT vs. '
-            'vertrauenswürdige Geräte; openSUSE betreibt Hintergrund-'
-            'Workloads. Über 40 raumweise Automationen verbinden Klima, '
-            'Licht, Anwesenheit und Sicherheit über Sensor-Fusion-Regeln.',
-        decisions: <String>[
-          'Jede Komponente in **leichtgewichtigen VMs auf Proxmox** virtualisiert statt sie auf einer Bare-Metal-Installation zu betreiben, denn ein schlechtes Upgrade auf dem Smart-Home-Host soll nicht den Broker und die Datenbank mitreißen. Isolation ist der ganze Punkt.',
-          '**OpenWRT für segmentierte VLANs** vorgelagert — jede Kamera, Lampe und jeder Anwesenheitssensor sitzt hinter seiner eigenen Netzwerk-Policy. Diese Segmentierung nach einem CVE nachzurüsten ist viel teurer, als sie von Anfang an mitzudenken.',
-          '**Raum-eigene Automationen** geschrieben statt verkettete globale Szenen — die Regeln eines Raumes komponieren mit dem nächsten, ohne globale Nebenwirkungen zu erben, und der Blast-Radius einer fehlerhaften Regel bleibt in diesem Raum.',
-          '**Jeden Cloud-Mittelsmann** abgelehnt — Privatsphäre war der gesamte Grund für das Projekt; sie gegen Komfort einzutauschen hätte den Zweck zunichtegemacht.',
-        ],
-        learnings: <String>[
-          'Energie-Monitoring über 12+ Geräte in Grafana fand zwei dauerhaft eingeschaltete Geräte, die zusammen rund 200 €/Jahr fraßen — das Dashboard hatte die Hardware in unter einem Jahr abbezahlt.',
-          'IoT-Segmentierung von Tag eins an auf einem eigenen VLAN ist dramatisch billiger, als sie nach einem CVE an einer Smart-Glühbirne nachzurüsten.',
-        ],
-      ),
-    },
-  ),
-
-  // 13 ----------------------------------------------------------------------
+  // 13 --------------------------------------------------------------------------
   ProjectItemData(title: 'Legal Evidence Organization',
     subtitle: 'Forensic evidence rooms, chronologies and source-bound citations',
     category: 'LEGAL TECH / KNOWLEDGE GRAPH',
@@ -946,7 +919,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 14 ----------------------------------------------------------------------
+  // 14 --------------------------------------------------------------------------
   ProjectItemData(title: 'Local AI Voice Assistant',
     subtitle: 'On-device wake-word + Whisper STT + local LLM + Piper TTS',
     category: 'AI / EDGE',
@@ -1018,7 +991,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 15 ----------------------------------------------------------------------
+  // 15 --------------------------------------------------------------------------
   ProjectItemData(title: 'AI-Driven Print-on-Demand Shop',
     subtitle: 'shop.burakbasci.de — generative pipeline, upscaler, bulk uploader',
     category: 'AUTOMATION / E-COMMERCE',
@@ -1093,7 +1066,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 16 ----------------------------------------------------------------------
+  // 16 --------------------------------------------------------------------------
   ProjectItemData(title: 'ImmoPilot — Real-Estate SaaS',
     subtitle: 'Multi-tenant CRM-and-mail automation for German brokers',
     category: 'B2B / SAAS',
@@ -1169,7 +1142,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 17 ----------------------------------------------------------------------
+  // 17 --------------------------------------------------------------------------
   ProjectItemData(title: 'Formal Document Automation',
     subtitle: 'DOCX/PDF generator for invoices, reminders and legal letters',
     category: 'AUTOMATION / DOCUMENTS',
@@ -1239,7 +1212,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 18 ----------------------------------------------------------------------
+  // 18 --------------------------------------------------------------------------
   ProjectItemData(title: 'CaterSmart — Catering Ops + AI Core',
     subtitle: 'FastAPI backend + pluggable-LLM inquiry triage',
     category: 'B2B / OPERATIONS',
@@ -1333,7 +1306,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 19 ----------------------------------------------------------------------
+  // 19 --------------------------------------------------------------------------
   ProjectItemData(title: 'Dynamic Property 3D Tours',
     subtitle: 'Browser-based walkable 3D building models for real-estate',
     category: 'CLIENT / 3D',
@@ -1412,7 +1385,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 20 ----------------------------------------------------------------------
+  // 20 --------------------------------------------------------------------------
   ProjectItemData(title: 'PSCoat — Industrial Coatings Ops',
     subtitle: 'Playwright lead discovery + LLM inquiry triage',
     category: 'CLIENT / AUTOMATION',
@@ -1476,7 +1449,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 21 ----------------------------------------------------------------------
+  // 21 --------------------------------------------------------------------------
   ProjectItemData(title: 'Theater Website — Ruhrbühne Witten',
     subtitle: 'Programme + season-pass site for a German regional theater',
     category: 'CLIENT / WEB',
@@ -1532,58 +1505,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 22 ----------------------------------------------------------------------
-  ProjectItemData(title: 'NestNode — Smart-Home Concept',
-    subtitle: 'Archived mobile concept rolled into Sovereign Smart Home',
-    category: 'IOT / MOBILE',
-    platform: 'iOS · Android',
-    primaryColor: const Color(0xFF0891B2),
-    image: '$_d/nestnode/cover.webp',
-    coverUrl: '$_d/nestnode/cover.webp',
-    coverColorUrl: '$_d/nestnode/cover-color.webp',
-    technologyUsed: 'Flutter · MQTT · Home Assistant',
-    portfolioDescription:
-        'A mobile concept for a self-hosted Home Assistant deployment: '
-        'lights, climate, energy and security in a tactile, '
-        'fast-responding UI that talks MQTT directly from the device '
-        'rather than through a cloud bridge. Archived at concept '
-        'stage — the design language was rolled into the Sovereign '
-        'Smart Home stack.',
-    isPublic: false,
-    isLive: false,
-    mockupType: 'phone',
-    screenshots: <String>[],
-    decisions: <String>[
-      'Archived as **concept-stage** — only a Word doc, logos and a moodboard exist; no codebase. The Home Assistant Edge stack absorbed the design language, so building a separate app would have been duplicate effort.',
-    ],
-    learnings: <String>[
-      'Some projects are most useful as design exercises — the gesture-first nav and tactile energy view were rolled into the Sovereign Smart Home UX instead of shipped standalone.',
-    ],
-    translations: const <String, ProjectTranslation>{
-      'de': ProjectTranslation(
-        title: 'NestNode — Smart-Home-Konzept',
-        subtitle: 'Archiviertes Mobile-Konzept, ins Souveräne Smart Home eingeflossen',
-        category: 'IOT / MOBIL',
-        platform: 'iOS · Android',
-        technologyUsed: 'Flutter · MQTT · Home Assistant',
-        portfolioDescription:
-            'Ein Mobile-Konzept für ein selbst gehostetes Home-Assistant-'
-            'Deployment: Licht, Klima, Energie und Sicherheit in einem '
-            'taktilen, schnell reagierenden UI, das MQTT direkt vom Gerät '
-            'spricht statt über eine Cloud-Bridge. Im Konzeptstatus '
-            'archiviert — die Design-Sprache wurde in den Souveränen-'
-            'Smart-Home-Stack überführt.',
-        decisions: <String>[
-          'Im **Konzeptstadium** archiviert — nur ein Word-Dokument, Logos und ein Moodboard existieren; keine Codebasis. Der Home-Assistant-Edge-Stack absorbierte die Design-Sprache, sodass eine separate App doppelte Arbeit gewesen wäre.',
-        ],
-        learnings: <String>[
-          'Manche Projekte sind als Design-Übungen am wertvollsten — die gestenorientierte Navigation und die taktile Energie-Sicht wurden in die UX des Souveränen Smart Home überführt statt als Standalone ausgeliefert.',
-        ],
-      ),
-    },
-  ),
-
-  // 23 ----------------------------------------------------------------------
+  // 22 --------------------------------------------------------------------------
   ProjectItemData(title: 'burakbasci_widgets',
     subtitle: 'Reusable Flutter widget library on pub.dev',
     category: 'OPEN SOURCE / PACKAGE',
@@ -1640,7 +1562,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 24 ----------------------------------------------------------------------
+  // 23 --------------------------------------------------------------------------
   ProjectItemData(title: 'AI Screenshot Recall',
     subtitle: 'Wayland-native evdev daemon racing Gemini vs Copilot',
     category: 'AI / TOOL',
@@ -1707,352 +1629,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 25 ----------------------------------------------------------------------
-  ProjectItemData(title: 'BoxHead — Unreal FPS',
-    subtitle: 'Wave-based first-person shooter built in UE5 + C++',
-    category: 'GAME / UNREAL',
-    platform: 'Windows · Linux',
-    primaryColor: const Color(0xFF1F2937),
-    image: '$_d/boxhead/cover.webp',
-    coverUrl: '$_d/boxhead/cover.webp',
-    coverColorUrl: '$_d/boxhead/cover-color.webp',
-    technologyUsed: 'Unreal Engine 5 · C++ · Blueprints',
-    portfolioDescription:
-        'A fast-paced 3D shooter built in Unreal Engine 5 — '
-        'claustrophobic maze-like arenas, wave-based AI, ranged and '
-        'melee weapons with their own feel. C++ handles the weapon '
-        'systems (spread, ricochet, projectile pooling), particle '
-        'effects sell the impacts, and the same project builds editor '
-        'and shipping targets for both Linux and Windows with high-res '
-        'screenshot tooling for level-design iteration.',
-    isPublic: false,
-    isLive: false,
-    // 'laptop' frames render an actual MacBook-style bezel around the
-    // image — without that the unreal-still mockupType only letterboxes
-    // the shot, which makes gameplay screens read like a static crop.
-    mockupType: 'laptop',
-    screenshots: <String>[
-      '$_d/boxhead/shot-01.png',
-      '$_d/boxhead/shot-04.png',
-    ],
-    decisions: <String>[
-      'Wrote the **weapon systems in C++**, not Blueprints, because the per-shot feel has to be tunable to single-frame accuracy — Blueprints add latency and the spread/ricochet math is fiddly enough that a typed compiler is worth it.',
-      'Baked **high-res screenshot tooling into the build** so every level-design iteration auto-generates a marketing-grade still — work product is also documentation.',
-      'Built **editor + shipping targets for both Linux and Windows from one project tree** — parallel platform branches always drift, single-tree builds force the platform diffs to live in code review.',
-    ],
-    learnings: <String>[
-      'Maze-like claustrophobic arenas drive the wave-shooter feel more than enemy variety does; one tight corridor + one mood carries the game further than a roster of monster types.',
-    ],
-    translations: const <String, ProjectTranslation>{
-      'de': ProjectTranslation(
-        title: 'BoxHead — Unreal FPS',
-        subtitle: 'Wellenbasierter Ego-Shooter mit UE5 + C++',
-        category: 'SPIEL / UNREAL',
-        platform: 'Windows · Linux',
-        technologyUsed: 'Unreal Engine 5 · C++ · Blueprints',
-        portfolioDescription:
-            'Ein schneller 3D-Shooter, gebaut in Unreal Engine 5 — '
-            'klaustrophobische, labyrinthartige Arenen, wellenbasierte '
-            'KI, Fern- und Nahkampfwaffen mit eigenem Feel. C++ '
-            'übernimmt die Waffensysteme (Spread, Ricochet, Projectile-'
-            'Pooling), Partikeleffekte verkaufen die Treffer, und '
-            'dasselbe Projekt baut Editor- und Shipping-Targets für '
-            'Linux und Windows mit High-Res-Screenshot-Tooling für die '
-            'Level-Design-Iteration.',
-        decisions: <String>[
-          'Die **Waffensysteme in C++** geschrieben, nicht in Blueprints, weil das Per-Shot-Feel auf einen Frame genau tunebar sein muss — Blueprints bringen Latenz, und die Spread-/Ricochet-Mathematik ist fummelig genug, dass ein typisierter Compiler den Aufwand wert ist.',
-          '**High-Res-Screenshot-Tooling in den Build eingebacken**, sodass jede Level-Design-Iteration automatisch ein marketingtaugliches Still erzeugt — das Arbeitsprodukt ist auch Dokumentation.',
-          '**Editor- + Shipping-Targets für Linux und Windows aus einem Projektbaum** gebaut — parallele Plattform-Branches driften immer; Single-Tree-Builds zwingen die Plattform-Diffs in den Code-Review.',
-        ],
-        learnings: <String>[
-          'Labyrinthartige, klaustrophobische Arenen treiben das Wave-Shooter-Feel stärker als Gegnervielfalt; ein enger Korridor + eine Stimmung trägt das Spiel weiter als ein Roster an Monster-Typen.',
-        ],
-      ),
-    },
-  ),
-
-  // 26 ----------------------------------------------------------------------
-  ProjectItemData(title: 'Flappy Griffon',
-    subtitle: 'Ray-traced indie game on itch.io',
-    category: 'GAME / UNREAL',
-    platform: 'Windows · Android',
-    primaryColor: const Color(0xFFF59E0B),
-    image: '$_d/flappy-griffon/cover.webp',
-    coverUrl: '$_d/flappy-griffon/cover.webp',
-    coverColorUrl: '$_d/flappy-griffon/cover-color.webp',
-    technologyUsed: 'Unreal Engine 5 · C++ · Blueprints · Water plugin',
-    portfolioDescription:
-        'A 3D, ray-traced reimagining of Flappy Bird. A griffon '
-        'navigates a continuously generated obstacle course; the '
-        'Water plugin handles the cinematic lake reflections, '
-        'ray-tracing carries the lighting, and the same project builds '
-        'across Windows, Linux, Android and Mac. Shipped on itch.io.',
-    isPublic: true,
-    isLive: true,
-    webUrl: 'https://burakbasci.itch.io/flappygriffon',
-    mockupType: 'unreal-still',
-    screenshots: <String>[],
-    decisions: <String>[
-      'Picked **ray-tracing for water + global illumination** because it\'s the visual hook in a genre that\'s usually 2D pixel art — the surprise is the entire selling point.',
-      'Built **one cross-platform project (Windows / Linux / Android / Mac)** instead of parallel ports — same reason as BoxHead, parallel trees always drift.',
-      'Shipped on **itch.io** rather than a gatekeeping storefront — same-day publishing, no review queue, no platform tax on indie experiments.',
-    ],
-    learnings: <String>[
-      'Reskinning a known mechanic (Flappy Bird) is a learning-vehicle accelerator; nobody has to figure out how to play, so the surprise is purely visual.',
-    ],
-    translations: const <String, ProjectTranslation>{
-      'de': ProjectTranslation(
-        title: 'Flappy Griffon',
-        subtitle: 'Raytraced Indie-Spiel auf itch.io',
-        category: 'SPIEL / UNREAL',
-        platform: 'Windows · Web',
-        technologyUsed: 'Unreal Engine 5 · C++ · Blueprints · Water-Plugin',
-        portfolioDescription:
-            'Eine 3D-Raytraced-Neuinterpretation von Flappy Bird. Ein '
-            'Greif navigiert durch einen kontinuierlich generierten '
-            'Hindernisparcours; das Water-Plugin liefert die '
-            'cineastischen See-Reflexionen, Raytracing trägt die '
-            'Beleuchtung, und dasselbe Projekt baut für Windows, Linux, '
-            'Android und Mac. Auf itch.io veröffentlicht.',
-        decisions: <String>[
-          '**Raytracing für Wasser + Global Illumination** gewählt, weil das der visuelle Hook in einem Genre ist, das sonst meist 2D-Pixel-Art ist — die Überraschung ist das gesamte Verkaufsargument.',
-          '**Ein plattformübergreifendes Projekt (Windows / Linux / Android / Mac)** statt paralleler Ports gebaut — gleicher Grund wie bei BoxHead: parallele Bäume driften immer.',
-          'Auf **itch.io** veröffentlicht statt auf einem Gatekeeping-Storefront — Same-Day-Publishing, keine Review-Queue, keine Plattform-Steuer auf Indie-Experimente.',
-        ],
-        learnings: <String>[
-          'Eine bekannte Mechanik neu zu skinnen (Flappy Bird) ist ein Learning-Vehicle-Beschleuniger; niemand muss erst herausfinden, wie man spielt — die Überraschung ist rein visuell.',
-        ],
-      ),
-    },
-  ),
-
-  // 27 ----------------------------------------------------------------------
-  ProjectItemData(title: 'MyJumpNRun',
-    subtitle: 'Iterative UE5 platformer series',
-    category: 'GAME / UNREAL',
-    platform: 'Windows',
-    primaryColor: const Color(0xFF65A30D),
-    image: '$_d/jumpnrun/cover.webp',
-    coverUrl: '$_d/jumpnrun/cover.webp',
-    coverColorUrl: '$_d/jumpnrun/cover-color.webp',
-    technologyUsed: 'Unreal Engine 5 · C++ · Blueprints',
-    portfolioDescription:
-        'A personal Unreal Engine platformer rebuilt across multiple '
-        'iterations (5.2, 5.2-variant, ...) to keep pushing on level '
-        'design, character physics and Blueprint scripting. Tight '
-        'movement (jump buffering, coyote time, wall-slide detection), '
-        'checkpoints and a small replay system make the core mechanics '
-        'feel responsive enough that the levels stand on their own.',
-    isPublic: false,
-    isLive: false,
-    mockupType: 'unreal-still',
-    screenshots: <String>[],
-    decisions: <String>[
-      'Tuned **jump buffering + coyote time + wall-slide detection up front** before designing any level — feel-tuning early means the levels exist for movement that already works, not the other way around.',
-      'Tracked **multiple project iterations as separate folders** (5.2, variant, ...) so old level files stayed playable as the engine updated — destructive in-place upgrades would have lost the early-iteration content.',
-    ],
-    learnings: <String>[
-      'Iterating on platformer feel is mostly about input latency and the curve of the jump arc; everything else (art, music, levels) is decoration on top.',
-    ],
-    translations: const <String, ProjectTranslation>{
-      'de': ProjectTranslation(
-        title: 'MyJumpNRun',
-        subtitle: 'Iterative UE5-Plattformer-Serie',
-        category: 'SPIEL / UNREAL',
-        platform: 'Windows',
-        technologyUsed: 'Unreal Engine 5 · C++ · Blueprints',
-        portfolioDescription:
-            'Ein persönlicher Unreal-Engine-Plattformer, über mehrere '
-            'Iterationen (5.2, 5.2-Variante, …) neu aufgebaut, um Level-'
-            'Design, Character-Physics und Blueprint-Scripting weiter zu '
-            'treiben. Tight gehaltene Bewegung (Jump-Buffering, Coyote '
-            'Time, Wall-Slide-Detection), Checkpoints und ein kleines '
-            'Replay-System lassen die Kernmechanik responsiv genug '
-            'wirken, dass die Levels für sich stehen.',
-        decisions: <String>[
-          '**Jump-Buffering + Coyote Time + Wall-Slide-Detection vorab getunt**, bevor ein einziges Level designt wurde — Feel-Tuning früh bedeutet, dass die Levels für eine Bewegung existieren, die bereits funktioniert, nicht andersherum.',
-          '**Mehrere Projekt-Iterationen als getrennte Ordner** verfolgt (5.2, Variante, …), damit alte Level-Files spielbar blieben, während die Engine geupdated wurde — destruktive In-Place-Upgrades hätten die frühen Iterationen verloren.',
-        ],
-        learnings: <String>[
-          'Plattformer-Feel zu iterieren geht meist um Input-Latenz und die Kurve des Sprungs; alles andere (Art, Musik, Levels) ist Deko obendrauf.',
-        ],
-      ),
-    },
-  ),
-
-  // 28 ----------------------------------------------------------------------
-  ProjectItemData(title: 'ALSignal — ASL Hackathon',
-    subtitle: 'Real-time American Sign Language in Unity',
-    category: 'HACKATHON / CV',
-    platform: 'Windows · Unity',
-    primaryColor: const Color(0xFF1F2937),
-    image: '$_d/unity-hackathon/cover.webp',
-    coverUrl: '$_d/unity-hackathon/cover.webp',
-    coverColorUrl: '$_d/unity-hackathon/cover-color.webp',
-    technologyUsed: 'Unity · C# · MediaPipe · LSTM · Webcam',
-    portfolioDescription:
-        'A weekend hackathon build: real-time American Sign Language '
-        'detection inside Unity. MediaPipe estimates the hand pose at '
-        '30 FPS; a small LSTM trained on a captured gesture set '
-        'classifies each window of frames into the right sign. The '
-        'demo overlays the recognised label and a confidence bar live '
-        'on the camera feed.',
-    isPublic: false,
-    isLive: false,
-    mockupType: 'fullbleed',
-    screenshots: <String>[],
-    decisions: <String>[
-      'Picked **MediaPipe + a small custom LSTM** over a one-shot vision model — off-the-shelf hand-tracking plus a tiny trainable classifier beats a single big model for niche gesture sets at this scale, and trains in minutes instead of hours.',
-      'Built the demo in **Unity** instead of a web frontend so the captured gesture set could stay on-device — privacy was a hackathon talking point as much as a real constraint.',
-      'Overlaid the **confidence bar + label live on the webcam feed** because visible decisions are easier to debug at a hackathon than logs are — judges see the model thinking.',
-    ],
-    learnings: <String>[
-      'Computer-vision UX at a hackathon stands or falls on a working live demo; the LSTM won purely because it was demoable.',
-    ],
-    translations: const <String, ProjectTranslation>{
-      'de': ProjectTranslation(
-        title: 'ALSignal — ASL Hackathon',
-        subtitle: 'Echtzeit American Sign Language in Unity',
-        category: 'HACKATHON / VISION',
-        platform: 'Unity',
-        technologyUsed: 'Unity · C# · MediaPipe · LSTM · Webcam',
-        portfolioDescription:
-            'Ein Wochenend-Hackathon-Build: Echtzeit-Erkennung von '
-            'American Sign Language innerhalb von Unity. MediaPipe '
-            'schätzt die Handpose bei 30 FPS; ein kleines, auf einem '
-            'aufgenommenen Gesten-Set trainiertes LSTM klassifiziert '
-            'jedes Frame-Fenster in das richtige Zeichen. Die Demo '
-            'überlagert das erkannte Label und einen Confidence-Bar '
-            'live auf dem Kamera-Feed.',
-        decisions: <String>[
-          '**MediaPipe + ein kleines Custom-LSTM** gegenüber einem One-Shot-Vision-Modell gewählt — Off-the-Shelf-Hand-Tracking plus ein winziger trainierbarer Klassifikator schlägt ein einzelnes großes Modell für Nischen-Gesten-Sets in dieser Größenordnung und trainiert in Minuten statt Stunden.',
-          'Die Demo in **Unity** statt in einem Web-Frontend gebaut, damit das aufgenommene Gesten-Set on-device bleiben konnte — Privacy war beim Hackathon Talking Point genauso wie reale Anforderung.',
-          'Den **Confidence-Bar + das Label live auf den Webcam-Feed** gelegt, weil sichtbare Entscheidungen bei einem Hackathon leichter zu debuggen sind als Logs — Jurys sehen das Modell denken.',
-        ],
-        learnings: <String>[
-          'Computer-Vision-UX bei einem Hackathon steht und fällt mit einer funktionierenden Live-Demo; das LSTM gewann rein deshalb, weil es demobar war.',
-        ],
-      ),
-    },
-  ),
-
-  // 29 ----------------------------------------------------------------------
-  ProjectItemData(title: 'Steam Market Arbitrage Bot',
-    subtitle: 'Trading-card economy analyser with risk scoring',
-    category: 'AUTOMATION / FINANCE',
-    platform: 'Linux',
-    primaryColor: const Color(0xFF1B2838),
-    image: '$_d/steam-market/cover.webp',
-    coverUrl: '$_d/steam-market/cover.webp',
-    coverColorUrl: '$_d/steam-market/cover-color.webp',
-    technologyUsed: 'Python · BeautifulSoup · Requests · SQLite',
-    portfolioDescription:
-        'A research toolkit for the Steam Community Market: scans '
-        'thousands of listings a day and detects arbitrage loops — '
-        'gem → booster pack crafting spreads, card → gem conversions, '
-        'foil-card price gaps, and badge → component economics. '
-        'Cookie-based authenticated session respects Steam\'s rate '
-        'limits, every simulated trade factors in Steam\'s 15% market '
-        'fee, and a local SQLite stores opportunities with a risk '
-        'score so the obviously-stale ones get filtered before a human '
-        'sees them.',
-    isPublic: false,
-    isLive: false,
-    mockupType: 'terminal',
-    screenshots: <String>[],
-    decisions: <String>[
-      'Used a **cookie-based authenticated session** that respects rate limits because anonymous scraping of the market gets blocked within minutes — being a guest on Valve\'s API isn\'t viable for this kind of scan.',
-      'Baked **Steam\'s 15% market fee into every simulated trade** because opportunities that ignore the fee look 10× bigger than they are; ranking by raw spread is a fast way to lose money.',
-      'Ranked opportunities by **risk score** (depth-of-book + listing age + spread volatility) rather than raw margin — most "arbitrage" on inefficient marketplaces is actually a liquidity trap.',
-    ],
-    learnings: <String>[
-      'Ranking by risk-of-execution beats ranking by margin every time on a thin marketplace; the right top-1 is the listing you can actually clear, not the listing that looks biggest.',
-    ],
-    translations: const <String, ProjectTranslation>{
-      'de': ProjectTranslation(
-        title: 'Steam Market Arbitrage Bot',
-        subtitle: 'Sammelkarten-Wirtschaftsanalyse mit Risk-Scoring',
-        category: 'AUTOMATION / SCRAPING',
-        platform: 'Python',
-        technologyUsed: 'Python · BeautifulSoup · Requests · SQLite',
-        portfolioDescription:
-            'Ein Research-Toolkit für den Steam Community Market: '
-            'scannt täglich tausende Listings und entdeckt Arbitrage-'
-            'Loops — Gem-→-Booster-Pack-Crafting-Spreads, Card-→-Gem-'
-            'Konversionen, Foil-Karten-Preisunterschiede und Badge-→-'
-            'Komponenten-Ökonomie. Eine cookie-basierte authentifizierte '
-            'Session respektiert Steams Rate-Limits, jeder simulierte '
-            'Trade rechnet Steams 15-%-Marktgebühr ein, und ein lokales '
-            'SQLite speichert Opportunities mit einem Risiko-Score, '
-            'damit die offensichtlich veralteten herausgefiltert werden, '
-            'bevor ein Mensch sie sieht.',
-        decisions: <String>[
-          'Eine **cookie-basierte authentifizierte Session**, die Rate-Limits respektiert, verwendet, weil anonymes Scraping des Markets innerhalb von Minuten geblockt wird — Gast auf Valves API zu sein ist für diese Art von Scan nicht tragfähig.',
-          'Steams **15-%-Marktgebühr in jeden simulierten Trade eingebacken**, weil Opportunities, die die Gebühr ignorieren, 10× größer aussehen als sie sind; nach rohem Spread zu sortieren ist ein schneller Weg, Geld zu verlieren.',
-          'Opportunities nach **Risiko-Score** sortiert (Depth-of-Book + Listing-Alter + Spread-Volatilität) statt nach roher Marge — die meiste "Arbitrage" auf ineffizienten Marketplaces ist in Wahrheit eine Liquiditätsfalle.',
-        ],
-        learnings: <String>[
-          'Nach Risk-of-Execution zu sortieren schlägt jedes Mal das Sortieren nach Marge auf einem dünnen Marketplace; das richtige Top-1 ist das Listing, das man wirklich abräumen kann, nicht das, das am größten aussieht.',
-        ],
-      ),
-    },
-  ),
-
-  // 30 ----------------------------------------------------------------------
-  ProjectItemData(title: 'CSFloat Sniper',
-    subtitle: 'CS:GO marketplace scanner with API integration',
-    category: 'AUTOMATION / RESEARCH',
-    platform: 'Linux',
-    primaryColor: const Color(0xFFEAB308),
-    image: '$_d/csfloat/cover.webp',
-    coverUrl: '$_d/csfloat/cover.webp',
-    coverColorUrl: '$_d/csfloat/cover-color.webp',
-    technologyUsed: 'Python · aiohttp · CSFloat API · asyncio',
-    portfolioDescription:
-        'A scanner that watches CSFloat marketplace listings (Bayonet '
-        'Vanilla, covert tier) for price + condition mismatches and '
-        'notifies a private channel. Built to learn browser-automation '
-        'and event-driven Python; configurable dry-run mode skips '
-        'order placement during testing.',
-    isPublic: false,
-    isLive: false,
-    mockupType: 'terminal',
-    screenshots: <String>[],
-    decisions: <String>[
-      'Cached **listings + buy orders into a single immutable `MarketDataCache` dataclass** rather than fetching per function — collapsed 3 API calls per item into 2 and stopped a class of "is this data still fresh?" bugs at the type level.',
-      'Loaded API tokens **from environment via a gitignored `.env`** — never check the credential surface into git, even for personal tooling.',
-    ],
-    learnings: <String>[
-      'Redundant API calls show up easily in multi-function workflows; one systematic audit of call sites before optimisation prevents regression and is faster than chasing them one at a time.',
-      'Caching by whole-value-object (entire market snapshot) instead of per-field simplified downstream signatures and removed a lot of state-passing noise.',
-    ],
-    translations: const <String, ProjectTranslation>{
-      'de': ProjectTranslation(
-        title: 'CSFloat Sniper',
-        subtitle: 'CS:GO Marktplatz-Scanner mit API-Integration',
-        category: 'AUTOMATION / SCRAPING',
-        platform: 'Python',
-        technologyUsed: 'Python · aiohttp · CSFloat API · asyncio',
-        portfolioDescription:
-            'Ein Scanner, der CSFloat-Marktplatz-Listings (Bayonet '
-            'Vanilla, Covert-Tier) auf Preis- und Zustands-Mismatches '
-            'beobachtet und einen privaten Channel benachrichtigt. '
-            'Gebaut, um Browser-Automation und event-driven Python zu '
-            'lernen; konfigurierbarer Dry-Run-Mode überspringt die '
-            'Order-Platzierung während Tests.',
-        decisions: <String>[
-          '**Listings + Buy-Orders in eine einzige unveränderliche `MarketDataCache`-Dataclass** gecached, statt pro Funktion zu fetchen — hat 3 API-Calls pro Item auf 2 kollabiert und eine Klasse von "ist diese Daten noch frisch?"-Bugs auf Typ-Ebene gestoppt.',
-          'API-Tokens **aus dem Environment via einer gitignored `.env`** geladen — die Credential-Surface nie in Git einchecken, auch nicht für persönliches Tooling.',
-        ],
-        learnings: <String>[
-          'Redundante API-Calls tauchen in Multi-Funktions-Workflows leicht auf; ein systematisches Audit der Call-Sites vor der Optimierung verhindert Regressionen und ist schneller, als ihnen einzeln nachzujagen.',
-          'Caching nach ganzem Value-Objekt (gesamter Markt-Snapshot) statt pro Feld vereinfachte Downstream-Signaturen und entfernte viel State-Passing-Rauschen.',
-        ],
-      ),
-    },
-  ),
-
-  // 31 ----------------------------------------------------------------------
+  // 24 --------------------------------------------------------------------------
   ProjectItemData(title: 'Binance → German Tax PDF',
     subtitle: 'CSV-to-Steuerbericht generator',
     category: 'TOOL / UTILITY',
@@ -2106,7 +1683,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 32 ----------------------------------------------------------------------
+  // 25 --------------------------------------------------------------------------
   ProjectItemData(title: 'WordPress Plugins for an Agency',
     subtitle: 'In-house plugins that replaced paid third-party tools',
     category: 'PHP / IN-HOUSE TOOLS',
@@ -2167,7 +1744,7 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
     },
   ),
 
-  // 33 ----------------------------------------------------------------------
+  // 26 --------------------------------------------------------------------------
   ProjectItemData(title: 'burakbasci.de',
     subtitle: 'This portfolio site — Flutter Web, Material 2, content-driven',
     category: 'WEB / PERSONAL',
@@ -2257,14 +1834,437 @@ final List<ProjectItemData> recentWorks = <ProjectItemData>[
       ),
     },
   ),
+  // 27 --------------------------------------------------------------------------
+  ProjectItemData(title: 'Durak — Cross-Platform Card Game',
+    subtitle: 'Six-platform Flutter card game — iOS · Android · Web · Desktop',
+    category: 'GAME / MOBILE',
+    platform: 'iOS · Android · Web · Desktop',
+    primaryColor: const Color(0xFFDC2626),
+    image: '$_d/durak/cover.webp',
+    coverUrl: '$_d/durak/cover.webp',
+    coverColorUrl: '$_d/durak/cover-color.webp',
+    technologyUsed:
+        'Flutter · Dart · GetX · WebSockets · PostgreSQL · Playwright E2E',
+    portfolioDescription:
+        'A polished Flutter implementation of the classic Russian Durak '
+        'card game, shipped to six platforms (Android, iOS, Web, '
+        'Windows, macOS, Linux) from a single codebase. Three AI '
+        'difficulty levels run fully offline; the move generator scores '
+        'every legal attack/defend pair against a heuristic that mirrors '
+        'how strong human players think about trump leverage and '
+        'hand-reduction. Custom rendering pushes 60 FPS on commodity '
+        'hardware, GetX drives a reactive state graph, 31 unit tests + '
+        'Playwright E2E protect the core rules, and the socket layer is '
+        'staged for online multiplayer. The OPEN LIVE button below jumps '
+        'straight to the running build.',
+    isPublic: false,
+    isLive: true,
+    webUrl: 'https://durak.burakbasci.de',
+    mockupType: 'phone',
+    screenshots: <String>[
+      '$_d/durak/shot-01.webp',
+      '$_d/durak/shot-02.webp',
+    ],
+    decisions: <String>[
+      'Extracted a **`GameRules` interface + `GameRegistry`** in Phase 13 so the engine could ship Hearts, Spades, Belote, Preferans and Uno without forking the game logic — previously every new variant was a copy-paste, which was bound to drift.',
+      'Adopted **Playwright E2E (32 tests) + server API tests (10) + exhaustive rule unit tests (57)** only after a 15-bug spike around the card-flip z-index — total >100 tests now block every release. Skipping E2E once cost a full week of regressions.',
+      'Used **WebSockets + Elo-based matchmaking with guest-token persistence** so people can play without registering. Required registration on a cards app destroys retention; the cost of supporting guests is rounding error.',
+      'Picked **GetX over Bloc/Riverpod** for state — at the time it had the lowest boilerplate-per-feature for a small team, and the reactive bindings fit a turn-based game cleanly.',
+    ],
+    learnings: <String>[
+      'A rolling-update deadlock bit us with required pod-anti-affinity + maxSurge>0 on the deployment; fix was `maxUnavailable: 1, maxSurge: 0` so a new pod can\'t starve a still-needed old one.',
+      'Localising in four languages (EN/RU/TR/DE) roughly doubled organic downloads in the test markets at the cost of one engineering week — best ROI of the year.',
+    ],
+    translations: const <String, ProjectTranslation>{
+      'de': ProjectTranslation(
+        title: 'Durak — Plattformübergreifendes Kartenspiel',
+        subtitle: 'Sechs-Plattform Flutter Kartenspiel — iOS · Android · Web · Desktop',
+        category: 'SPIEL / MOBIL',
+        platform: 'iOS · Android · Web · Desktop',
+        technologyUsed:
+            'Flutter · Dart · GetX · WebSockets · PostgreSQL · Playwright E2E',
+        portfolioDescription:
+            'Eine polierte Flutter-Implementierung des klassischen '
+            'russischen Kartenspiels Durak, ausgeliefert auf sechs '
+            'Plattformen (Android, iOS, Web, Windows, macOS, Linux) aus '
+            'einer einzigen Codebasis. Drei KI-Schwierigkeitsstufen '
+            'laufen vollständig offline; der Move-Generator bewertet '
+            'jedes legale Angriffs-/Verteidigungs-Paar gegen eine '
+            'Heuristik, die widerspiegelt, wie starke menschliche '
+            'Spieler über Trumpf-Hebel und Handkartenreduktion '
+            'nachdenken. Custom-Rendering schiebt 60 FPS auf '
+            'Commodity-Hardware, GetX treibt einen reaktiven State-'
+            'Graphen, 31 Unit-Tests + Playwright-E2E schützen die '
+            'Kernregeln, und der Socket-Layer ist für Online-Multiplayer '
+            'vorbereitet. Der OPEN-LIVE-Button unten springt direkt in '
+            'den laufenden Build.',
+        decisions: <String>[
+          'In Phase 13 ein **`GameRules`-Interface + `GameRegistry`** extrahiert, damit die Engine Hearts, Spades, Belote, Preferans und Uno ausliefern kann, ohne die Spiellogik zu forken — vorher war jede neue Variante ein Copy-Paste, das zwangsläufig auseinanderdriften musste.',
+          '**Playwright-E2E (32 Tests) + Server-API-Tests (10) + erschöpfende Regel-Unit-Tests (57)** erst nach einem 15-Bug-Spike rund um den Card-Flip-z-Index eingeführt — insgesamt >100 Tests blockieren jetzt jeden Release. Einmal auf E2E zu verzichten kostete eine ganze Woche Regressionen.',
+          '**WebSockets + Elo-basiertes Matchmaking mit Guest-Token-Persistenz** verwendet, damit Leute ohne Registrierung spielen können. Eine Pflicht-Registrierung in einer Karten-App zerstört Retention; die Kosten, Gäste zu unterstützen, sind Rundungsfehler.',
+          '**GetX gegenüber Bloc/Riverpod** für State gewählt — zu der Zeit hatte es den niedrigsten Boilerplate-pro-Feature für ein kleines Team, und die reaktiven Bindings passten sauber zu einem rundenbasierten Spiel.',
+        ],
+        learnings: <String>[
+          'Ein Rolling-Update-Deadlock biss uns mit erforderter Pod-Anti-Affinity + maxSurge>0 am Deployment; Fix war `maxUnavailable: 1, maxSurge: 0`, damit ein neuer Pod keinen noch benötigten alten aushungern kann.',
+          'Lokalisierung in vier Sprachen (EN/RU/TR/DE) verdoppelte die organischen Downloads in den Testmärkten ungefähr, zum Preis einer Engineering-Woche — bester ROI des Jahres.',
+        ],
+      ),
+    },
+  ),
+
+  // 28 --------------------------------------------------------------------------
+  ProjectItemData(title: 'BoxHead — Unreal FPS',
+    subtitle: 'Wave-based first-person shooter built in UE5 + C++',
+    category: 'GAME / UNREAL',
+    platform: 'Windows · Linux',
+    primaryColor: const Color(0xFF1F2937),
+    image: '$_d/boxhead/cover.webp',
+    coverUrl: '$_d/boxhead/cover.webp',
+    coverColorUrl: '$_d/boxhead/cover-color.webp',
+    technologyUsed: 'Unreal Engine 5 · C++ · Blueprints',
+    portfolioDescription:
+        'A fast-paced 3D shooter built in Unreal Engine 5 — '
+        'claustrophobic maze-like arenas, wave-based AI, ranged and '
+        'melee weapons with their own feel. C++ handles the weapon '
+        'systems (spread, ricochet, projectile pooling), particle '
+        'effects sell the impacts, and the same project builds editor '
+        'and shipping targets for both Linux and Windows with high-res '
+        'screenshot tooling for level-design iteration.',
+    isPublic: false,
+    isLive: false,
+    // 'laptop' frames render an actual MacBook-style bezel around the
+    // image — without that the unreal-still mockupType only letterboxes
+    // the shot, which makes gameplay screens read like a static crop.
+    mockupType: 'laptop',
+    screenshots: <String>[
+      '$_d/boxhead/shot-01.png',
+      '$_d/boxhead/shot-04.png',
+    ],
+    decisions: <String>[
+      'Wrote the **weapon systems in C++**, not Blueprints, because the per-shot feel has to be tunable to single-frame accuracy — Blueprints add latency and the spread/ricochet math is fiddly enough that a typed compiler is worth it.',
+      'Baked **high-res screenshot tooling into the build** so every level-design iteration auto-generates a marketing-grade still — work product is also documentation.',
+      'Built **editor + shipping targets for both Linux and Windows from one project tree** — parallel platform branches always drift, single-tree builds force the platform diffs to live in code review.',
+    ],
+    learnings: <String>[
+      'Maze-like claustrophobic arenas drive the wave-shooter feel more than enemy variety does; one tight corridor + one mood carries the game further than a roster of monster types.',
+    ],
+    translations: const <String, ProjectTranslation>{
+      'de': ProjectTranslation(
+        title: 'BoxHead — Unreal FPS',
+        subtitle: 'Wellenbasierter Ego-Shooter mit UE5 + C++',
+        category: 'SPIEL / UNREAL',
+        platform: 'Windows · Linux',
+        technologyUsed: 'Unreal Engine 5 · C++ · Blueprints',
+        portfolioDescription:
+            'Ein schneller 3D-Shooter, gebaut in Unreal Engine 5 — '
+            'klaustrophobische, labyrinthartige Arenen, wellenbasierte '
+            'KI, Fern- und Nahkampfwaffen mit eigenem Feel. C++ '
+            'übernimmt die Waffensysteme (Spread, Ricochet, Projectile-'
+            'Pooling), Partikeleffekte verkaufen die Treffer, und '
+            'dasselbe Projekt baut Editor- und Shipping-Targets für '
+            'Linux und Windows mit High-Res-Screenshot-Tooling für die '
+            'Level-Design-Iteration.',
+        decisions: <String>[
+          'Die **Waffensysteme in C++** geschrieben, nicht in Blueprints, weil das Per-Shot-Feel auf einen Frame genau tunebar sein muss — Blueprints bringen Latenz, und die Spread-/Ricochet-Mathematik ist fummelig genug, dass ein typisierter Compiler den Aufwand wert ist.',
+          '**High-Res-Screenshot-Tooling in den Build eingebacken**, sodass jede Level-Design-Iteration automatisch ein marketingtaugliches Still erzeugt — das Arbeitsprodukt ist auch Dokumentation.',
+          '**Editor- + Shipping-Targets für Linux und Windows aus einem Projektbaum** gebaut — parallele Plattform-Branches driften immer; Single-Tree-Builds zwingen die Plattform-Diffs in den Code-Review.',
+        ],
+        learnings: <String>[
+          'Labyrinthartige, klaustrophobische Arenen treiben das Wave-Shooter-Feel stärker als Gegnervielfalt; ein enger Korridor + eine Stimmung trägt das Spiel weiter als ein Roster an Monster-Typen.',
+        ],
+      ),
+    },
+  ),
+
+  // 29 --------------------------------------------------------------------------
+  ProjectItemData(title: 'Flappy Griffon',
+    subtitle: 'Ray-traced indie game on itch.io',
+    category: 'GAME / UNREAL',
+    platform: 'Windows · Android',
+    primaryColor: const Color(0xFFF59E0B),
+    image: '$_d/flappy-griffon/cover.webp',
+    coverUrl: '$_d/flappy-griffon/cover.webp',
+    coverColorUrl: '$_d/flappy-griffon/cover-color.webp',
+    technologyUsed: 'Unreal Engine 5 · C++ · Blueprints · Water plugin',
+    portfolioDescription:
+        'A 3D, ray-traced reimagining of Flappy Bird. A griffon '
+        'navigates a continuously generated obstacle course; the '
+        'Water plugin handles the cinematic lake reflections, '
+        'ray-tracing carries the lighting, and the same project builds '
+        'across Windows, Linux, Android and Mac. Shipped on itch.io.',
+    isPublic: true,
+    isLive: true,
+    webUrl: 'https://burakbasci.itch.io/flappygriffon',
+    mockupType: 'unreal-still',
+    screenshots: <String>[],
+    decisions: <String>[
+      'Picked **ray-tracing for water + global illumination** because it\'s the visual hook in a genre that\'s usually 2D pixel art — the surprise is the entire selling point.',
+      'Built **one cross-platform project (Windows / Linux / Android / Mac)** instead of parallel ports — same reason as BoxHead, parallel trees always drift.',
+      'Shipped on **itch.io** rather than a gatekeeping storefront — same-day publishing, no review queue, no platform tax on indie experiments.',
+    ],
+    learnings: <String>[
+      'Reskinning a known mechanic (Flappy Bird) is a learning-vehicle accelerator; nobody has to figure out how to play, so the surprise is purely visual.',
+    ],
+    translations: const <String, ProjectTranslation>{
+      'de': ProjectTranslation(
+        title: 'Flappy Griffon',
+        subtitle: 'Raytraced Indie-Spiel auf itch.io',
+        category: 'SPIEL / UNREAL',
+        platform: 'Windows · Web',
+        technologyUsed: 'Unreal Engine 5 · C++ · Blueprints · Water-Plugin',
+        portfolioDescription:
+            'Eine 3D-Raytraced-Neuinterpretation von Flappy Bird. Ein '
+            'Greif navigiert durch einen kontinuierlich generierten '
+            'Hindernisparcours; das Water-Plugin liefert die '
+            'cineastischen See-Reflexionen, Raytracing trägt die '
+            'Beleuchtung, und dasselbe Projekt baut für Windows, Linux, '
+            'Android und Mac. Auf itch.io veröffentlicht.',
+        decisions: <String>[
+          '**Raytracing für Wasser + Global Illumination** gewählt, weil das der visuelle Hook in einem Genre ist, das sonst meist 2D-Pixel-Art ist — die Überraschung ist das gesamte Verkaufsargument.',
+          '**Ein plattformübergreifendes Projekt (Windows / Linux / Android / Mac)** statt paralleler Ports gebaut — gleicher Grund wie bei BoxHead: parallele Bäume driften immer.',
+          'Auf **itch.io** veröffentlicht statt auf einem Gatekeeping-Storefront — Same-Day-Publishing, keine Review-Queue, keine Plattform-Steuer auf Indie-Experimente.',
+        ],
+        learnings: <String>[
+          'Eine bekannte Mechanik neu zu skinnen (Flappy Bird) ist ein Learning-Vehicle-Beschleuniger; niemand muss erst herausfinden, wie man spielt — die Überraschung ist rein visuell.',
+        ],
+      ),
+    },
+  ),
+
+  // 30 --------------------------------------------------------------------------
+  ProjectItemData(title: 'MyJumpNRun',
+    subtitle: 'Iterative UE5 platformer series',
+    category: 'GAME / UNREAL',
+    platform: 'Windows',
+    primaryColor: const Color(0xFF65A30D),
+    image: '$_d/jumpnrun/cover.webp',
+    coverUrl: '$_d/jumpnrun/cover.webp',
+    coverColorUrl: '$_d/jumpnrun/cover-color.webp',
+    technologyUsed: 'Unreal Engine 5 · C++ · Blueprints',
+    portfolioDescription:
+        'A personal Unreal Engine platformer rebuilt across multiple '
+        'iterations (5.2, 5.2-variant, ...) to keep pushing on level '
+        'design, character physics and Blueprint scripting. Tight '
+        'movement (jump buffering, coyote time, wall-slide detection), '
+        'checkpoints and a small replay system make the core mechanics '
+        'feel responsive enough that the levels stand on their own.',
+    isPublic: false,
+    isLive: false,
+    mockupType: 'unreal-still',
+    screenshots: <String>[],
+    decisions: <String>[
+      'Tuned **jump buffering + coyote time + wall-slide detection up front** before designing any level — feel-tuning early means the levels exist for movement that already works, not the other way around.',
+      'Tracked **multiple project iterations as separate folders** (5.2, variant, ...) so old level files stayed playable as the engine updated — destructive in-place upgrades would have lost the early-iteration content.',
+    ],
+    learnings: <String>[
+      'Iterating on platformer feel is mostly about input latency and the curve of the jump arc; everything else (art, music, levels) is decoration on top.',
+    ],
+    translations: const <String, ProjectTranslation>{
+      'de': ProjectTranslation(
+        title: 'MyJumpNRun',
+        subtitle: 'Iterative UE5-Plattformer-Serie',
+        category: 'SPIEL / UNREAL',
+        platform: 'Windows',
+        technologyUsed: 'Unreal Engine 5 · C++ · Blueprints',
+        portfolioDescription:
+            'Ein persönlicher Unreal-Engine-Plattformer, über mehrere '
+            'Iterationen (5.2, 5.2-Variante, …) neu aufgebaut, um Level-'
+            'Design, Character-Physics und Blueprint-Scripting weiter zu '
+            'treiben. Tight gehaltene Bewegung (Jump-Buffering, Coyote '
+            'Time, Wall-Slide-Detection), Checkpoints und ein kleines '
+            'Replay-System lassen die Kernmechanik responsiv genug '
+            'wirken, dass die Levels für sich stehen.',
+        decisions: <String>[
+          '**Jump-Buffering + Coyote Time + Wall-Slide-Detection vorab getunt**, bevor ein einziges Level designt wurde — Feel-Tuning früh bedeutet, dass die Levels für eine Bewegung existieren, die bereits funktioniert, nicht andersherum.',
+          '**Mehrere Projekt-Iterationen als getrennte Ordner** verfolgt (5.2, Variante, …), damit alte Level-Files spielbar blieben, während die Engine geupdated wurde — destruktive In-Place-Upgrades hätten die frühen Iterationen verloren.',
+        ],
+        learnings: <String>[
+          'Plattformer-Feel zu iterieren geht meist um Input-Latenz und die Kurve des Sprungs; alles andere (Art, Musik, Levels) ist Deko obendrauf.',
+        ],
+      ),
+    },
+  ),
+
+  // 31 --------------------------------------------------------------------------
+  ProjectItemData(title: 'ALSignal — ASL Hackathon',
+    subtitle: 'Real-time American Sign Language in Unity',
+    category: 'HACKATHON / CV',
+    platform: 'Windows · Unity',
+    primaryColor: const Color(0xFF1F2937),
+    image: '$_d/unity-hackathon/cover.webp',
+    coverUrl: '$_d/unity-hackathon/cover.webp',
+    coverColorUrl: '$_d/unity-hackathon/cover-color.webp',
+    technologyUsed: 'Unity · C# · MediaPipe · LSTM · Webcam',
+    portfolioDescription:
+        'A weekend hackathon build: real-time American Sign Language '
+        'detection inside Unity. MediaPipe estimates the hand pose at '
+        '30 FPS; a small LSTM trained on a captured gesture set '
+        'classifies each window of frames into the right sign. The '
+        'demo overlays the recognised label and a confidence bar live '
+        'on the camera feed.',
+    isPublic: false,
+    isLive: false,
+    mockupType: 'fullbleed',
+    screenshots: <String>[],
+    decisions: <String>[
+      'Picked **MediaPipe + a small custom LSTM** over a one-shot vision model — off-the-shelf hand-tracking plus a tiny trainable classifier beats a single big model for niche gesture sets at this scale, and trains in minutes instead of hours.',
+      'Built the demo in **Unity** instead of a web frontend so the captured gesture set could stay on-device — privacy was a hackathon talking point as much as a real constraint.',
+      'Overlaid the **confidence bar + label live on the webcam feed** because visible decisions are easier to debug at a hackathon than logs are — judges see the model thinking.',
+    ],
+    learnings: <String>[
+      'Computer-vision UX at a hackathon stands or falls on a working live demo; the LSTM won purely because it was demoable.',
+    ],
+    translations: const <String, ProjectTranslation>{
+      'de': ProjectTranslation(
+        title: 'ALSignal — ASL Hackathon',
+        subtitle: 'Echtzeit American Sign Language in Unity',
+        category: 'HACKATHON / VISION',
+        platform: 'Unity',
+        technologyUsed: 'Unity · C# · MediaPipe · LSTM · Webcam',
+        portfolioDescription:
+            'Ein Wochenend-Hackathon-Build: Echtzeit-Erkennung von '
+            'American Sign Language innerhalb von Unity. MediaPipe '
+            'schätzt die Handpose bei 30 FPS; ein kleines, auf einem '
+            'aufgenommenen Gesten-Set trainiertes LSTM klassifiziert '
+            'jedes Frame-Fenster in das richtige Zeichen. Die Demo '
+            'überlagert das erkannte Label und einen Confidence-Bar '
+            'live auf dem Kamera-Feed.',
+        decisions: <String>[
+          '**MediaPipe + ein kleines Custom-LSTM** gegenüber einem One-Shot-Vision-Modell gewählt — Off-the-Shelf-Hand-Tracking plus ein winziger trainierbarer Klassifikator schlägt ein einzelnes großes Modell für Nischen-Gesten-Sets in dieser Größenordnung und trainiert in Minuten statt Stunden.',
+          'Die Demo in **Unity** statt in einem Web-Frontend gebaut, damit das aufgenommene Gesten-Set on-device bleiben konnte — Privacy war beim Hackathon Talking Point genauso wie reale Anforderung.',
+          'Den **Confidence-Bar + das Label live auf den Webcam-Feed** gelegt, weil sichtbare Entscheidungen bei einem Hackathon leichter zu debuggen sind als Logs — Jurys sehen das Modell denken.',
+        ],
+        learnings: <String>[
+          'Computer-Vision-UX bei einem Hackathon steht und fällt mit einer funktionierenden Live-Demo; das LSTM gewann rein deshalb, weil es demobar war.',
+        ],
+      ),
+    },
+  ),
+
+  // 32 --------------------------------------------------------------------------
+  ProjectItemData(title: 'Steam Market Arbitrage Bot',
+    subtitle: 'Trading-card economy analyser with risk scoring',
+    category: 'AUTOMATION / FINANCE',
+    platform: 'Linux',
+    primaryColor: const Color(0xFF1B2838),
+    image: '$_d/steam-market/cover.webp',
+    coverUrl: '$_d/steam-market/cover.webp',
+    coverColorUrl: '$_d/steam-market/cover-color.webp',
+    technologyUsed: 'Python · BeautifulSoup · Requests · SQLite',
+    portfolioDescription:
+        'A research toolkit for the Steam Community Market: scans '
+        'thousands of listings a day and detects arbitrage loops — '
+        'gem → booster pack crafting spreads, card → gem conversions, '
+        'foil-card price gaps, and badge → component economics. '
+        'Cookie-based authenticated session respects Steam\'s rate '
+        'limits, every simulated trade factors in Steam\'s 15% market '
+        'fee, and a local SQLite stores opportunities with a risk '
+        'score so the obviously-stale ones get filtered before a human '
+        'sees them.',
+    isPublic: false,
+    isLive: false,
+    mockupType: 'terminal',
+    screenshots: <String>[],
+    decisions: <String>[
+      'Used a **cookie-based authenticated session** that respects rate limits because anonymous scraping of the market gets blocked within minutes — being a guest on Valve\'s API isn\'t viable for this kind of scan.',
+      'Baked **Steam\'s 15% market fee into every simulated trade** because opportunities that ignore the fee look 10× bigger than they are; ranking by raw spread is a fast way to lose money.',
+      'Ranked opportunities by **risk score** (depth-of-book + listing age + spread volatility) rather than raw margin — most "arbitrage" on inefficient marketplaces is actually a liquidity trap.',
+    ],
+    learnings: <String>[
+      'Ranking by risk-of-execution beats ranking by margin every time on a thin marketplace; the right top-1 is the listing you can actually clear, not the listing that looks biggest.',
+    ],
+    translations: const <String, ProjectTranslation>{
+      'de': ProjectTranslation(
+        title: 'Steam Market Arbitrage Bot',
+        subtitle: 'Sammelkarten-Wirtschaftsanalyse mit Risk-Scoring',
+        category: 'AUTOMATION / SCRAPING',
+        platform: 'Python',
+        technologyUsed: 'Python · BeautifulSoup · Requests · SQLite',
+        portfolioDescription:
+            'Ein Research-Toolkit für den Steam Community Market: '
+            'scannt täglich tausende Listings und entdeckt Arbitrage-'
+            'Loops — Gem-→-Booster-Pack-Crafting-Spreads, Card-→-Gem-'
+            'Konversionen, Foil-Karten-Preisunterschiede und Badge-→-'
+            'Komponenten-Ökonomie. Eine cookie-basierte authentifizierte '
+            'Session respektiert Steams Rate-Limits, jeder simulierte '
+            'Trade rechnet Steams 15-%-Marktgebühr ein, und ein lokales '
+            'SQLite speichert Opportunities mit einem Risiko-Score, '
+            'damit die offensichtlich veralteten herausgefiltert werden, '
+            'bevor ein Mensch sie sieht.',
+        decisions: <String>[
+          'Eine **cookie-basierte authentifizierte Session**, die Rate-Limits respektiert, verwendet, weil anonymes Scraping des Markets innerhalb von Minuten geblockt wird — Gast auf Valves API zu sein ist für diese Art von Scan nicht tragfähig.',
+          'Steams **15-%-Marktgebühr in jeden simulierten Trade eingebacken**, weil Opportunities, die die Gebühr ignorieren, 10× größer aussehen als sie sind; nach rohem Spread zu sortieren ist ein schneller Weg, Geld zu verlieren.',
+          'Opportunities nach **Risiko-Score** sortiert (Depth-of-Book + Listing-Alter + Spread-Volatilität) statt nach roher Marge — die meiste "Arbitrage" auf ineffizienten Marketplaces ist in Wahrheit eine Liquiditätsfalle.',
+        ],
+        learnings: <String>[
+          'Nach Risk-of-Execution zu sortieren schlägt jedes Mal das Sortieren nach Marge auf einem dünnen Marketplace; das richtige Top-1 ist das Listing, das man wirklich abräumen kann, nicht das, das am größten aussieht.',
+        ],
+      ),
+    },
+  ),
+
+  // 33 --------------------------------------------------------------------------
+  ProjectItemData(title: 'CSFloat Sniper',
+    subtitle: 'CS:GO marketplace scanner with API integration',
+    category: 'AUTOMATION / RESEARCH',
+    platform: 'Linux',
+    primaryColor: const Color(0xFFEAB308),
+    image: '$_d/csfloat/cover.webp',
+    coverUrl: '$_d/csfloat/cover.webp',
+    coverColorUrl: '$_d/csfloat/cover-color.webp',
+    technologyUsed: 'Python · aiohttp · CSFloat API · asyncio',
+    portfolioDescription:
+        'A scanner that watches CSFloat marketplace listings (Bayonet '
+        'Vanilla, covert tier) for price + condition mismatches and '
+        'notifies a private channel. Built to learn browser-automation '
+        'and event-driven Python; configurable dry-run mode skips '
+        'order placement during testing.',
+    isPublic: false,
+    isLive: false,
+    mockupType: 'terminal',
+    screenshots: <String>[],
+    decisions: <String>[
+      'Cached **listings + buy orders into a single immutable `MarketDataCache` dataclass** rather than fetching per function — collapsed 3 API calls per item into 2 and stopped a class of "is this data still fresh?" bugs at the type level.',
+      'Loaded API tokens **from environment via a gitignored `.env`** — never check the credential surface into git, even for personal tooling.',
+    ],
+    learnings: <String>[
+      'Redundant API calls show up easily in multi-function workflows; one systematic audit of call sites before optimisation prevents regression and is faster than chasing them one at a time.',
+      'Caching by whole-value-object (entire market snapshot) instead of per-field simplified downstream signatures and removed a lot of state-passing noise.',
+    ],
+    translations: const <String, ProjectTranslation>{
+      'de': ProjectTranslation(
+        title: 'CSFloat Sniper',
+        subtitle: 'CS:GO Marktplatz-Scanner mit API-Integration',
+        category: 'AUTOMATION / SCRAPING',
+        platform: 'Python',
+        technologyUsed: 'Python · aiohttp · CSFloat API · asyncio',
+        portfolioDescription:
+            'Ein Scanner, der CSFloat-Marktplatz-Listings (Bayonet '
+            'Vanilla, Covert-Tier) auf Preis- und Zustands-Mismatches '
+            'beobachtet und einen privaten Channel benachrichtigt. '
+            'Gebaut, um Browser-Automation und event-driven Python zu '
+            'lernen; konfigurierbarer Dry-Run-Mode überspringt die '
+            'Order-Platzierung während Tests.',
+        decisions: <String>[
+          '**Listings + Buy-Orders in eine einzige unveränderliche `MarketDataCache`-Dataclass** gecached, statt pro Funktion zu fetchen — hat 3 API-Calls pro Item auf 2 kollabiert und eine Klasse von "ist diese Daten noch frisch?"-Bugs auf Typ-Ebene gestoppt.',
+          'API-Tokens **aus dem Environment via einer gitignored `.env`** geladen — die Credential-Surface nie in Git einchecken, auch nicht für persönliches Tooling.',
+        ],
+        learnings: <String>[
+          'Redundante API-Calls tauchen in Multi-Funktions-Workflows leicht auf; ein systematisches Audit der Call-Sites vor der Optimierung verhindert Regressionen und ist schneller, als ihnen einzeln nachzujagen.',
+          'Caching nach ganzem Value-Objekt (gesamter Markt-Snapshot) statt pro Feld vereinfachte Downstream-Signaturen und entfernte viel State-Passing-Rauschen.',
+        ],
+      ),
+    },
+  ),
+
 ];
 
 /// Subset shown on the home page "selection of recent work" — the top picks.
 final List<ProjectItemData> recentWorksHighlights = <ProjectItemData>[
-  recentWorks[0], // Volkswagen AI Patent Search
-  recentWorks[1], // Hetzner k3s Infrastructure
+  recentWorks[0], // Hetzner k3s Infrastructure
+  recentWorks[1], // Sovereign Real-Estate Infrastructure
   recentWorks[2], // PostPilot
-  recentWorks[6], // Night-Drive Object Detection
-  recentWorks[7], // VR Anxiety Trainer
-  recentWorks[8], // Durak Multiplayer
+  recentWorks[3], // Sovereign Smart Home
+  recentWorks[4], // NestNode
+  recentWorks[5], // Volkswagen AI Patent Search
 ];

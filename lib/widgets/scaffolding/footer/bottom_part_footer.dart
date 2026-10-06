@@ -52,17 +52,34 @@ class BottomPartFooter extends StatelessWidget {
             const Spacer(),
             const SpaceH16(),
 
-            /// Privacy Policy
-            AnimatedUnderlineTextButton(
-              text: Tr.of('footer.privacy_policy'),
-              underlineColor: CustomColors.white,
-              underlineBottomOffset: 0.0,
-              textStyle: textStyle?.copyWith(
-                decoration: TextDecoration.underline,
-              ),
-              onTap: () {
-                PageTransition.goTo(context, StringConst.PRIVACY_POLICY_PAGE);
-              },
+            /// Privacy Policy + Legal Notice
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                AnimatedUnderlineTextButton(
+                  text: Tr.of('footer.privacy_policy'),
+                  underlineColor: CustomColors.white,
+                  underlineBottomOffset: 0.0,
+                  textStyle: textStyle?.copyWith(
+                    decoration: TextDecoration.underline,
+                  ),
+                  onTap: () {
+                    PageTransition.goTo(context, StringConst.PRIVACY_POLICY_PAGE);
+                  },
+                ),
+                const SpaceW16(),
+                AnimatedUnderlineTextButton(
+                  text: Tr.of('footer.imprint'),
+                  underlineColor: CustomColors.white,
+                  underlineBottomOffset: 0.0,
+                  textStyle: textStyle?.copyWith(
+                    decoration: TextDecoration.underline,
+                  ),
+                  onTap: () {
+                    PageTransition.goTo(context, StringConst.IMPRESSUM_PAGE);
+                  },
+                ),
+              ],
             ),
             const SpaceH8(),
 

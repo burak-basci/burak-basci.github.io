@@ -5,6 +5,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 // import '../../pages/project_detail/widgets/project_item.dart';
 import '../../widgets/buttons/socials_icon_button.dart';
+import '../lang.dart';
+import '../legal_texts.dart';
 import '../../widgets/scaffolding/header/top_navigation_item.dart';
 
 part 'colors.dart';

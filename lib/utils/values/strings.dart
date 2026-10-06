@@ -29,6 +29,8 @@ class StringConst {
   static const String CONTACT_PAGE = "/contact";
   static const String PROJECT_DETAIL_PAGE = "/project-detail";
   static const String PRIVACY_POLICY_PAGE = "/privacy_policy";
+  static const String IMPRESSUM = "Legal Notice";
+  static const String IMPRESSUM_PAGE = "/impressum";
 
   ///
   /// Footer
@@ -37,8 +39,8 @@ class StringConst {
   static const String AVAILABLE_FOR_FREELANCE = "I'm available for Consultancy & Freelancing.";
   static const String SAY_HELLO = "Say Hello";
 
-  static const String COPYRIGHT = "©  2023  Built by  $DEV_NAME,";
-  static const String COPYRIGHT2 = "©  2023  Built by  $DEV_NAME";
+  static const String COPYRIGHT = "©  2023 — 2026  Built by  $DEV_NAME,";
+  static const String COPYRIGHT2 = "©  2023 — 2026  Built by  $DEV_NAME";
   static const String COPYRIGHT3 = " based on the design of ";
   // static const String BASED_ON = "David Cobbina's source.";
   // static const String BASED_ON_LINK = "https://github.com/david-legend/david-legend.github.io";
@@ -51,8 +53,8 @@ class StringConst {
   ///
   static const String HI = "Hi,";
   static const String DEV_INTRO = "I'm Burak.";
-  static const String DEV_TITLE = "A Software Developer \n& Problem Solver.";
-  static const String DEV_DESC = "Flutter / Unreal Engine / AI / Blockchain";
+  static const String DEV_TITLE = "Platform Engineer\n& Software Architect.";
+  static const String DEV_DESC = "Kubernetes / GitOps / Terraform / GitLab CI";
   static const String SEE_MY_WORK = "See my work";
   static const String SCROLL_DOWN = "Scroll Down";
   static const String CRAFTED_WITH_LOVE = "Crafted with love.";
@@ -85,7 +87,7 @@ class StringConst {
 
   /// Header
   static const String ABOUT_DEV_CATCH_LINE_1 =
-      "I am a curious individual who loves to understand and solve problems.";
+      "I build platforms that let teams ship safely and fast.";
   static const String ABOUT_DEV_CATCH_LINE_2 = "I also have a passion for music.";
 
   /// Section 1
@@ -93,13 +95,15 @@ class StringConst {
 
   static const String ABOUT_DEV_STORY_TITLE = "A little bit about myself";
   static const String ABOUT_DEV_STORY_CONTENT_1 =
-      "I'm pursuing a dual degree in Industrial Engineering and Psychology, with a keen interest in "
-      "entrepreneurship, information technology, philosophy, and personal growth. I enjoy learning "
-      "new skills and applying them to diverse projects, such as developing a website, a VR "
-      "application, a driving robot, a side-scroller game or an AI training data generator. "
-      "Outside of academics and work, I find fulfillment in playing the piano, calisthenics, "
-      "hiking, juggling, and exploring new topics.\n\n"
-      "Professionally, I work as a Technical Product Owner and Platform Engineer with more than "
+      "I hold two completed degrees: a B.Sc. in Industrial Engineering from TU Dortmund (2024) and a "
+      "B.Sc. in Psychology from IU International University (2026). Psychology shapes how I build "
+      "platforms: the goal is to lower cognitive load and friction, so that the right way is also "
+      "the easy way for every developer. I'm interested in entrepreneurship, information "
+      "technology, philosophy, and personal growth, and I enjoy learning new skills and applying "
+      "them to diverse projects, such as developing a website, a VR application, a driving robot, "
+      "a side-scroller game or an AI training data generator. Outside of work, I find fulfillment "
+      "in playing the piano, calisthenics, hiking, juggling, and exploring new topics.\n\n"
+      "Professionally, I work as a Platform Engineer and Software Architect with more than "
       "three years of experience delivering production-grade DevSecOps environments and AI-driven "
       "automation. I reduced environment provisioning time by 95% on one project and architected "
       "a sovereign cloud infrastructure for a 700+ unit real estate portfolio. I love owning the "
@@ -107,7 +111,7 @@ class StringConst {
       "deployment.\n\n"
       "My dual background in Industrial Engineering and Psychology lets me take a human-centric "
       "approach to platform engineering: bridging deep technical execution (Kubernetes, Terraform, "
-      "ArgoCD, FastAPI, RAG) and stakeholder alignment through cognitive usability analysis. I "
+      "Argo CD, FastAPI, RAG) and stakeholder alignment through cognitive usability analysis. I "
       "currently lead cross-functional teams and DevSecOps transformations for multiple clients "
       "across Germany, focusing on Architecture-as-Code and scalable AI integration.";
 
@@ -116,18 +120,17 @@ class StringConst {
 
   static const String ABOUT_DEV_TECHNOLOGY_TITLE = "What I use";
   static const String ABOUT_DEV_TECHNOLOGY_CONTENT =
-      "I use a wide range of tools to take ideas from prototype to production. "
-      "On the platform side I lean on Kubernetes, Terraform, ArgoCD and GitLab "
-      "CI/CD for reproducible, GitOps-driven infrastructure. For product work "
-      "I reach for Flutter, Next.js, Django and FastAPI, with PostgreSQL, "
-      "ElasticSearch and vector databases sitting behind them. On the AI side, "
+      "My core is platform engineering: Kubernetes, Terraform, Argo CD and GitLab CI/CD for "
+      "reproducible, GitOps-driven infrastructure, with Podman, Docker, Prometheus and Grafana "
+      "around it. For product work I reach for Flutter, Next.js, Django and FastAPI, with "
+      "PostgreSQL, ElasticSearch and vector databases sitting behind them. On the AI side, "
       "I orchestrate LLMs and RAG pipelines, train and evaluate computer-"
       "vision models, and build synthetic-data simulations in Unreal Engine "
       "(C++). The full list of languages, frameworks and tools I have shipped "
       "with over the years is below.";
 
   static const String PROGRAMMING_LANGUAGES = "Programming Languages";
-  static const String APPLICATIONS = "Applications & Frameworks";
+  static const String APPLICATIONS = "Frameworks & Tools";
   static const String OTHER_SOFTWARE = "Other Software";
 
   /// Section 3
@@ -150,14 +153,14 @@ class StringConst {
   /// Professional Career
   /// Freelance DevSecOps (newest)
   static const String EXPERIENCE_5_TIME = "Oct 2024 - Present";
-  static const String EXPERIENCE_5_TITLE = "Freelance DevSecOps & AI Automation Engineer";
+  static const String EXPERIENCE_5_TITLE = "Platform Engineer & Software Architect (Freelance)";
   static const String EXPERIENCE_5_URL = "";
   static const String EXPERIENCE_5_SUBTITLE =
       "Self-Employed, Bochum, Germany. I architect production-grade Kubernetes infrastructure, "
       "GitOps workflows and LLM-powered automation for clients across Germany.";
   static const String EXPERIENCE_5_BULLET_POINT_1 =
       "I designed and deployed production-grade Kubernetes clusters (Hetzner Cloud) using Terraform "
-      "(IaC) and ArgoCD (GitOps), achieving 100% environment reproducibility and reducing "
+      "(IaC) and Argo CD (GitOps), achieving 100% environment reproducibility and reducing "
       "provisioning lead time from 4 days to 45 minutes (95% improvement).";
   static const String EXPERIENCE_5_BULLET_POINT_2 =
       "I implemented automated GitLab CI/CD pipelines and GitOps workflows; established a full-stack "
@@ -276,16 +279,19 @@ class StringConst {
 
   /// Academic Career
   /// Section 1
-  static const String ACADEMIC_2_TIME = "Since 2020";
+  static const String ACADEMIC_2_TIME = "2020 - 2026";
   static const String ACADEMIC_2_TITLE = "IU International University (Distance Study)";
   static const String ACADEMIC_2_URL = "";
-  static const String ACADEMIC_2_SUBTITLE = "Degree Program: Psychology (B.Sc.)";
+  static const String ACADEMIC_2_SUBTITLE = "Degree Program: Psychology (B.Sc.), completed";
+  static const String ACADEMIC_2_BULLET_POINT_1 = "Bachelor's Thesis (grade 1.0), titled:\n"
+      "\"Algorithmic Error Correction and Hebbian Learning: A Mechanistic Comparison of Two "
+      "Fundamental Learning Principles in Artificial and Biological Neural Networks\"";
 
   /// Section 2
-  static const String ACADEMIC_1_TIME = "Since Oct 2018";
+  static const String ACADEMIC_1_TIME = "Oct 2018 - Nov 2024";
   static const String ACADEMIC_1_TITLE = "Technical University in Dortmund";
   static const String ACADEMIC_1_URL = "";
-  static const String ACADEMIC_1_SUBTITLE = "Degree Program: Industrial Engineering (B.Sc.)\n"
+  static const String ACADEMIC_1_SUBTITLE = "Degree Program: Industrial Engineering (B.Sc.), completed\n"
       "Profile: Management of Electrical Systems";
   static const String ACADEMIC_1_BULLET_POINT_1 = "3D-Printing and Laser Woodcutter Workshop";
   static const String ACADEMIC_1_BULLET_POINT_2 = "Programming of a Micro Controller ";
@@ -294,134 +300,10 @@ class StringConst {
   static const String ACADEMIC_1_BULLET_POINT_5 = "I wrote a scientific paper on the application and "
       "optimization of object detection at night using Deep Learning (YOLOv8) in a simulated urban "
       "environment from the perspective of a moving car.";
-  static const String ACADEMIC_1_BULLET_POINT_6 = "Currently I am engaged in my Bachelor's Thesis, "
+  static const String ACADEMIC_1_BULLET_POINT_6 = "I completed my Bachelor's Thesis (submitted May 2024, grade 1.3), "
       "titled:\n"
       "\"Evaluation of the Influence of Lighting and Training Parameters on Object Detection by "
-      "Artificial Neural Networks in Virtual Night Drives.\".";
-
-  ///
-  /// Privacy Policy
-  ///
-
-  // static const String h1 = "Privacy Policy";
-  static const String PARAGRAPH1 =
-      "At Burak Basci, accessible from https://burak-basci.github.io/ and https://www.burakbasci.de/, one of our main "
-      "priorities is the privacy of our visitors. This Privacy Policy document contains types of "
-      "information that is collected and recorded by Burak Basci and how we use it.\n";
-  static const String PARAGRAPH2 =
-      "If you have additional questions or require more information about our Privacy "
-      "Policy, do not hesitate to contact us.\n";
-  static const String PARAGRAPH3 =
-      "This Privacy Policy applies only to our online activities and is valid for visitors "
-      "to our website with regards to the information that they shared and/or collect in Burak "
-      "Basci. This policy is not applicable to any information collected offline or via channels "
-      "other than this website.";
-  static const String HEADER1 = "Consent";
-  static const String PARAGRAPH4 =
-      "By using our website, you hereby consent to our Privacy Policy and agree to its terms.";
-  static const String HEADER2 = "Information we collect";
-  static const String PARAGRAPH5 =
-      "The personal information that you are asked to provide, and the reasons why you are "
-      "asked to provide it, will be made clear to you at the point we ask you to provide your "
-      "personal information.\n";
-  static const String PARAGRAPH6 =
-      "If you contact us directly, we may receive additional information about you such "
-      "as your name, email address, phone number, the contents of the message and/or attachments "
-      "you may send us, and any other information you may choose to provide.\n";
-  static const String PARAGRAPH7 =
-      "When you register for an Account, we may ask for your contact information, including "
-      "items such as name, company name, address, email address, and telephone number.";
-  static const String HEADER3 = "How we use your information";
-  static const String PARAGRAPH8 = "We use the information we collect in various ways, including to:\n";
-  static const String LIST1 = """
-- Provide, operate, and maintain our website
-- Improve, personalize, and expand our website
-- Understand and analyze how you use our website
-- Develop new products, services, features, and functionality
-- Communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to the website, and for marketing and promotional purposes
-- Send you emails
-- Find and prevent fraud""";
-  static const String HEADER4 = "Log Files";
-  static const String PARAGRAPH9 =
-      "Burak Basci follows a standard procedure of using log files. These files log visitors "
-      "when they visit websites. All hosting companies do this and a part of hosting services' "
-      "analytics. The information collected by log files include internet protocol (IP) addresses, "
-      "browser type, Internet Service Provider (ISP), date and time stamp, referring/exit pages, and "
-      "possibly the number of clicks. These are not linked to any information that is personally "
-      "identifiable. The purpose of the information is for analyzing trends, administering the site, "
-      "tracking users' movement on the website, and gathering demographic information.";
-
-  static const String HEADER5 = "Advertising Partners Privacy Policies";
-  static const String PARAGRAPH10 =
-      "You may consult this list to find the Privacy Policy for each of the advertising "
-      "partners of Burak Basci.\n";
-  static const String PARAGRAPH11 =
-      "Third-party ad servers or ad networks uses technologies like cookies, JavaScript, or "
-      "Web Beacons that are used in their respective advertisements and links that appear on Burak "
-      "Basci, which are sent directly to users' browser. They automatically receive your IP address "
-      "when this occurs. These technologies are used to measure the effectiveness of their "
-      "advertising campaigns and/or to personalize the advertising content that you see on websites "
-      "that you visit.\n";
-  static const String PARAGRAPH12 =
-      "Note that Burak Basci has no access to or control over these cookies that are used "
-      "by third-party advertisers.";
-  static const String HEADER6 = "Third Party Privacy Policies";
-  static const String PARAGRAPH13 =
-      "Burak Basci's Privacy Policy does not apply to other advertisers or websites. Thus, "
-      "we are advising you to consult the respective Privacy Policies of these third-party ad "
-      "servers for more detailed information. It may include their practices and instructions about "
-      "how to opt-out of certain options.\n";
-  static const String PARAGRAPH14 =
-      "You can choose to disable cookies through your individual browser options. To know "
-      "more detailed information about cookie management with specific web browsers, it can be found "
-      "at the browsers' respective websites.";
-  static const String HEADER7 = "CCPA Privacy Rights (Do Not Sell My Personal Information)";
-  static const String PARAGRAPH15 =
-      "Under the CCPA, among other rights, California consumers have the right to:\n";
-  static const String LIST2 = """
-- Request that a business that collects a consumer's personal data disclose the categories and specific pieces of personal data that a business has collected about consumers.
-- Request that a business delete any personal data about the consumer that a business has collected.
-- Request that a business that sells a consumer's personal data, not sell the consumer's personal data.
-- If you make a request, we have one month to respond to you. If you would like to exercise any of these rights, please contact us.""";
-  static const String HEADER8 = "GDPR Data Protection Rights";
-  static const String PARAGRAPH16 =
-      "We would like to make sure you are fully aware of all of your data protection rights. "
-      "Every user is entitled to the following:\n";
-  static const String LIST3 = """
-- The right to access – You have the right to request copies of your personal data. We may charge you a small fee for this service.
-- The right to rectification – You have the right to request that we correct any information you believe is inaccurate. You also have the right to request that we complete the information you believe is incomplete.
-- The right to erasure – You have the right to request that we erase your personal data, under certain conditions.
-- The right to restrict processing – You have the right to request that we restrict the processing of your personal data, under certain conditions.
-- The right to object to processing – You have the right to object to our processing of your personal data, under certain conditions.
-- The right to data portability – You have the right to request that we transfer the data that we have collected to another organization, or directly to you, under certain conditions.
-- If you make a request, we have one month to respond to you. If you would like to exercise any of these rights, please contact us.""";
-  static const String HEADER9 = "Children's Information";
-  static const String PARAGRAPH17 =
-      "Another part of our priority is adding protection for children while using the "
-      "internet. We encourage parents and guardians to observe, participate in, and/or monitor and "
-      "guide their online activity.\n";
-  static const String PARAGRAPH18 =
-      "Burak Basci does not knowingly collect any Personal Identifiable Information from "
-      "children under the age of 13. If you think that your child provided this kind of information "
-      "on our website, we strongly encourage you to contact us immediately and we will do our best "
-      "efforts to promptly remove such information from our records.";
-  static const String HEADER10 = "Changes to This Privacy Policy";
-  static const String PARAGRAPH19 =
-      "We may update our Privacy Policy from time to time. Thus, we advise you to review "
-      "this page periodically for any changes. We will notify you of any changes by posting the new "
-      "Privacy Policy on this page. These changes are effective immediately, after they are posted "
-      "on this page.\n";
-  static const String PARAGRAPH20 = "Our Privacy Policy was created with the help of the "
-      "https://www.termsfeed.com/privacy-policy-generator/ Privacy Policy Generator";
-  static const String HEADER11 = "Contact Us";
-  static const String PARAGRAPH21 =
-      "If you have any questions or suggestions about our Privacy Policy, do not hesitate to "
-      "contact us";
-
-  //
-
-  //
-  //
+      "Artificial Neural Networks in Virtual Night Drives.\"";
 
   /// Font Family
   static const String VISUELT_PRO = "VisueltPro";
@@ -469,7 +351,7 @@ class StringConst {
   static const String VIEW = "View";
   static const String COMING_SOON = "COMING SOON !!";
   static const String BUILT_WITH_FLUTTER = "Built using ";
-  static const String DEV_EMAIL = "burakbasci98@gmail.com";
+  static const String DEV_EMAIL = "burakbascidev@gmail.com";
   static const String EMAIL_URL = "mailto:<$DEV_EMAIL>?subject=&body=";
 
   static const String KEY_SKILLS = "KEY SKILLS";

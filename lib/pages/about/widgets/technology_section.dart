@@ -41,6 +41,24 @@ class TechnologySection extends StatelessWidget {
                 AnimatedSlideBoxTransitionText(
                   controller: controller,
                   width: screenWidth,
+                  text: Tr.of('about.tech.platform'),
+                  textStyle: titleStyle,
+                ),
+                const SpaceH16(),
+                Wrap(
+                  direction: Axis.vertical,
+                  spacing: 4.0,
+                  children: _buildTechnologySection(
+                    context,
+                    selfPositioningController: selfPositioningController,
+                    data: Data.platformTools,
+                    width: screenWidth,
+                  ),
+                ),
+                const SpaceH32(),
+                AnimatedSlideBoxTransitionText(
+                  controller: controller,
+                  width: screenWidth,
                   text: Tr.of('about.tech.programming_languages'),
                   textStyle: titleStyle,
                 ),
@@ -73,24 +91,6 @@ class TechnologySection extends StatelessWidget {
                     width: screenWidth,
                   ),
                 ),
-                const SpaceH32(),
-                AnimatedSlideBoxTransitionText(
-                  controller: controller,
-                  width: screenWidth,
-                  text: Tr.of('about.tech.other_software'),
-                  textStyle: titleStyle,
-                ),
-                const SpaceH16(),
-                Wrap(
-                  direction: Axis.vertical,
-                  spacing: 4.0,
-                  children: _buildTechnologySection(
-                    context,
-                    selfPositioningController: selfPositioningController,
-                    data: Data.otherSoftware,
-                    width: screenWidth,
-                  ),
-                ),
               ],
             );
           } else {
@@ -104,6 +104,38 @@ class TechnologySection extends StatelessWidget {
                       AnimatedSlideBoxTransitionText(
                         controller: controller,
                         width: width * 0.25,
+                        text: Tr.of('about.tech.platform'),
+                        textStyle: titleStyle,
+                      ),
+                      const SpaceH16(),
+                      Row(
+                        children: <Widget>[
+                          const SpaceW4(),
+                          Expanded(
+                            child: Wrap(
+                              direction: Axis.vertical,
+                              spacing: 8.0,
+                              clipBehavior: Clip.antiAlias,
+                              children: _buildTechnologySection(
+                                context,
+                                selfPositioningController: selfPositioningController,
+                                data: Data.platformTools,
+                                width: width * 0.25,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      AnimatedSlideBoxTransitionText(
+                        controller: controller,
+                        width: (width * 0.25),
                         text: Tr.of('about.tech.programming_languages'),
                         textStyle: titleStyle,
                       ),
@@ -152,38 +184,6 @@ class TechnologySection extends StatelessWidget {
                                 context,
                                 selfPositioningController: selfPositioningController,
                                 data: Data.applications,
-                                width: width * 0.25,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      AnimatedSlideBoxTransitionText(
-                        controller: controller,
-                        width: (width * 0.25),
-                        text: Tr.of('about.tech.other_software'),
-                        textStyle: titleStyle,
-                      ),
-                      const SpaceH16(),
-                      Row(
-                        children: <Widget>[
-                          const SpaceW4(),
-                          Expanded(
-                            child: Wrap(
-                              direction: Axis.vertical,
-                              spacing: 8.0,
-                              clipBehavior: Clip.antiAlias,
-                              children: _buildTechnologySection(
-                                context,
-                                selfPositioningController: selfPositioningController,
-                                data: Data.otherSoftware,
                                 width: width * 0.25,
                               ),
                             ),

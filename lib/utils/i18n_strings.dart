@@ -60,8 +60,8 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
   // --- Home hero -------------------------------------------------------
   'home.hi':                 {'en': 'Hi,',                                 'de': 'Hallo,'},
   'home.dev_intro':          {'en': "I'm Burak.",                          'de': 'ich bin Burak.'},
-  'home.dev_title':          {'en': 'A Software Developer \n& Problem Solver.', 'de': 'Software-Entwickler\n& Problemlöser.'},
-  'home.dev_desc':           {'en': 'Flutter / Unreal Engine / AI / Blockchain', 'de': 'Flutter / Unreal Engine / AI / Blockchain'},
+  'home.dev_title':          {'en': 'Platform Engineer\n& Software Architect.', 'de': 'Platform Engineer\n& Software-Architekt.'},
+  'home.dev_desc':           {'en': 'Kubernetes / GitOps / Terraform / GitLab CI', 'de': 'Kubernetes / GitOps / Terraform / GitLab CI'},
   'home.see_my_work':        {'en': 'See my work',                          'de': 'Projekte ansehen'},
   'home.crafted':            {'en': 'Crafted with love.',                   'de': 'Mit Liebe gebaut.'},
   // Closing line shown after the home page's project cascade. The
@@ -118,7 +118,7 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
   'footer.built_with':      {'en': 'Built using ',                     'de': 'Gebaut mit '},
   'footer.built_with_love': {'en': ' with ',                           'de': ' mit '},
   'footer.privacy_policy':  {'en': 'Privacy Policy',                   'de': 'Datenschutz'},
-  'footer.imprint':         {'en': 'Imprint',                          'de': 'Impressum'},
+  'footer.imprint':         {'en': 'Legal Notice',                          'de': 'Impressum'},
 
   // --- Language switcher ----------------------------------------------
   'lang.switch_to_de':      {'en': 'Switch to German',  'de': 'Auf Deutsch wechseln'},
@@ -126,8 +126,8 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
 
   // --- About page header ----------------------------------------------
   'about.catch_line_1': {
-    'en': 'I am a curious individual who loves to understand and solve problems.',
-    'de': 'Ich bin ein neugieriger Mensch, der gerne Probleme versteht und löst.',
+    'en': 'I build platforms that let teams ship safely and fast.',
+    'de': 'Ich baue Plattformen, auf denen Teams sicher und schnell ausliefern.',
   },
   'about.catch_line_2': {
     'en': 'I also have a passion for music.',
@@ -139,13 +139,15 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
   'about.story.title':   {'en': 'A little bit about myself',   'de': 'Ein wenig über mich'},
   'about.story.content': {
     'en':
-        "I'm pursuing a dual degree in Industrial Engineering and Psychology, with a keen interest in "
-            "entrepreneurship, information technology, philosophy, and personal growth. I enjoy learning "
-            "new skills and applying them to diverse projects, such as developing a website, a VR "
-            "application, a driving robot, a side-scroller game or an AI training data generator. "
-            "Outside of academics and work, I find fulfillment in playing the piano, calisthenics, "
-            "hiking, juggling, and exploring new topics.\n\n"
-            "Professionally, I work as a Technical Product Owner and Platform Engineer with more than "
+        "I hold two completed degrees: a B.Sc. in Industrial Engineering from TU Dortmund (2024) and a "
+            "B.Sc. in Psychology from IU International University (2026). Psychology shapes how I build "
+            "platforms: the goal is to lower cognitive load and friction, so that the right way is also "
+            "the easy way for every developer. I'm interested in entrepreneurship, information "
+            "technology, philosophy, and personal growth, and I enjoy learning new skills and applying "
+            "them to diverse projects, such as developing a website, a VR application, a driving robot, "
+            "a side-scroller game or an AI training data generator. Outside of work, I find fulfillment "
+            "in playing the piano, calisthenics, hiking, juggling, and exploring new topics.\n\n"
+            "Professionally, I work as a Platform Engineer and Software Architect with more than "
             "three years of experience delivering production-grade DevSecOps environments and AI-driven "
             "automation. I reduced environment provisioning time by 95% on one project and architected "
             "a sovereign cloud infrastructure for a 700+ unit real estate portfolio. I love owning the "
@@ -153,17 +155,20 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
             "deployment.\n\n"
             "My dual background in Industrial Engineering and Psychology lets me take a human-centric "
             "approach to platform engineering: bridging deep technical execution (Kubernetes, Terraform, "
-            "ArgoCD, FastAPI, RAG) and stakeholder alignment through cognitive usability analysis. I "
+            "Argo CD, FastAPI, RAG) and stakeholder alignment through cognitive usability analysis. I "
             "currently lead cross-functional teams and DevSecOps transformations for multiple clients "
             "across Germany, focusing on Architecture-as-Code and scalable AI integration.",
     'de':
-        "Ich absolviere ein duales Studium in Wirtschaftsingenieurwesen und Psychologie und interessiere "
-            "mich besonders für Entrepreneurship, Informationstechnologie, Philosophie und persönliche "
+        "Ich habe zwei Studiengänge abgeschlossen: den B.Sc. Wirtschaftsingenieurwesen an der TU "
+            "Dortmund (2024) und den B.Sc. Psychologie an der IU Internationalen Hochschule (2026). Die "
+            "Psychologie prägt, wie ich Plattformen baue: Ziel ist, kognitive Last und Reibung zu senken, "
+            "damit der richtige Weg für jeden Entwickler auch der einfache ist. Ich interessiere mich "
+            "besonders für Entrepreneurship, Informationstechnologie, Philosophie und persönliche "
             "Entwicklung. Ich lerne gerne neue Fähigkeiten und wende sie in unterschiedlichsten Projekten "
             "an – sei es eine Website, eine VR-Anwendung, ein fahrender Roboter, ein Side-Scroller-Spiel "
-            "oder ein Generator für KI-Trainingsdaten. Neben Studium und Beruf finde ich Ausgleich beim "
+            "oder ein Generator für KI-Trainingsdaten. Neben dem Beruf finde ich Ausgleich beim "
             "Klavierspielen, Calisthenics, Wandern, Jonglieren und beim Erschließen neuer Themen.\n\n"
-            "Beruflich arbeite ich als Technical Product Owner und Platform Engineer mit über drei Jahren "
+            "Beruflich arbeite ich als Platform Engineer und Software-Architekt mit über drei Jahren "
             "Erfahrung im Aufbau produktionsreifer DevSecOps-Umgebungen und KI-gestützter Automatisierung. "
             "In einem Projekt habe ich die Bereitstellungszeit für Umgebungen um 95 % reduziert und für "
             "ein Immobilienportfolio mit mehr als 700 Einheiten eine souveräne Cloud-Infrastruktur "
@@ -171,7 +176,7 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
             "Modellierung im Enterprise Architect bis zum GitOps-basierten Deployment.\n\n"
             "Mein dualer Hintergrund in Wirtschaftsingenieurwesen und Psychologie ermöglicht mir einen "
             "menschzentrierten Ansatz im Platform Engineering: Ich verbinde tiefe technische Umsetzung "
-            "(Kubernetes, Terraform, ArgoCD, FastAPI, RAG) mit Stakeholder-Abstimmung durch kognitive "
+            "(Kubernetes, Terraform, Argo CD, FastAPI, RAG) mit Stakeholder-Abstimmung durch kognitive "
             "Usability-Analysen. Aktuell leite ich cross-funktionale Teams und DevSecOps-Transformationen "
             "für mehrere Kunden in ganz Deutschland, mit Fokus auf Architecture-as-Code und skalierbare "
             "KI-Integration.",
@@ -181,29 +186,27 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
   'about.technology.title':   {'en': 'What I use',  'de': 'Womit ich arbeite'},
   'about.technology.content': {
     'en':
-        "I use a wide range of tools to take ideas from prototype to production. "
-            "On the platform side I lean on Kubernetes, Terraform, ArgoCD and GitLab "
-            "CI/CD for reproducible, GitOps-driven infrastructure. For product work "
-            "I reach for Flutter, Next.js, Django and FastAPI, with PostgreSQL, "
-            "ElasticSearch and vector databases sitting behind them. On the AI side, "
+        "My core is platform engineering: Kubernetes, Terraform, Argo CD and GitLab CI/CD for "
+            "reproducible, GitOps-driven infrastructure, with Podman, Docker, Prometheus and Grafana "
+            "around it. For product work I reach for Flutter, Next.js, Django and FastAPI, with "
+            "PostgreSQL, ElasticSearch and vector databases sitting behind them. On the AI side, "
             "I orchestrate LLMs and RAG pipelines, train and evaluate computer-"
             "vision models, and build synthetic-data simulations in Unreal Engine "
             "(C++). The full list of languages, frameworks and tools I have shipped "
             "with over the years is below.",
     'de':
-        "Ich nutze ein breites Spektrum an Werkzeugen, um Ideen vom Prototyp in die Produktion zu "
-            "bringen. Auf der Plattform-Seite setze ich auf Kubernetes, Terraform, ArgoCD und GitLab "
-            "CI/CD für reproduzierbare, GitOps-getriebene Infrastruktur. Für die Produktentwicklung "
-            "greife ich zu Flutter, Next.js, Django und FastAPI – darunter PostgreSQL, ElasticSearch "
-            "und Vektor-Datenbanken. Im KI-Bereich orchestriere ich LLMs und RAG-Pipelines, trainiere "
-            "und evaluiere Computer-Vision-Modelle und baue synthetische Datensimulationen in Unreal "
-            "Engine (C++). Die vollständige Liste der Sprachen, Frameworks und Tools, mit denen ich "
-            "über die Jahre produktiv geliefert habe, findest du unten.",
+        "Mein Kern ist Platform Engineering: Kubernetes, Terraform, Argo CD und GitLab CI/CD für "
+            "reproduzierbare, GitOps-getriebene Infrastruktur, dazu Podman, Docker, Prometheus und "
+            "Grafana. Für die Produktentwicklung greife ich zu Flutter, Next.js, Django und FastAPI – "
+            "darunter PostgreSQL, ElasticSearch und Vektor-Datenbanken. Im KI-Bereich orchestriere ich "
+            "LLMs und RAG-Pipelines, trainiere und evaluiere Computer-Vision-Modelle und baue "
+            "synthetische Datensimulationen in Unreal Engine (C++). Die vollständige Liste der Sprachen, "
+            "Frameworks und Tools, mit denen ich über die Jahre produktiv geliefert habe, findest du unten.",
   },
 
+  'about.tech.platform':              {'en': 'Platform & Infrastructure', 'de': 'Plattform & Infrastruktur'},
   'about.tech.programming_languages': {'en': 'Programming Languages',     'de': 'Programmiersprachen'},
-  'about.tech.applications':          {'en': 'Applications & Frameworks', 'de': 'Anwendungen & Frameworks'},
-  'about.tech.other_software':        {'en': 'Other Software',            'de': 'Weitere Software'},
+  'about.tech.applications':          {'en': 'Frameworks & Tools',        'de': 'Frameworks & Werkzeuge'},
 
   'about.contact.label':  {'en': 'Contact',      'de': 'Kontakt'},
   'about.contact.social': {'en': 'Social Media', 'de': 'Soziale Medien'},
@@ -262,7 +265,7 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
 
   // Freelance DevSecOps (workData index 0)
   'experience.5.time':  {'en': 'Oct 2024 - Present',                          'de': 'Okt. 2024 – Heute'},
-  'experience.5.title': {'en': 'Freelance DevSecOps & AI Automation Engineer','de': 'Freiberuflicher DevSecOps- & KI-Automatisierungs-Engineer'},
+  'experience.5.title': {'en': 'Platform Engineer & Software Architect (Freelance)','de': 'Platform Engineer & Software-Architekt (Freelance)'},
   'experience.5.subtitle': {
     'en': 'Self-Employed, Bochum, Germany. I architect production-grade Kubernetes infrastructure, '
         'GitOps workflows and LLM-powered automation for clients across Germany.',
@@ -271,9 +274,9 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
   },
   'experience.5.bullet_1': {
     'en': 'I designed and deployed production-grade Kubernetes clusters (Hetzner Cloud) using Terraform '
-        '(IaC) and ArgoCD (GitOps), achieving 100% environment reproducibility and reducing '
+        '(IaC) and Argo CD (GitOps), achieving 100% environment reproducibility and reducing '
         'provisioning lead time from 4 days to 45 minutes (95% improvement).',
-    'de': 'Ich habe produktionsreife Kubernetes-Cluster (Hetzner Cloud) mit Terraform (IaC) und ArgoCD '
+    'de': 'Ich habe produktionsreife Kubernetes-Cluster (Hetzner Cloud) mit Terraform (IaC) und Argo CD '
         '(GitOps) entworfen und ausgerollt – mit 100 % Reproduzierbarkeit der Umgebungen und einer '
         'Reduktion der Bereitstellungszeit von 4 Tagen auf 45 Minuten (95 % Verbesserung).',
   },
@@ -488,20 +491,28 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
   },
 
   // Academic — IU International University (academicData index 0)
-  'academic.2.time':     {'en': 'Since 2020',                  'de': 'Seit 2020'},
+  'academic.2.time':     {'en': '2020 - 2026',                 'de': '2020 – 2026'},
   'academic.2.title':    {'en': 'IU International University (Distance Study)',
                           'de': 'IU Internationale Hochschule (Fernstudium)'},
-  'academic.2.subtitle': {'en': 'Degree Program: Psychology (B.Sc.)',
-                          'de': 'Studiengang: Psychologie (B.Sc.)'},
+  'academic.2.subtitle': {'en': 'Degree Program: Psychology (B.Sc.), completed',
+                          'de': 'Studiengang: Psychologie (B.Sc.), abgeschlossen'},
+  'academic.2.bullet_1': {
+    'en': "Bachelor's Thesis (grade 1.0), titled:\n"
+        '"Algorithmic Error Correction and Hebbian Learning: A Mechanistic Comparison of Two '
+        'Fundamental Learning Principles in Artificial and Biological Neural Networks"',
+    'de': 'Bachelorarbeit (Note 1,0) mit dem Titel:\n'
+        '„Algorithmische Fehlerkorrektur und Hebbsches Lernen: Ein mechanistischer Vergleich zweier '
+        'fundamentaler Lernprinzipien in künstlichen und biologischen neuronalen Netzen"',
+  },
 
   // Academic — TU Dortmund (academicData index 1)
-  'academic.1.time':  {'en': 'Since Oct 2018', 'de': 'Seit Okt. 2018'},
+  'academic.1.time':  {'en': 'Oct 2018 - Nov 2024', 'de': 'Okt. 2018 – Nov. 2024'},
   'academic.1.title': {'en': 'Technical University in Dortmund',
                        'de': 'Technische Universität Dortmund'},
   'academic.1.subtitle': {
-    'en': 'Degree Program: Industrial Engineering (B.Sc.)\n'
+    'en': 'Degree Program: Industrial Engineering (B.Sc.), completed\n'
         'Profile: Management of Electrical Systems',
-    'de': 'Studiengang: Wirtschaftsingenieurwesen (B.Sc.)\n'
+    'de': 'Studiengang: Wirtschaftsingenieurwesen (B.Sc.), abgeschlossen\n'
         'Profil: Management elektrischer Systeme',
   },
   'academic.1.bullet_1': {'en': '3D-Printing and Laser Woodcutter Workshop',
@@ -521,12 +532,12 @@ const Map<String, Map<String, String>> _strings = <String, Map<String, String>>{
         'eines fahrenden Autos verfasst.',
   },
   'academic.1.bullet_6': {
-    'en': "Currently I am engaged in my Bachelor's Thesis, "
+    'en': "I completed my Bachelor's Thesis (submitted May 2024, grade 1.3), "
         'titled:\n'
         '"Evaluation of the Influence of Lighting and Training Parameters on Object Detection by '
-        'Artificial Neural Networks in Virtual Night Drives.".',
-    'de': 'Aktuell arbeite ich an meiner Bachelorarbeit mit dem Titel:\n'
-        '„Evaluation des Einflusses von Beleuchtungs- und Trainingsparametern auf die Objekterkennung '
-        'durch künstliche neuronale Netze bei virtuellen Nachtfahrten.".',
+        'Artificial Neural Networks in Virtual Night Drives."',
+    'de': 'Ich habe meine Bachelorarbeit abgeschlossen (abgegeben Mai 2024, Note 1,3) mit dem Titel:\n'
+        '„Evaluierung des Einflusses von Beleuchtungs- und Trainingsparametern auf die Objekterkennung '
+        'von künstlichen neuronalen Netzen bei virtuellen Nachtfahrten"',
   },
 };

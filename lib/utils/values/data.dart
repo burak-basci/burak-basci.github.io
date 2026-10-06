@@ -132,6 +132,21 @@ class Data {
     ),
   ];
 
+  static const List<String> platformTools = <String>[
+    "Kubernetes",
+    "Argo CD",
+    "Terraform",
+    "GitLab CI/CD",
+    "Podman",
+    "Docker",
+    "Prometheus",
+    "Grafana",
+    "Proxmox",
+    "Git",
+    "openSUSE",
+    "OpenWRT",
+  ];
+
   static const List<String> programmingLanguages = <String>[
     "Dart",
     "C/C++",
@@ -143,6 +158,7 @@ class Data {
     "Solidity",
     "Matlab",
     "Java",
+    "Rust",
   ];
 
   static const List<String> applications = <String>[
@@ -153,50 +169,25 @@ class Data {
     "Django",
     "FastAPI",
     "ElasticSearch",
+    "Firebase",
     "Firestore",
     "Unreal Engine",
     "ROS",
     "PyTorch",
     "TensorFlow",
+    "RAG",
+    "Vector Databases",
+    "YOLOv8",
     "Enterprise Architect",
     "Home Assistant",
     "n8n",
+    "Wordpress",
     "Android Studio",
     "Visual Studio",
     "Remix Ethereum IDE",
+    "Hardhat",
     "Matlab",
     "TwinCAT",
-    "OBS Studio",
-    "Adobe Photoshop",
-    "Adobe Illustrator",
-    "Microsoft Word",
-    "Microsoft Excel",
-    "Microsoft PowerPoint",
-  ];
-
-  static const List<String> otherSoftware = <String>[
-    "Kubernetes",
-    "Docker",
-    "Podman",
-    "Terraform",
-    "ArgoCD",
-    "GitLab CI/CD",
-    "Prometheus",
-    "Grafana",
-    "Git",
-    "Firebase",
-    "Hardhat",
-    "RAG",
-    "Vector Databases",
-    "Proxmox",
-    "openSUSE",
-    "OpenWRT",
-    "YOLOv8",
-    "MidJourney",
-    "Stable Diffusion",
-    "Auto GPT",
-    "Wordpress",
-    "MuseScore",
   ];
 
   // static List<ProjectItemData> recentWorks = <ProjectItemData>[
@@ -378,7 +369,9 @@ class Data {
       title: StringConst.ACADEMIC_2_TITLE,
       subtitle: StringConst.ACADEMIC_2_SUBTITLE,
       url: StringConst.ACADEMIC_2_URL,
-      bulletPoint: <String>[],
+      bulletPoint: <String>[
+        StringConst.ACADEMIC_2_BULLET_POINT_1,
+      ],
     ),
     ExperienceData(
       time: StringConst.ACADEMIC_1_TIME,
@@ -396,32 +389,9 @@ class Data {
     ),
   ];
 
-  static final List<PrivacyPolicyData> privacyPolicyData = <PrivacyPolicyData>[
-    PrivacyPolicyData(content: StringConst.PARAGRAPH1),
-    PrivacyPolicyData(content: StringConst.PARAGRAPH2),
-    PrivacyPolicyData(content: StringConst.PARAGRAPH3),
-    PrivacyPolicyData(title: StringConst.HEADER1, content: StringConst.PARAGRAPH4),
-    PrivacyPolicyData(title: StringConst.HEADER2, content: StringConst.PARAGRAPH5),
-    PrivacyPolicyData(content: StringConst.PARAGRAPH6),
-    PrivacyPolicyData(content: StringConst.PARAGRAPH7),
-    PrivacyPolicyData(title: StringConst.HEADER3, content: StringConst.PARAGRAPH8),
-    PrivacyPolicyData(content: StringConst.LIST1),
-    PrivacyPolicyData(title: StringConst.HEADER4, content: StringConst.PARAGRAPH9),
-    PrivacyPolicyData(title: StringConst.HEADER5, content: StringConst.PARAGRAPH10),
-    PrivacyPolicyData(content: StringConst.PARAGRAPH11),
-    PrivacyPolicyData(content: StringConst.PARAGRAPH12),
-    PrivacyPolicyData(title: StringConst.HEADER6, content: StringConst.PARAGRAPH13),
-    PrivacyPolicyData(content: StringConst.PARAGRAPH14),
-    PrivacyPolicyData(title: StringConst.HEADER7, content: StringConst.PARAGRAPH15),
-    PrivacyPolicyData(content: StringConst.LIST2),
-    PrivacyPolicyData(title: StringConst.HEADER8, content: StringConst.PARAGRAPH16),
-    PrivacyPolicyData(content: StringConst.LIST3),
-    PrivacyPolicyData(title: StringConst.HEADER9, content: StringConst.PARAGRAPH17),
-    PrivacyPolicyData(content: StringConst.PARAGRAPH18),
-    PrivacyPolicyData(title: StringConst.HEADER10, content: StringConst.PARAGRAPH19),
-    PrivacyPolicyData(content: StringConst.PARAGRAPH20),
-    PrivacyPolicyData(title: StringConst.HEADER11, content: StringConst.PARAGRAPH21),
-  ];
+  static List<PrivacyPolicyData> get privacyPolicyData => LegalTexts.privacy(LangController.to.lang);
+
+  static List<PrivacyPolicyData> get impressumData => LegalTexts.impressum(LangController.to.lang);
 
 // }
 //

@@ -25,7 +25,9 @@ src_sha=$(git rev-parse --short HEAD)
 src_branch=$(git rev-parse --abbrev-ref HEAD)
 msg=${1:-"deploy: $(git log -1 --format=%s)"}
 
-flutter build web --release
+# --no-web-resources-cdn: ship CanvasKit with the site instead of loading it from
+# gstatic.com (privacy statement says no third-party servers are contacted).
+flutter build web --release --no-web-resources-cdn
 [ -f build/web/index.html ] || { echo "build/web/index.html missing" >&2; exit 1; }
 
 git fetch -q origin main

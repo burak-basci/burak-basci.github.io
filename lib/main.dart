@@ -1,10 +1,8 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:get/get.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-import 'firebase_options.dart';
 import 'pages/home/home_page.dart';
 import 'utils/intro_redirect.dart';
 import 'utils/lang.dart';
@@ -47,9 +45,9 @@ Future<void> main() async {
   // requested route here; the home page consumes it after the intro.
   IntroRedirect.captureDeepLink();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Firebase is deliberately not initialised: nothing in the site uses it,
+  // and initialising it makes the browser load the Firebase JS SDK from
+  // Google's CDN (gstatic.com) — an avoidable third-party request.
 
   runApp(const Website());
 }

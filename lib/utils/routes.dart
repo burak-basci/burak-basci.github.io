@@ -1,4 +1,5 @@
 import 'package:burak_basci_website/pages/privacy_policy/privacy_policy_page.dart';
+import 'package:burak_basci_website/pages/impressum/impressum_page.dart';
 import 'package:flutter/material.dart';
 
 import '../pages/about/about_page.dart';
@@ -73,6 +74,11 @@ class RouteConfiguration {
     Path(
       PrivacyPolicyPage.privacyPolicyPageRoute,
       (context, matches) => const PrivacyPolicyPage(),
+    ),
+
+    Path(
+      ImpressumPage.impressumPageRoute,
+      (context, matches) => const ImpressumPage(),
     ),
 
     // Per-project URLs: /projects/<slug>
