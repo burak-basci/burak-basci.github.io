@@ -104,17 +104,6 @@ class LegalTexts {
               'anlegen.',
         ),
         PrivacyPolicyData(
-          title: 'Google-API-Anwendung „OpenClaw“',
-          content: '„OpenClaw“ ist eine private Anwendung, mit der ich ausschließlich meine eigenen '
-              'Google-Konten (Gmail, Kalender, Drive) für persönliche Automatisierung nutze. Über diese '
-              'Anwendung werden keine Daten anderer Personen abgefragt. Über Google-APIs erhaltene Daten '
-              'werden nur lokal auf meinen eigenen Rechnern verarbeitet, nicht verkauft, nicht an Dritte '
-              'weitergegeben und nicht für Werbung verwendet. Die Nutzung entspricht der Google API '
-              'Services User Data Policy einschließlich der Anforderungen zur eingeschränkten Nutzung '
-              '(Limited Use). Eine erteilte Berechtigung kann jederzeit unter '
-              'myaccount.google.com/permissions widerrufen werden.',
-        ),
-        PrivacyPolicyData(
           title: 'Deine Rechte',
           content: 'Du hast nach der DSGVO das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), '
               'Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18) und Datenübertragbarkeit '
@@ -179,15 +168,6 @@ class LegalTexts {
         content: 'This website sets no cookies and uses no tracking, analytics or advertising services. '
             'There are no user accounts and no newsletter sign-up. Your browser may keep technically '
             'necessary caches to deliver the site.',
-      ),
-      PrivacyPolicyData(
-        title: 'Google API application "OpenClaw"',
-        content: '"OpenClaw" is a private application I use exclusively with my own Google accounts '
-            '(Gmail, Calendar, Drive) for personal automation. It does not request any data of other '
-            'people. Data obtained via Google APIs is processed only locally on my own machines, is not '
-            'sold, not shared with third parties and not used for advertising. Its use complies with the '
-            'Google API Services User Data Policy, including the Limited Use requirements. Any granted '
-            'permission can be revoked at any time at myaccount.google.com/permissions.',
       ),
       PrivacyPolicyData(
         title: 'Your rights',
